@@ -3,6 +3,15 @@ declare module "packard-belle" {
   type ClickEvent = (
     event: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => void;
+
+  export interface SelectBoxOption {
+    value: any;
+    title: string;
+    icon: string;
+    alt: string;
+    className?: string;
+  }
+
   export function Theme(props: {
     children: React.ReactNode;
     className?: string;
@@ -70,7 +79,17 @@ declare module "packard-belle" {
     onHelp?: ClickEvent;
   }): JSX.Element;
   export function WindowAlert(props: any): JSX.Element;
-  export function WindowAction(props: any): JSX.Element;
+  export function WindowAction(props: {
+    className?: string;
+    action: string;
+    onAction?: ClickEvent;
+    onCancel?: ClickEvent;
+    onHelp?: ClickEvent;
+    location?: string;
+    content?: Array<SelectBoxOption>;
+    onChangeName?: (text: string) => void;
+    name?: string;
+  }): JSX.Element;
   export function WindowExplorer(props: any): JSX.Element;
   export function WindowProgram(props: any): JSX.Element;
   export function DetailsSection(props: any): JSX.Element;
