@@ -1,75 +1,74 @@
-import { sequence } from "0xsequence";
 import {
   SelectBox,
   SelectBoxOption,
   Window,
   ListIcon,
   ButtonForm,
+  FakeSelect,
 } from "packard-belle";
 import "./Contacts.css";
+import searchIcon from "./search.png";
 interface ContactsProps<T> {
-  wallet: sequence.Wallet;
   onClose?: () => void;
   onHelp?: () => void;
   onSubmit?: () => void;
   onChangeSelected?: (value: T) => void;
+  options: Array<SelectBoxOption>;
 }
 export function Contacts<T>({
-  wallet,
   onClose,
   onHelp,
   onSubmit,
   onChangeSelected,
+  options,
 }: ContactsProps<T>) {
-  const contacts: Array<SelectBoxOption> = [
-    {
-      title: "ari",
-      value: "0x000123",
-      icon: "",
-      alt: "bing chilling",
-    },
-    {
-      title: "matthew",
-      value: "0x000123",
-      icon: "",
-      alt: "bing chilling",
-    },
-    {
-      title: "coulter",
-      value: "0x000123",
-      icon: "",
-      alt: "bing chilling",
-    },
-  ];
+  console.log(options);
   return (
     <div className="contactsModal">
       <Window
         className="WindowAction"
-        title="Pick a trading partner:"
+        title="Pick a trading partner"
         onClose={onClose}
         onHelp={onHelp}
         resizable={false}
       >
-        {/* <div className="WindowAction__location">
-          <div>Pick Trading  in</div>
-          <FakeSelect title={props.location} />
-          <ButtonIconSmall isDisabled hasBorder icon={img5} />
-          <ButtonIconSmall isDisabled hasBorder icon={img4} />
-          <ButtonIconSmall isDisabled hasBorder icon={img3} />
-          <ButtonIconSmall isDisabled hasBorder icon={img2} />
-          <ButtonIconSmall isDisabled hasBorder icon={img1} />
-        </div> */}
-        <SelectBox
-          options={contacts}
-          className="WindowAction__files"
-          selected={[]}
-          component={ListIcon}
-          onClick={onChangeSelected ?? (() => {})}
-        />
+        <div className="WindowAction__location">
+          <div>Load partners from:</div>
+          <FakeSelect title="The Internet" />
+        </div>
+        {options.length ? (
+          <SelectBox
+            options={options}
+            className="WindowAction__files"
+            selected={[]}
+            component={ListIcon}
+            onClick={onChangeSelected ?? (() => {})}
+          />
+        ) : (
+          <SelectBox
+            isDisabled={true}
+            options={[
+              {
+                title: "Waiting for peers...",
+                value: "Waiting for peers...",
+                alt: "Waiting for peers...",
+                icon: searchIcon,
+              },
+            ]}
+            className="WindowAction__files"
+            selected={[]}
+            component={ListIcon}
+            onClick={() => {}}
+          />
+        )}
         <div className="WindowAction__footer">
           <div className="WindowAction__action-buttons contactSaveButtons">
-            <ButtonForm onClick={onSubmit}>Pick</ButtonForm>
-            <ButtonForm onClick={onClose}>Cancel</ButtonForm>
+            <ButtonForm onClick={onSubmit} className="pre">
+              {"  "}Send Trade Request{"  "}
+            </ButtonForm>
+            <ButtonForm onClick={onClose} className="pre">
+              Cancel
+            </ButtonForm>
           </div>
         </div>
       </Window>

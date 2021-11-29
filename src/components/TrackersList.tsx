@@ -20,11 +20,11 @@ export function TrackersList({ sources, trackers }: TrackersListProps) {
       </div>
     ) : (
       <>
-        {[...trackers.values()].map((tracker) => (
+        {[...trackers].map((tracker) => (
           <div key={tracker.announceUrl}>🟢 {tracker.announceUrl}</div>
         ))}
         {sources.map((source) =>
-          [...trackers.values()].some(
+          [...trackers].some(
             (tracker) => tracker.announceUrl === source
           ) ? null : (
             <div key={source}>🔴 {source}</div>

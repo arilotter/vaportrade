@@ -1,6 +1,5 @@
-import { Clippy } from "./Clippy";
 import { defaultScale, defaultSize } from "./ProfileIcon";
-import "./ProfileIcon.css";
+import "./FindProfileIcon.css";
 interface FindProfileIconProps {
   size?: number;
   scale?: number;
@@ -18,7 +17,7 @@ export function FindProfileIcon(props: FindProfileIconProps) {
 
   return (
     <div
-      className={`profileIcon ${className ? className : ""}`}
+      className={`findProfileIcon ${className ? className : ""}`}
       style={{
         width: `${size * scale}px`,
         height: `${size * scale}px`,
@@ -33,7 +32,7 @@ export function FindProfileIcon(props: FindProfileIconProps) {
         style={{
           fontFamily: "Arial,sans-serif",
           fontSize: "4em",
-          color: "blue",
+          color: "#126fc2",
         }}
       >
         +

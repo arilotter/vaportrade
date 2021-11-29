@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
 import { Window, Theme } from "packard-belle";
-import P2PT from "p2pt";
+import P2PT, { Peer } from "p2pt";
+import * as blockies from "blockies-ts";
 
 import { TrackersList } from "./components/TrackersList";
 import { TradeUI } from "./components/tradeui/TradeUI";
@@ -15,7 +16,7 @@ import { ConnectToSequence } from "./sequence/ConnectToSequence";
 import { sequence } from "0xsequence";
 import { EllipseAnimation } from "./utils/EllipseAnimation";
 import { SequenceIndexerProvider } from "./sequence/SequenceIndexerProvider";
-import { ProfileIcon } from "./components/ProfileIcon";
+import { defaultSize, ProfileIcon } from "./components/ProfileIcon";
 import { FindProfileIcon } from "./components/FindProfileIcon";
 import { Clippy } from "./components/Clippy";
 import { Contacts } from "./components/Contacts";
@@ -57,6 +58,9 @@ function Vaportrade({
 }) {
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
   const [sources, updateSources] = useImmer<string[]>([]);
+  const [peers, updatePeers] = useImmer<
+    Set<{ peer: Peer; address: string | null; tradeRequest: boolean }>
+  >(new Set());
   useEffect(() => {
     // fetch(
     //   "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_all_ws.txt"
@@ -83,7 +87,7 @@ function Vaportrade({
     if (!sources.length) {
       return;
     }
-    const p2p = new P2PT([...sources.values()], "vaportrade");
+    const p2p = new P2PT([...sources], "vaportrade");
 
     // If a tracker connection was successful
     p2p.on("trackerconnect", (tracker, stats) => {
@@ -92,12 +96,12 @@ function Vaportrade({
           throw new Error(
             `Connected to tracker that wasn't in connection list!\nGot tracker ${
               tracker.announceUrl
-            }, expecting one of ${[...sources.values()].filter(
+            }, expecting one of ${[...sources].filter(
               (t) => typeof t === "string"
             )}`
           );
         }
-        const existing = [...trackers.values()].find(
+        const existing = [...trackers].find(
           (t) => t.announceUrl === tracker.announceUrl
         );
         if (existing) {
@@ -112,25 +116,37 @@ function Vaportrade({
       console.error(msg);
     });
 
-    // If a new peer, send message
     p2p.on("peerconnect", (peer) => {
-      p2p
-        .send(peer, "Hi")
-        .then(([peer, msg]) => {
-          console.log("Got response : " + msg);
-          return peer.respond("Bye");
-        })
-        .then(([peer, msg]) => {
-          console.log("Got response2 : " + msg);
-        });
+      updatePeers((peers) => {
+        peers.add({ peer, address: null, tradeRequest: false });
+      });
+      p2p.send(peer, address);
     });
 
-    // If message received from peer
+    p2p.on("peerclose", (closedPeer) =>
+      updatePeers((peers) => {
+        for (const peer of peers) {
+          if (peer.peer.id === closedPeer.id) {
+            peers.delete(peer);
+          }
+        }
+      })
+    );
+
     p2p.on("msg", (peer, msg) => {
-      console.log(`Got message from ${peer.id} : ${msg}`);
-      if (msg === "Hi") {
-        peer.respond("Hello !").then(([peer, msg]) => {
-          peer.respond("Bye !");
+      if (typeof msg === "string" && msg.startsWith("0x")) {
+        updatePeers((peers) => {
+          const correctPeer = [...peers].find((p) => p.peer.id === peer.id);
+          const incorrectPeers = [...peers].filter(
+            (p) => p.address === msg && peer.id !== correctPeer?.peer.id
+          );
+          for (const peer of incorrectPeers) {
+            peers.delete(peer);
+          }
+          if (!correctPeer) {
+            return;
+          }
+          correctPeer.address = msg;
         });
       }
     });
@@ -143,8 +159,11 @@ function Vaportrade({
       updateTrackers((set) => {
         set.clear();
       });
+      updatePeers((set) => {
+        set.clear();
+      });
     };
-  }, [sources, updateTrackers]);
+  }, [sources, updateTrackers, address, updatePeers]);
 
   const [showContacts, setShowContacts] = useState(false);
 
@@ -163,6 +182,12 @@ function Vaportrade({
         onClose={disconnect}
       >
         <TrackersList sources={sources} trackers={trackers} />
+        <h1>Peers:</h1>
+        {[...peers].map((p) => (
+          <p key={p.peer.id}>
+            {p.peer.id}: {p.address}
+          </p>
+        ))}
         <SequenceIndexerProvider wallet={wallet}>
           {({ indexer }) =>
             trackers.size ? (
@@ -177,7 +202,21 @@ function Vaportrade({
         </SequenceIndexerProvider>
       </Window>
       {showContacts ? (
-        <Contacts wallet={wallet} onClose={() => setShowContacts(false)} />
+        <Contacts
+          onClose={() => setShowContacts(false)}
+          options={[...peers]
+            .map((peer) => [peer.peer.id, peer.address] as const)
+            .filter((x: any): x is [string, string] => typeof x[1] === "string")
+            .filter(([_, peerAddr]) => address !== peerAddr)
+            .map(([peerId, peerAddr]) => ({
+              title: peerAddr,
+              value: `${peerId}:${address}`,
+              alt: `Wallet Address ${peerAddr}`,
+              icon: blockies
+                .create({ seed: peerAddr.toUpperCase(), size: defaultSize })
+                .toDataURL(),
+            }))}
+        />
       ) : null}
       <Clippy
         message={

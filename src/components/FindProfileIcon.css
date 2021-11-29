@@ -1,0 +1,27 @@
+.findProfileIcon {
+  position: relative;
+}
+
+.findProfileIcon::after {
+  box-shadow: inset -1px -1px 0px #0c0c0c, inset 1px 1px 0px 0px #bbc3c4,
+    inset -2px -2px 0px #808088, inset 2px 2px 0px 0px #ffffff;
+  bottom: 0;
+  content: "";
+  display: block;
+  left: 0;
+  height: 100%;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+}
+
+.findProfileIcon:active div {
+  padding-top: 2px;
+  padding-left: 2px;
+}
+
+.findProfileIcon:active:after {
+  box-shadow: inset -1px -1px 0px #ffffff, inset 1px 1px 0px 0px #808088,
+    inset -2px -2px 0px #bbc3c4, inset 2px 2px 0px 0px #0c0c0c;
+}

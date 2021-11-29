@@ -16,3 +16,7 @@
   flex-direction: row;
   width: 100%;
 }
+
+.pre {
+  white-space: pre;
+}
