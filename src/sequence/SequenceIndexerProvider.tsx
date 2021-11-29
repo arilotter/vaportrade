@@ -36,7 +36,6 @@ export function SequenceIndexerProvider({
   const [state, setState] = useState<State>({ waitingFor: "signer" });
   useEffect(() => {
     async function getIndexer() {
-      throw new Error("temp disabled til i figure out wagwan");
       const signer = await wallet.getSigner(networks[0].chainId);
       setState({ waitingFor: "signer_address" });
       const signerAddress = await signer.getAddress();

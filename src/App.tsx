@@ -166,6 +166,7 @@ function Vaportrade({
   }, [sources, updateTrackers, address, updatePeers]);
 
   const [showContacts, setShowContacts] = useState(false);
+  const [allowSequenceAttempt, setallowSequenceAttempt] = useState(false);
 
   return (
     <>
@@ -182,24 +183,24 @@ function Vaportrade({
         onClose={disconnect}
       >
         <TrackersList sources={sources} trackers={trackers} />
-        <h1>Peers:</h1>
-        {[...peers].map((p) => (
-          <p key={p.peer.id}>
-            {p.peer.id}: {p.address}
-          </p>
-        ))}
-        <SequenceIndexerProvider wallet={wallet}>
-          {({ indexer }) =>
-            trackers.size ? (
-              <TradeUI wallet={wallet} indexer={indexer} />
-            ) : (
-              <div style={{ padding: "8px" }}>
-                Connecting to trackers
-                <EllipseAnimation />
-              </div>
-            )
-          }
-        </SequenceIndexerProvider>
+        {allowSequenceAttempt ? (
+          <SequenceIndexerProvider wallet={wallet}>
+            {({ indexer }) =>
+              trackers.size ? (
+                <TradeUI wallet={wallet} indexer={indexer} />
+              ) : (
+                <div style={{ padding: "8px" }}>
+                  Connecting to trackers
+                  <EllipseAnimation />
+                </div>
+              )
+            }
+          </SequenceIndexerProvider>
+        ) : (
+          <button onClick={() => setallowSequenceAttempt(true)}>
+            Attempt Sequence Session Create
+          </button>
+        )}
       </Window>
       {showContacts ? (
         <Contacts
