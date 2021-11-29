@@ -52,7 +52,7 @@ export function SequenceIndexerProvider({
             weight: SignerLevel.Gold,
           },
         ],
-        thershold: DefaultThreshold,
+        threshold: DefaultThreshold,
         metadata: {
           name: "Vaportrade",
           // 1 day JWT expiry
