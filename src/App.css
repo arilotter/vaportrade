@@ -1,11 +1,16 @@
 .w98.container {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 4px);
+  height: calc(100% - 8px);
+  margin-left: 8px;
+  width: calc(100% - 16px);
 }
 
 header {
-  text-align: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .logo {
@@ -13,6 +18,5 @@ header {
 }
 
 .window {
-  width: calc(100% - 3px);
   flex-grow: 1;
 }

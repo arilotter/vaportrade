@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
 import { Window, Theme } from "packard-belle";
@@ -15,6 +15,10 @@ import { ConnectToSequence } from "./sequence/ConnectToSequence";
 import { sequence } from "0xsequence";
 import { EllipseAnimation } from "./utils/EllipseAnimation";
 import { SequenceIndexerProvider } from "./sequence/SequenceIndexerProvider";
+import { ProfileIcon } from "./components/ProfileIcon";
+import { FindProfileIcon } from "./components/FindProfileIcon";
+import { Clippy } from "./components/Clippy";
+import { Contacts } from "./components/Contacts";
 
 enableMapSet();
 
@@ -22,8 +26,6 @@ function App() {
   return (
     <div
       style={{
-        paddingLeft: "8px",
-        paddingRight: "8px",
         background: `url(${clouds})`,
         imageRendering: "pixelated",
         height: "100%",
@@ -31,8 +33,12 @@ function App() {
     >
       <Theme className="container">
         <ConnectToSequence>
-          {({ wallet, disconnect }) => (
-            <Vaportrade wallet={wallet} disconnect={disconnect} />
+          {({ wallet, address, disconnect }) => (
+            <Vaportrade
+              wallet={wallet}
+              address={address}
+              disconnect={disconnect}
+            />
           )}
         </ConnectToSequence>
       </Theme>
@@ -42,9 +48,11 @@ function App() {
 
 function Vaportrade({
   wallet,
+  address,
   disconnect,
 }: {
   wallet: sequence.Wallet;
+  address: string;
   disconnect: () => void;
 }) {
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
@@ -138,15 +146,14 @@ function Vaportrade({
     };
   }, [sources, updateTrackers]);
 
-  const [address, setAddress] = useState<null | string>(null);
-  useEffect(() => {
-    wallet.getAddress().then(setAddress);
-  }, [wallet]);
+  const [showContacts, setShowContacts] = useState(false);
 
   return (
     <>
       <header>
+        <ProfileIcon seed={address} />
         <img src={logo} alt="Vaportrade Logo" className="logo" />
+        <FindProfileIcon onClick={() => setShowContacts(true)} />
       </header>
       <Window
         title={`Vaportrade: Wallet ${address}`}
@@ -169,6 +176,16 @@ function Vaportrade({
           }
         </SequenceIndexerProvider>
       </Window>
+      {showContacts ? (
+        <Contacts wallet={wallet} onClose={() => setShowContacts(false)} />
+      ) : null}
+      <Clippy
+        message={
+          showContacts
+            ? "Pick someone online to trade with!"
+            : "Click the plus button in the top right to find a trading partner!"
+        }
+      />
     </>
   );
 }

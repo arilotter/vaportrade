@@ -2,7 +2,7 @@ import sequenceLogo from "./sequence.png";
 import { Window, ButtonForm, DetailsSection } from "packard-belle";
 import { sequence } from "0xsequence";
 import { ETHAuth } from "@0xsequence/ethauth";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import "./ConnectToSequence.css";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
@@ -11,6 +11,7 @@ export const wallet = new sequence.Wallet("polygon");
 
 interface WalletProviderProps {
   wallet: sequence.Wallet;
+  address: string;
 
   // WORKAROUND BUG IN SEQUENCE.JS:
   // disconnect callback is never called.
@@ -22,7 +23,12 @@ interface ConnectToSequenceProps {
 }
 export function ConnectToSequence(props: ConnectToSequenceProps) {
   const [walletConnectionState, setWalletConnected] = useState<
-    "no" | "connecting" | "connected" | { error: string }
+    | "no"
+    | "connecting"
+    | "connected"
+    | "fetching_address"
+    | { address: string }
+    | { error: string }
   >(wallet.isConnected() ? "connected" : "no");
   useMemo(() => {
     wallet.on("connect", () => {
@@ -34,9 +40,20 @@ export function ConnectToSequence(props: ConnectToSequenceProps) {
     });
   }, []);
 
-  if (walletConnectionState === "connected") {
+  useEffect(() => {
+    if (walletConnectionState === "connected") {
+      setWalletConnected("fetching_address");
+      wallet.getAddress().then((address) => setWalletConnected({ address }));
+    }
+  }, [walletConnectionState]);
+
+  if (
+    typeof walletConnectionState === "object" &&
+    "address" in walletConnectionState
+  ) {
     return props.children({
       wallet,
+      address: walletConnectionState.address,
       disconnect: () => {
         wallet.disconnect();
         setWalletConnected(wallet.isConnected() ? "connected" : "no");
