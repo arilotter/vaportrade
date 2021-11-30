@@ -6,23 +6,23 @@ import {
   ButtonForm,
   FakeSelect,
 } from "packard-belle";
+import { useState } from "react";
 import "./Contacts.css";
 import searchIcon from "./search.png";
 interface ContactsProps<T> {
   onClose?: () => void;
   onHelp?: () => void;
-  onSubmit?: () => void;
-  onChangeSelected?: (value: T) => void;
-  options: Array<SelectBoxOption>;
+  onSubmit: (peer: T) => void;
+  options: Array<SelectBoxOption<T>>;
 }
 export function Contacts<T>({
   onClose,
   onHelp,
   onSubmit,
-  onChangeSelected,
   options,
 }: ContactsProps<T>) {
-  console.log(options);
+  const [selectedPeer, setSelectedPeer] = useState<T | null>(null);
+
   return (
     <div className="contactsModal">
       <Window
@@ -39,14 +39,13 @@ export function Contacts<T>({
         {options.length ? (
           <SelectBox
             options={options}
-            className="WindowAction__files"
-            selected={[]}
+            selected={selectedPeer}
             component={ListIcon}
-            onClick={onChangeSelected ?? (() => {})}
+            onClick={setSelectedPeer}
           />
         ) : (
           <SelectBox
-            isDisabled={true}
+            isDisabled
             options={[
               {
                 title: "Waiting for peers...",
@@ -55,7 +54,6 @@ export function Contacts<T>({
                 icon: searchIcon,
               },
             ]}
-            className="WindowAction__files"
             selected={[]}
             component={ListIcon}
             onClick={() => {}}
@@ -63,8 +61,12 @@ export function Contacts<T>({
         )}
         <div className="WindowAction__footer">
           <div className="WindowAction__action-buttons contactSaveButtons">
-            <ButtonForm onClick={onSubmit} className="pre">
-              {"  "}Send Trade Request{"  "}
+            <ButtonForm
+              onClick={() => onSubmit(selectedPeer!)}
+              className="pre"
+              isDisabled={selectedPeer === null}
+            >
+              {"   "}Send Trade Request{"   "}
             </ButtonForm>
             <ButtonForm onClick={onClose} className="pre">
               Cancel

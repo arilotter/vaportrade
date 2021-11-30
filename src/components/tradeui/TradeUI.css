@@ -1,0 +1,13 @@
+.tradeUI {
+  /* display: flex; */
+}
+
+.itemSections {
+  max-height: calc(100vh - 168px);
+  display: flex;
+}
+
+.itemSections .DetailsSection {
+  flex-grow: 1;
+  padding-bottom: 32px;
+}

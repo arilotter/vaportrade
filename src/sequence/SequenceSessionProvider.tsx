@@ -1,26 +1,34 @@
 import { sequence } from "0xsequence";
 import { Session } from "@0xsequence/auth";
 import { sequenceContext, ChainId } from "@0xsequence/network";
-import * as ethers from 'ethers';
+import * as ethers from "ethers";
 import { DetailsSection } from "packard-belle";
 import { useState, useEffect } from "react";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
 
-interface SequenceIndexerProviderProps {
+interface SequenceSessionProviderProps {
   wallet: sequence.Wallet;
   children: (props: SequenceIndexerProps) => JSX.Element;
 }
 
 interface SequenceIndexerProps {
   indexer: sequence.indexer.Indexer;
+  metadata: sequence.metadata.SequenceMetadataClient;
 }
 
 type State =
   | {
-      waitingFor: "signer" | "signer_address" | "session" | "indexer";
+      waitingFor:
+        | "signer"
+        | "signer_address"
+        | "session"
+        | "indexer_and_metadata";
     }
   | { error: Array<string> }
-  | { indexer: sequence.indexer.Indexer };
+  | {
+      indexer: sequence.indexer.Indexer;
+      metadata: sequence.metadata.SequenceMetadataClient;
+    };
 
 enum SignerLevel {
   Gold = 3,
@@ -30,14 +38,16 @@ enum SignerLevel {
 
 const DefaultThreshold = SignerLevel.Gold;
 
-export function SequenceIndexerProvider({
+export function SequenceSessionProvider({
   children,
   wallet,
-}: SequenceIndexerProviderProps) {
+}: SequenceSessionProviderProps) {
   const [state, setState] = useState<State>({ waitingFor: "signer" });
   useEffect(() => {
     async function getIndexer() {
-      const signer = ethers.Wallet.fromMnemonic('major danger this key only test please avoid main net use okay');
+      const signer = ethers.Wallet.fromMnemonic(
+        "major danger this key only test please avoid main net use okay"
+      );
       setState({ waitingFor: "signer_address" });
       const signerAddress = await signer.getAddress();
       setState({ waitingFor: "session" });
@@ -60,9 +70,12 @@ export function SequenceIndexerProvider({
           expiration: 60 * 60 * 24 * 1,
         },
       });
-      setState({ waitingFor: "indexer" });
-      const indexer = await session.getIndexerClient(137);
-      setState({ indexer });
+      setState({ waitingFor: "indexer_and_metadata" });
+      const [indexer, metadata] = await Promise.all([
+        session.getIndexerClient(ChainId.POLYGON),
+        session.getMetadataClient(),
+      ]);
+      setState({ indexer, metadata });
     }
     getIndexer().catch((err) => {
       console.error(`Failed to get Indexer.`, err, new Error().stack);
@@ -100,7 +113,7 @@ export function SequenceIndexerProvider({
       </DetailsSection>
     );
   } else {
-    return children({ indexer: state.indexer });
+    return children(state);
   }
 }
 interface SequenceError {
