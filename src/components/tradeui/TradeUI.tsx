@@ -15,10 +15,11 @@ export function TradeUI({ wallet, indexer }: TradeUIProps) {
   useEffect(() => {
     async function getItems() {
       const address = await wallet.getAddress();
-      const { balances } = await indexer.getTokenBalances({
+      const balances = await indexer.getTokenBalances({
         accountAddress: address,
       });
-      setItems(balances);
+      console.log(balances)
+      setItems(balances.balances);
     }
     getItems();
   });
