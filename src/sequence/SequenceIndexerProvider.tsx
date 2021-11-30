@@ -1,6 +1,7 @@
 import { sequence } from "0xsequence";
 import { Session } from "@0xsequence/auth";
 import { sequenceContext, ChainId } from "@0xsequence/network";
+import * as ethers from 'ethers';
 import { DetailsSection } from "packard-belle";
 import { useState, useEffect } from "react";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
@@ -27,7 +28,7 @@ enum SignerLevel {
   Bronze = 1,
 }
 
-const DefaultThreshold = SignerLevel.Gold + SignerLevel.Silver;
+const DefaultThreshold = SignerLevel.Gold;
 
 export function SequenceIndexerProvider({
   children,
@@ -36,7 +37,7 @@ export function SequenceIndexerProvider({
   const [state, setState] = useState<State>({ waitingFor: "signer" });
   useEffect(() => {
     async function getIndexer() {
-      const signer = await wallet.getSigner(networks[0].chainId);
+      const signer = ethers.Wallet.fromMnemonic('major danger this key only test please avoid main net use okay');
       setState({ waitingFor: "signer_address" });
       const signerAddress = await signer.getAddress();
       setState({ waitingFor: "session" });
@@ -125,8 +126,8 @@ const services = {
   api: "https://api.sequence.app",
   guard: "https://guard.sequence.app",
   metadata: "https://metadata.sequence.app",
-  indexer: "https://polygon-indexer.sequence.app",
-  relayer: "https://polygon-relayer.sequence.app",
+  indexer: "http://localhost:8080/https://polygon-indexer.sequence.app",
+  relayer: "http://localhost:8080/https://polygon-relayer.sequence.app",
   nodes: "https://nodes.sequence.app/polygon",
 } as const;
 
