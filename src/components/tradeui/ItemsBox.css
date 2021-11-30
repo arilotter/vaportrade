@@ -1,28 +1,22 @@
 .itemsBox {
-  background-color: #e3e3e3;
-  background-image: repeating-linear-gradient(
-      45deg,
-      #ffffff 25%,
-      transparent 25%,
-      transparent 75%,
-      #ffffff 75%,
-      #ffffff
-    ),
-    repeating-linear-gradient(
-      45deg,
-      #ffffff 25%,
-      #e3e3e3 25%,
-      #e3e3e3 75%,
-      #ffffff 75%,
-      #ffffff
-    );
-  background-position: 0 0, 8px 8px;
-  background-size: 16px 16px;
-
-  width: 256px;
-  height: 256px;
-
+  background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAICAYAAADaxo44AAAAGklEQVQImWP49OnTfxhGBgxUlEDmICuiogQASpu7mfYC9wcAAAAASUVORK5CYII=")
+    repeat;
+  background-size: 16px;
   box-shadow: inset -1px -1px 0px #ffffff, inset 1px 1px 0px 0px #808088,
     inset -2px -2px 0px #bbc3c4, inset 2px 2px 0px 0px #0c0c0c;
   margin: 7.1px; /* why does it need to be 7.1 to line up wtf??? */
+
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  padding: 4px;
+  height: 100%;
+  overflow-y: scroll;
+}
+
+.icon.ExplorerIcon:focus .icon__icon,
+.icon.ExplorerIcon:active .icon__icon,
+.icon.ExplorerIcon:active:focus .icon__icon,
+.icon.ExplorerIcon.is-active .icon__icon {
+  filter: sepia(100%) saturate(374%) brightness(70%) hue-rotate(180deg)
+    saturate(80%);
 }

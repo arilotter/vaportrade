@@ -3,11 +3,10 @@ import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
 import { Window, Theme } from "packard-belle";
 import P2PT, { Peer } from "p2pt";
-import * as blockies from "blockies-ts";
 
 import { TrackersList } from "./components/TrackersList";
 import { TradeUI } from "./components/tradeui/TradeUI";
-import { FailableTracker } from "./utils/types";
+import { FailableTracker, TRADE_REQUEST_MESSAGE } from "./utils/types";
 
 import logo from "./vtlogo.png";
 import clouds from "./clouds.png";
@@ -15,11 +14,12 @@ import "./App.css";
 import { ConnectToSequence } from "./sequence/ConnectToSequence";
 import { sequence } from "0xsequence";
 import { EllipseAnimation } from "./utils/EllipseAnimation";
-import { SequenceIndexerProvider } from "./sequence/SequenceIndexerProvider";
-import { defaultSize, ProfileIcon } from "./components/ProfileIcon";
+import { SequenceSessionProvider } from "./sequence/SequenceSessionProvider";
+import { ProfileIcon } from "./components/ProfileIcon";
 import { FindProfileIcon } from "./components/FindProfileIcon";
 import { Clippy } from "./components/Clippy";
 import { Contacts } from "./components/Contacts";
+import { makeBlockyIcon } from "./makeBlockyIcon";
 
 enableMapSet();
 
@@ -61,6 +61,7 @@ function Vaportrade({
   const [peers, updatePeers] = useImmer<
     Set<{ peer: Peer; address: string | null; tradeRequest: boolean }>
   >(new Set());
+
   useEffect(() => {
     // fetch(
     //   "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_all_ws.txt"
@@ -148,6 +149,14 @@ function Vaportrade({
           }
           correctPeer.address = msg;
         });
+      } else if (msg === TRADE_REQUEST_MESSAGE) {
+        updatePeers((peers) => {
+          const correctPeer = [...peers].find((p) => p.peer.id === peer.id);
+          if (!correctPeer) {
+            return;
+          }
+          correctPeer.tradeRequest = true;
+        });
       }
     });
 
@@ -166,7 +175,7 @@ function Vaportrade({
   }, [sources, updateTrackers, address, updatePeers]);
 
   const [showContacts, setShowContacts] = useState(false);
-  const [allowSequenceAttempt, setallowSequenceAttempt] = useState(false);
+  const [showClippy, setShowClippy] = useState(false);
 
   return (
     <>
@@ -181,26 +190,31 @@ function Vaportrade({
         resizable={false}
         className="window"
         onClose={disconnect}
+        onHelp={() => setShowClippy(true)}
       >
         <TrackersList sources={sources} trackers={trackers} />
-        {allowSequenceAttempt ? (
-          <SequenceIndexerProvider wallet={wallet}>
-            {({ indexer }) =>
-              trackers.size ? (
-                <TradeUI wallet={wallet} indexer={indexer} />
-              ) : (
-                <div style={{ padding: "8px" }}>
-                  Connecting to trackers
-                  <EllipseAnimation />
-                </div>
-              )
-            }
-          </SequenceIndexerProvider>
-        ) : (
-          <button onClick={() => setallowSequenceAttempt(true)}>
-            Attempt Sequence Session Create
-          </button>
-        )}
+        <SequenceSessionProvider wallet={wallet}>
+          {({ indexer, metadata }) =>
+            trackers.size ? (
+              <TradeUI
+                wallet={wallet}
+                indexer={indexer}
+                metadata={metadata}
+                tradeRequests={[...peers].filter((peer): peer is {
+                  address: string;
+                  peer: Peer;
+                  tradeRequest: true;
+                } => Boolean(peer.address && peer.tradeRequest))}
+                p2pt={client.current}
+              />
+            ) : (
+              <div style={{ padding: "8px" }}>
+                Connecting to trackers
+                <EllipseAnimation />
+              </div>
+            )
+          }
+        </SequenceSessionProvider>
       </Window>
       {showContacts ? (
         <Contacts
@@ -211,21 +225,37 @@ function Vaportrade({
             .filter(([_, peerAddr]) => address !== peerAddr)
             .map(([peerId, peerAddr]) => ({
               title: peerAddr,
-              value: `${peerId}:${address}`,
+              value: peerId,
               alt: `Wallet Address ${peerAddr}`,
-              icon: blockies
-                .create({ seed: peerAddr.toUpperCase(), size: defaultSize })
-                .toDataURL(),
+              icon: makeBlockyIcon(peerAddr),
             }))}
+          onSubmit={(peerId) => {
+            const correctPeer = [...peers].find((p) => p.peer.id === peerId);
+            if (correctPeer) {
+              client.current?.send(correctPeer.peer, TRADE_REQUEST_MESSAGE);
+              updatePeers((peers) => {
+                const correctPeer = [...peers].find(
+                  (p) => p.peer.id === peerId
+                );
+                if (correctPeer) {
+                  correctPeer.tradeRequest = true;
+                }
+              });
+            }
+            setShowContacts(false);
+          }}
         />
       ) : null}
-      <Clippy
-        message={
-          showContacts
-            ? "Pick someone online to trade with!"
-            : "Click the plus button in the top right to find a trading partner!"
-        }
-      />
+      {showClippy && (
+        <Clippy
+          message={
+            showContacts
+              ? "Pick someone online to trade with!"
+              : "Click the plus button in the top right to find a trading partner!"
+          }
+          onOutOfMessages={() => setShowClippy(false)}
+        />
+      )}
     </>
   );
 }

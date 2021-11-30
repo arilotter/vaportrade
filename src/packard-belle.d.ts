@@ -4,8 +4,8 @@ declare module "packard-belle" {
     event: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ) => void;
 
-  export interface SelectBoxOption {
-    value: any;
+  export interface SelectBoxOption<T> {
+    value: T;
     title: string;
     icon: string;
     alt: string;
@@ -39,8 +39,9 @@ declare module "packard-belle" {
   export function ButtonProgram(props: {
     className?: string;
     isActive?: boolean;
-
     style?: React.CSSProperties;
+    children?: React.ReactNode;
+    icon: string;
 
     onClick?: ClickEvent;
   }): JSX.Element;
@@ -57,7 +58,13 @@ declare module "packard-belle" {
   export function Radio(props: any): JSX.Element;
   export function InputText(props: any): JSX.Element;
   export function FakeSelect(props: any): JSX.Element;
-  export function SelectBox(props: any): JSX.Element;
+  export function SelectBox(props: {
+    component?: React.ComponentType;
+    isDisabled?: boolean;
+    options: Array<SelectBoxOption>;
+    selected?: SelectBoxOption["value"] | Array<SelectBoxOption["value"]>;
+    onClick?: (option: SelectBoxOption["value"]) => void;
+  }): JSX.Element;
   export function SelectBoxSimple(props: any): JSX.Element;
   export function StartMenu(props: any): JSX.Element;
   export function TaskBar(props: any): JSX.Element;
@@ -92,5 +99,8 @@ declare module "packard-belle" {
   }): JSX.Element;
   export function WindowExplorer(props: any): JSX.Element;
   export function WindowProgram(props: any): JSX.Element;
-  export function DetailsSection(props: any): JSX.Element;
+  export function DetailsSection(props: {
+    title: string;
+    children: React.ReactNode;
+  }): JSX.Element;
 }

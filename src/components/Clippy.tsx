@@ -1,10 +1,11 @@
 import clippy from "./clippy.gif";
 import clippyMad from "./clippymad.gif";
 import "./Clippy.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ClippyProps {
   message: string;
+  onOutOfMessages?: () => void;
 }
 
 const angryDialog = [
@@ -12,14 +13,19 @@ const angryDialog = [
   "i mean it.",
   "stop.",
   "STOP.",
-  "FUCK OFF.",
-  "i'm leaving, fuck this",
+  "please just leave me alone.",
+  "fine. you've harassed me enough. i'm leaving.",
   ".........",
 ];
 
-export function Clippy({ message }: ClippyProps) {
+export function Clippy({ message, onOutOfMessages }: ClippyProps) {
   const [isHovering, setIsHovering] = useState(false);
   const [clickCount, setClickCount] = useState(0);
+  useEffect(() => {
+    if (clickCount === angryDialog.length - 1) {
+      onOutOfMessages?.();
+    }
+  });
   return (
     <div className="clippyContainer">
       <div className="speechBubble">

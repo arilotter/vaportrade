@@ -20,3 +20,10 @@
 .pre {
   white-space: pre;
 }
+
+.icon.ListIcon:focus .icon__icon,
+.icon.ListIcon:active .icon__icon,
+.icon.ListIcon:active:focus .icon__icon,
+.icon.ListIcon.is-active .icon__icon {
+  filter: contrast(0.3) saturate(2) !important;
+}
