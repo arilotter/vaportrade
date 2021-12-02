@@ -1,7 +1,3 @@
-.tradeUI {
-  /* display: flex; */
-}
-
 .itemSections {
   max-height: calc(100vh - 168px);
   display: flex;

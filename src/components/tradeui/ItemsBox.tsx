@@ -1,5 +1,5 @@
 import "./ItemsBox.css";
-import { ExplorerIcon, Window } from "packard-belle";
+import { Window } from "packard-belle";
 import missingIcon from "./missing.png";
 import { TokenBalance } from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
@@ -13,23 +13,17 @@ import {
   getTokenKey,
   chunk,
   normalizeAddress,
+  Item,
 } from "../../utils/utils";
 import { ethers } from "ethers";
 import { sequence } from "0xsequence";
 import { ChainId } from "@0xsequence/network";
 import { Folder } from "./Folder";
+import { DraggableIcon } from "./DraggableIcon";
 interface ItemsBoxProps {
   accountAddress: string;
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
-}
-
-interface Item {
-  address: string;
-  name: string;
-  balance: ethers.BigNumber;
-  tokenId: string;
-  iconUrl: string;
 }
 
 const TOKEN_METADATA_MAX_AT_ONCE = 50;
@@ -197,7 +191,7 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
               key={getContractKey(chainId, address)}
               name={name}
               address={address}
-              iconUrl={iconUrl}
+              iconUrl={iconUrl.length ? iconUrl : missingIcon}
               onFolderOpen={() => setTokenFolderAddress(address)}
             />
           ))}
@@ -206,14 +200,9 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
           // really should sort by price tho
           .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
           .map((item) => (
-            <ExplorerIcon
-              onDoubleClick={() => {
-                console.log("addddddddd thing");
-              }}
-              alt={`${item.name} (${item.address})`}
-              key={getTokenKey(chainId, item.address, item.tokenId)}
-              icon={item.iconUrl || missingIcon}
-              title={item.name}
+            <DraggableIcon
+              item={item}
+              key={getTokenKey(ChainId.POLYGON, item.address, item.tokenId)}
             />
           ))}
       </div>
@@ -227,14 +216,9 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
             {erc155sInOpenFolder
               .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
               .map((item) => (
-                <ExplorerIcon
-                  onDoubleClick={() => {
-                    console.log("addddddddd thing");
-                  }}
-                  alt={`${item.name} (${item.address})`}
-                  key={getTokenKey(chainId, item.address, item.tokenId)}
-                  icon={item.iconUrl || missingIcon}
-                  title={`${item.name} x${item.balance}`}
+                <DraggableIcon
+                  item={item}
+                  key={getTokenKey(ChainId.POLYGON, item.address, item.tokenId)}
                 />
               ))}
           </div>
@@ -325,7 +309,7 @@ function getItems(
         ? {
             address: balance.contractAddress,
             balance: ethers.BigNumber.from(balance.balance).div(
-              contract.decimals ?? 1
+              ethers.BigNumber.from(10).pow(contract.decimals ?? 0)
             ),
             iconUrl: contract.logoURI,
             name: contract.name,

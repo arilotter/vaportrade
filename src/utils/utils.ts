@@ -46,3 +46,15 @@ export function getTokenKey(
   return `${chainId}-${contractAddress.toLowerCase()}-${tokenId}` as const;
 }
 export type TokenKey = ReturnType<typeof getTokenKey>;
+
+export const DragItemTypes = {
+  WTF: "wtf",
+};
+
+export interface Item {
+  address: string;
+  name: string;
+  balance: ethers.BigNumber;
+  tokenId: string;
+  iconUrl: string;
+}

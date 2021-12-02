@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { sequence } from "0xsequence";
 import "./TradeUI.css";
-import { ItemsBox } from "./ItemsBox";
 import P2PT, { Peer } from "p2pt";
 import { ButtonProgram, DetailsSection } from "packard-belle";
 import { makeBlockyIcon } from "../../makeBlockyIcon";
 import { TRADE_REQUEST_MESSAGE } from "../../utils/utils";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import { EllipseAnimation } from "../../utils/EllipseAnimation";
-
+import { ItemsBox } from "./ItemsBox";
 interface TradeUIProps {
   wallet: sequence.Wallet;
   indexer: sequence.indexer.Indexer;
@@ -46,7 +47,7 @@ export function TradeUI({
   }, [wallet]);
 
   return (
-    <div className="tradeUI">
+    <div>
       <div>
         {tradeRequests.map((request) => (
           <TradeRequestPopup
@@ -60,31 +61,33 @@ export function TradeUI({
           />
         ))}
       </div>
-      <div className="itemSections">
-        <DetailsSection title="My Wallet">
-          {address ? (
-            <ItemsBox
-              accountAddress={address}
-              indexer={indexer}
-              metadata={metadata}
-            />
-          ) : (
-            <div>
-              Loading wallet address
-              <EllipseAnimation />
-            </div>
-          )}
-        </DetailsSection>
-        {tradingPartner ? (
-          <DetailsSection title={`${tradingPartner.address}`}>
-            <ItemsBox
-              accountAddress={tradingPartner.address}
-              indexer={indexer}
-              metadata={metadata}
-            />
+      <DndProvider backend={HTML5Backend}>
+        <div className="itemSections">
+          <DetailsSection title="My Wallet">
+            {address ? (
+              <ItemsBox
+                accountAddress={address}
+                indexer={indexer}
+                metadata={metadata}
+              />
+            ) : (
+              <div>
+                Loading wallet address
+                <EllipseAnimation />
+              </div>
+            )}
           </DetailsSection>
-        ) : null}
-      </div>
+          {tradingPartner ? (
+            <DetailsSection title={`${tradingPartner.address}`}>
+              <ItemsBox
+                accountAddress={tradingPartner.address}
+                indexer={indexer}
+                metadata={metadata}
+              />
+            </DetailsSection>
+          ) : null}
+        </div>
+      </DndProvider>
     </div>
   );
 }
