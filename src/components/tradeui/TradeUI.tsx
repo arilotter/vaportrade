@@ -1,23 +1,17 @@
 import { useEffect, useState } from "react";
 import { sequence } from "0xsequence";
-import { TokenBalance } from "@0xsequence/indexer";
-
 import "./TradeUI.css";
-import { Item, ItemsBox } from "./ItemsBox";
-import { ContractInfo } from "@0xsequence/metadata";
-import { useImmer } from "use-immer";
-import { ChainId } from "@0xsequence/network";
+import { ItemsBox } from "./ItemsBox";
 import P2PT, { Peer } from "p2pt";
 import { ButtonProgram, DetailsSection } from "packard-belle";
 import { makeBlockyIcon } from "../../makeBlockyIcon";
-import { TRADE_REQUEST_MESSAGE } from "../../utils/types";
-
-const chainId = ChainId.POLYGON;
+import { TRADE_REQUEST_MESSAGE } from "../../utils/utils";
+import { EllipseAnimation } from "../../utils/EllipseAnimation";
 
 interface TradeUIProps {
   wallet: sequence.Wallet;
   indexer: sequence.indexer.Indexer;
-  metadata: sequence.metadata.SequenceMetadataClient;
+  metadata: sequence.metadata.Metadata;
   tradeRequests: TradeRequest[];
   p2pt: P2PT | null;
 }
@@ -34,14 +28,7 @@ export function TradeUI({
   tradeRequests,
   p2pt,
 }: TradeUIProps) {
-  const [balances, setBalances] = useState<TokenBalance[]>([]);
-  const [tradingPartnerBalances, setTradingPartnerBalances] = useState<
-    TokenBalance[]
-  >([]);
-  const [contracts, updateContracts] = useImmer<
-    Map<ContractKey, ContractInfo | "fetching">
-  >(new Map());
-
+  const [address, setAddress] = useState<string | null>(null);
   const [tradingPartner, setTradingPartner] = useState<TradeRequest | null>(
     null
   );
@@ -55,72 +42,8 @@ export function TradeUI({
   }, [p2pt, tradingPartner, setTradingPartner]);
 
   useEffect(() => {
-    async function getBalances() {
-      const address = await wallet.getAddress();
-      const { balances } = await indexer.getTokenBalances({
-        accountAddress: address,
-      });
-      setBalances(balances);
-    }
-    getBalances();
-  }, [indexer, wallet]);
-
-  useEffect(() => {
-    async function getTradingPartnerBalances() {
-      if (!tradingPartner) {
-        setTradingPartnerBalances([]);
-      } else {
-        const { balances } = await indexer.getTokenBalances({
-          accountAddress: tradingPartner.address,
-        });
-        setTradingPartnerBalances(balances);
-      }
-    }
-    getTradingPartnerBalances();
-  }, [indexer, tradingPartner]);
-
-  useEffect(() => {
-    const contractAddresses = [
-      ...new Set(
-        [...balances, ...tradingPartnerBalances].map((t) => t.contractAddress)
-      ),
-    ];
-    if (!contractAddresses.length) {
-      return;
-    }
-
-    const batchContractAddresses: string[] = [];
-    for (const contractAddress of contractAddresses) {
-      const key = getContractKey(contractAddress, chainId);
-
-      if (contractAddress !== "0x0" && !contracts.has(key)) {
-        batchContractAddresses.push(contractAddress);
-      }
-    }
-
-    if (batchContractAddresses.length) {
-      const batchPromise = metadata.getContractInfoBatch({
-        contractAddresses: batchContractAddresses,
-        chainID: String(chainId),
-      });
-      batchPromise.then(({ contractInfoMap }) => {
-        updateContracts((contracts) => {
-          for (const contractAddress of batchContractAddresses) {
-            const key = getContractKey(contractAddress, chainId);
-            contracts.set(key, contractInfoMap[contractAddress.toLowerCase()]);
-          }
-        });
-      });
-      updateContracts((contracts) => {
-        for (const contractAddress of batchContractAddresses) {
-          const key = getContractKey(contractAddress, chainId);
-          if (!contracts.has(key)) {
-            contracts.set(key, "fetching");
-          }
-        }
-      });
-    }
-  }, [balances, tradingPartnerBalances, metadata, contracts, updateContracts]);
+    wallet.getAddress().then(setAddress);
+  }, [wallet]);
 
   return (
     <div className="tradeUI">
@@ -139,36 +62,31 @@ export function TradeUI({
       </div>
       <div className="itemSections">
         <DetailsSection title="My Wallet">
-          <ItemsBox items={getItems(balances, contracts)} />
+          {address ? (
+            <ItemsBox
+              accountAddress={address}
+              indexer={indexer}
+              metadata={metadata}
+            />
+          ) : (
+            <div>
+              Loading wallet address
+              <EllipseAnimation />
+            </div>
+          )}
         </DetailsSection>
-        {tradingPartner && tradingPartnerBalances.length ? (
+        {tradingPartner ? (
           <DetailsSection title={`${tradingPartner.address}`}>
-            <ItemsBox items={getItems(tradingPartnerBalances, contracts)} />
+            <ItemsBox
+              accountAddress={tradingPartner.address}
+              indexer={indexer}
+              metadata={metadata}
+            />
           </DetailsSection>
         ) : null}
       </div>
     </div>
   );
-}
-
-function getItems(
-  balances: TokenBalance[],
-  contracts: Map<ContractKey, ContractInfo | "fetching">
-): Item[] {
-  return balances
-    .map<Item | null>((balance) => {
-      const key = getContractKey(balance.contractAddress, chainId);
-      const contract = contracts.get(key);
-      return typeof contract === "object"
-        ? {
-            address: balance.contractAddress,
-            balance: balance.balance,
-            iconUrl: contract.logoURI,
-            name: contract.name,
-          }
-        : null;
-    })
-    .filter((i): i is Item => i !== null);
 }
 
 function TradeRequestPopup({
@@ -190,9 +108,3 @@ function TradeRequestPopup({
     </ButtonProgram>
   );
 }
-
-function getContractKey(contractAddress: string, chainId: ChainId) {
-  return `${chainId}:${contractAddress.toLowerCase()}` as const;
-}
-
-type ContractKey = ReturnType<typeof getContractKey>;

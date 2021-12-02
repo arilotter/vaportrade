@@ -13,7 +13,7 @@ interface SequenceSessionProviderProps {
 
 interface SequenceIndexerProps {
   indexer: sequence.indexer.Indexer;
-  metadata: sequence.metadata.SequenceMetadataClient;
+  metadata: sequence.metadata.Metadata;
 }
 
 type State =
@@ -27,7 +27,7 @@ type State =
   | { error: Array<string> }
   | {
       indexer: sequence.indexer.Indexer;
-      metadata: sequence.metadata.SequenceMetadataClient;
+      metadata: sequence.metadata.Metadata;
     };
 
 enum SignerLevel {

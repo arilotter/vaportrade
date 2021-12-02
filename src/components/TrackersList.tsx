@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { FailableTracker } from "../utils/types";
+import { FailableTracker } from "../utils/utils";
 import { DetailsSection, Checkbox } from "packard-belle";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
 interface TrackersListProps {

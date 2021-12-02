@@ -6,7 +6,7 @@ import P2PT, { Peer } from "p2pt";
 
 import { TrackersList } from "./components/TrackersList";
 import { TradeUI } from "./components/tradeui/TradeUI";
-import { FailableTracker, TRADE_REQUEST_MESSAGE } from "./utils/types";
+import { FailableTracker, TRADE_REQUEST_MESSAGE } from "./utils/utils";
 
 import logo from "./vtlogo.png";
 import clouds from "./clouds.png";
