@@ -1,5 +1,5 @@
 import "./ItemsBox.css";
-import { ExplorerIcon } from "packard-belle";
+import { ExplorerIcon, Window } from "packard-belle";
 import missingIcon from "./missing.png";
 import { TokenBalance } from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
@@ -17,6 +17,7 @@ import {
 import { ethers } from "ethers";
 import { sequence } from "0xsequence";
 import { ChainId } from "@0xsequence/network";
+import { Folder } from "./Folder";
 interface ItemsBoxProps {
   accountAddress: string;
   indexer: sequence.indexer.Indexer;
@@ -26,7 +27,7 @@ interface ItemsBoxProps {
 interface Item {
   address: string;
   name: string;
-  balance: string;
+  balance: ethers.BigNumber;
   tokenId: string;
   iconUrl: string;
 }
@@ -55,67 +56,42 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
     Map<ContractKey, ContractInfo | "fetching">
   >(new Map());
 
+  const [tokenFolderAddress, setTokenFolderAddress] = useState<string | null>(
+    null
+  );
+
+  // Get all balances for user's address
   useEffect(() => {
-    async function getBalances() {
-      const { balances } = await indexer.getTokenBalances({
-        accountAddress,
-      });
-      const extraBalances = await Promise.all(
-        balances
-          .filter((b) => b.contractType === "ERC1155")
-          .map((balance) =>
-            indexer
-              .getTokenBalances({
-                accountAddress,
-                contractAddress: balance.contractAddress,
-              })
-              .then((b) => b.balances)
-          )
-      );
-      setBalances([...balances, ...extraBalances.flat()]);
-    }
-    getBalances();
+    fetchBalances(indexer, accountAddress).then(setBalances);
   }, [indexer, accountAddress]);
 
+  // Get all contracts for user's balances
   useEffect(() => {
-    const contractAddresses = unique(balances.map((t) => t.contractAddress));
-    if (!contractAddresses.length) {
+    const ctr = fetchContractsForBalances(metadata, balances, contracts);
+    if (!ctr) {
       return;
     }
 
-    const batchContractAddresses: string[] = [];
-    for (const contractAddress of contractAddresses) {
-      const key = getContractKey(chainId, contractAddress);
-
-      if (contractAddress !== "0x0" && !contracts.has(key)) {
-        batchContractAddresses.push(contractAddress);
-      }
-    }
-
-    if (batchContractAddresses.length) {
-      const batchPromise = metadata.getContractInfoBatch({
-        contractAddresses: batchContractAddresses,
-        chainID: String(chainId),
-      });
-      batchPromise.then(({ contractInfoMap }) => {
-        updateContracts((contracts) => {
-          for (const contractAddress of batchContractAddresses) {
-            const key = getContractKey(chainId, contractAddress);
-            contracts.set(key, contractInfoMap[contractAddress.toLowerCase()]);
-          }
-        });
-      });
+    ctr.batchPromise.then(({ contractInfoMap }) => {
       updateContracts((contracts) => {
-        for (const contractAddress of batchContractAddresses) {
+        for (const contractAddress of ctr.batchContractAddresses) {
           const key = getContractKey(chainId, contractAddress);
-          if (!contracts.has(key)) {
-            contracts.set(key, "fetching");
-          }
+          contracts.set(key, contractInfoMap[contractAddress.toLowerCase()]);
         }
       });
-    }
+    });
+
+    updateContracts((contracts) => {
+      for (const contractAddress of ctr.batchContractAddresses) {
+        const key = getContractKey(chainId, contractAddress);
+        if (!contracts.has(key)) {
+          contracts.set(key, "fetching");
+        }
+      }
+    });
   }, [balances, metadata, contracts, updateContracts]);
 
+  // Get all collectible balances for user's contracts.
   useEffect(() => {
     async function getMeta() {
       const tokenContracts = [...contracts.values()]
@@ -132,7 +108,7 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
         const tokens = myUnfetchedTokens.filter(
           (t) => t.contractAddress === contract.address
         );
-        getCollectibles(metadata, contract, tokens).then((fetched) =>
+        fetchCollectibles(metadata, contract, tokens).then((fetched) =>
           updateCollectibles((collectibles) => {
             for (const item of fetched) {
               const key = getTokenKey(
@@ -174,35 +150,162 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
     collectibles,
     updateCollectibles,
   ]);
+
+  const erc20And721 = [
+    ...getItems(
+      balances.filter((b) => b.contractType !== "ERC1155"),
+      contracts,
+      collectibles
+    ),
+  ];
+  const erc1155Folders = getItems(
+    balances.reduce<TokenBalance[]>((acc, bal) => {
+      // Only load one tokenID of each 1155
+      if (
+        bal.contractType === "ERC1155" &&
+        !acc.some((item) => item.contractAddress === bal.contractAddress)
+      ) {
+        acc.push(bal);
+      }
+      return acc;
+    }, []),
+    contracts
+  );
+
+  const tokenFolderContract = tokenFolderAddress
+    ? contracts.get(getContractKey(chainId, tokenFolderAddress))
+    : undefined;
+  const tokenFolderContractName =
+    typeof tokenFolderContract === "object"
+      ? `${tokenFolderContract.name} (${tokenFolderContract.address})`
+      : null;
+  const erc155sInOpenFolder = tokenFolderAddress
+    ? getItems(
+        balances.filter((bal) => bal.contractAddress === tokenFolderAddress),
+        contracts,
+        collectibles
+      )
+    : null;
+
   return (
-    <div className="itemsBox">
-      {[...getItems(balances, contracts, collectibles)]
-        // sort assets with icons first :)
-        // really should sort by price tho
-        .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-        .map((item) => (
-          <ExplorerIcon
-            onDoubleClick={() => {
-              console.log("addddddddd thing");
-            }}
-            alt={`${item.name} (${item.address})`}
-            key={getTokenKey(chainId, item.address, item.tokenId)}
-            icon={item.iconUrl || missingIcon}
-            title={item.name}
-          />
-        ))}
+    <div className="itemsBoxContainer">
+      <div className="itemsBox">
+        {erc1155Folders
+          .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
+          .map(({ name, address, iconUrl }) => (
+            <Folder
+              key={getContractKey(chainId, address)}
+              name={name}
+              address={address}
+              iconUrl={iconUrl}
+              onFolderOpen={() => setTokenFolderAddress(address)}
+            />
+          ))}
+        {erc20And721
+          // sort assets with icons first :)
+          // really should sort by price tho
+          .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
+          .map((item) => (
+            <ExplorerIcon
+              onDoubleClick={() => {
+                console.log("addddddddd thing");
+              }}
+              alt={`${item.name} (${item.address})`}
+              key={getTokenKey(chainId, item.address, item.tokenId)}
+              icon={item.iconUrl || missingIcon}
+              title={item.name}
+            />
+          ))}
+      </div>
+      {erc155sInOpenFolder && erc155sInOpenFolder.length ? (
+        <Window
+          title={tokenFolderContractName ?? ""}
+          className="tokenFolder"
+          onClose={() => setTokenFolderAddress(null)}
+        >
+          <div className="itemsBox">
+            {erc155sInOpenFolder
+              .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
+              .map((item) => (
+                <ExplorerIcon
+                  onDoubleClick={() => {
+                    console.log("addddddddd thing");
+                  }}
+                  alt={`${item.name} (${item.address})`}
+                  key={getTokenKey(chainId, item.address, item.tokenId)}
+                  icon={item.iconUrl || missingIcon}
+                  title={`${item.name} x${item.balance}`}
+                />
+              ))}
+          </div>
+        </Window>
+      ) : null}
     </div>
   );
+}
+
+function fetchContractsForBalances(
+  metadata: sequence.metadata.Metadata,
+  balances: TokenBalance[],
+  contracts: Map<ContractKey, ContractInfo | "fetching">
+): null | {
+  batchPromise: Promise<sequence.metadata.GetContractInfoBatchReturn>;
+  batchContractAddresses: string[];
+} {
+  const contractAddresses = unique(balances.map((t) => t.contractAddress));
+  if (!contractAddresses.length) {
+    return null;
+  }
+
+  const batchContractAddresses: string[] = [];
+  for (const contractAddress of contractAddresses) {
+    const key = getContractKey(chainId, contractAddress);
+
+    if (contractAddress !== "0x0" && !contracts.has(key)) {
+      batchContractAddresses.push(contractAddress);
+    }
+  }
+
+  if (batchContractAddresses.length) {
+    const batchPromise = metadata.getContractInfoBatch({
+      contractAddresses: batchContractAddresses,
+      chainID: String(chainId),
+    });
+    return { batchPromise, batchContractAddresses };
+  }
+  return null;
+}
+
+async function fetchBalances(
+  indexer: sequence.indexer.Indexer,
+  accountAddress: string
+): Promise<Array<TokenBalance>> {
+  const { balances } = await indexer.getTokenBalances({
+    accountAddress,
+  });
+  const extraBalances = await Promise.all(
+    balances
+      .filter((b) => b.contractType === "ERC1155")
+      .map((balance) =>
+        indexer
+          .getTokenBalances({
+            accountAddress,
+            contractAddress: balance.contractAddress,
+          })
+          .then((b) => b.balances)
+      )
+  );
+  return [...balances, ...extraBalances.flat()];
 }
 
 function getItems(
   balances: TokenBalance[],
   contracts: Map<ContractKey, ContractInfo | "fetching">,
-  collectibles: Map<TokenKey, Collectible | "fetching">
+  collectibles?: Map<TokenKey, Collectible | "fetching">
 ): Item[] {
   return balances
     .map<Item | null>((balance) => {
-      const collectible = collectibles.get(
+      const collectible = collectibles?.get(
         getTokenKey(chainId, balance.contractAddress, balance.tokenID)
       );
       if (typeof collectible === "object") {
@@ -210,7 +313,9 @@ function getItems(
           address: collectible.contractAddress,
           iconUrl: collectible.image,
           name: collectible.name,
-          balance: collectible.balance.toString(),
+          balance: collectible.balance.div(
+            ethers.BigNumber.from(10).pow(collectible.decimals)
+          ),
           tokenId: collectible.tokenId,
         };
       }
@@ -219,7 +324,9 @@ function getItems(
       return typeof contract === "object"
         ? {
             address: balance.contractAddress,
-            balance: balance.balance,
+            balance: ethers.BigNumber.from(balance.balance).div(
+              contract.decimals ?? 1
+            ),
             iconUrl: contract.logoURI,
             name: contract.name,
             tokenId: balance.tokenID,
@@ -228,7 +335,7 @@ function getItems(
     })
     .filter((i): i is Item => i !== null);
 }
-async function getCollectibles(
+async function fetchCollectibles(
   metadata: sequence.metadata.SequenceMetadataClient,
   contract: ContractInfo,
   tokens: Array<{ tokenID: string; balance: string }>

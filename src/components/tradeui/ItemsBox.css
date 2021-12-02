@@ -8,7 +8,7 @@
 
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-  padding: 4px;
+  padding: 12px;
   height: 100%;
   overflow-y: scroll;
 }
@@ -19,4 +19,15 @@
 .icon.ExplorerIcon.is-active .icon__icon {
   filter: sepia(100%) saturate(374%) brightness(70%) hue-rotate(180deg)
     saturate(80%);
+}
+
+.tokenFolder {
+  position: absolute;
+  top: 0;
+}
+
+.itemsBoxContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
