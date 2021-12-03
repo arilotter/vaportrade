@@ -51,6 +51,7 @@ declare module "packard-belle" {
     props: any & { icon: string; hasBorder: boolean }
   ): JSX.Element;
   export function StandardMenu(props: any): JSX.Element;
+  export function StandardMenuHOC(props: any): JSX.Element;
   export function ExplorerIcon(props: any): JSX.Element;
   export function ListIcon(props: any): JSX.Element;
   export function ExplorerView(props: any): JSX.Element;

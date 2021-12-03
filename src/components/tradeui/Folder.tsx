@@ -22,8 +22,11 @@ export function Folder({ name, address, iconUrl, onFolderOpen }: FolderProps) {
         width="32"
         style={{
           position: "absolute",
-          left: "13px",
+          left: "0",
+          right: "0",
+          margin: "0 auto",
           top: "3px",
+          paddingLeft: "6px",
         }}
       />
       <img
@@ -32,7 +35,11 @@ export function Folder({ name, address, iconUrl, onFolderOpen }: FolderProps) {
         width="24"
         style={{
           position: "absolute",
-          left: "18px",
+          left: "0",
+          right: "0",
+          margin: "0 auto",
+          paddingLeft: "9px",
+          transform: "rotateZ(14deg) translateY(-1px)",
         }}
       />
       <ExplorerIcon

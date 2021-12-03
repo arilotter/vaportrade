@@ -1,20 +1,27 @@
+import { BigNumber } from "ethers";
 import { ExplorerIcon } from "packard-belle";
 import { useDrag } from "react-dnd";
-import { DragItemTypes, Item } from "../../utils/utils";
+import { DragItemType, Item } from "../../utils/utils";
 import missingIcon from "./missing.png";
 
 interface DraggableIconProps {
   item: Item;
+  onDoubleClick: () => void;
 }
 
-export function DraggableIcon({ item }: DraggableIconProps) {
+export function DraggableIcon({ item, onDoubleClick }: DraggableIconProps) {
   const [{ isDragging }, drag] = useDrag(() => ({
-    type: DragItemTypes.WTF,
+    type: DragItemType.MY_ITEM,
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
   }));
-  const title = `${item.name} x ${item.balance}`;
+  const title = `${
+    BigNumber.from(item.balance.toString().split(".")[0]).gt(1_000_000_000)
+      ? "a lot of"
+      : addNumberCommas(item.balance.toString())
+  }\n${item.name}`;
+
   return (
     <div
       ref={drag}
@@ -26,13 +33,32 @@ export function DraggableIcon({ item }: DraggableIconProps) {
       }}
     >
       <ExplorerIcon
-        onDoubleClick={() => {
-          console.log("addddddddd thing");
-        }}
-        alt={`${title} (${item.address})`}
+        onDoubleClick={onDoubleClick}
+        alt={`${item.balance} ${item.name} (${item.address})`}
         icon={item.iconUrl || missingIcon}
         title={title}
       />
     </div>
+  );
+}
+
+function addNumberCommas(number: string) {
+  const [whole, fractional] = number.split(".");
+  const fractionalStripped =
+    fractional.length && fractional !== "0" ? `.${fractional.slice(0, 5)}` : "";
+  return (
+    whole
+      .split("")
+      .reverse()
+      .reduce<string[]>(
+        (a, e, i) => [
+          ...a,
+          e,
+          ...(i < whole.length - 1 && i % 3 === 2 ? [","] : []),
+        ],
+        []
+      )
+      .reverse()
+      .join("") + fractionalStripped
   );
 }

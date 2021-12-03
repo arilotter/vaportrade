@@ -2,11 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
 import { Window, Theme } from "packard-belle";
-import P2PT, { Peer } from "p2pt";
+import P2PT, { Peer, Tracker } from "p2pt";
 
 import { TrackersList } from "./components/TrackersList";
 import { TradeUI } from "./components/tradeui/TradeUI";
-import { FailableTracker, TRADE_REQUEST_MESSAGE } from "./utils/utils";
+import {
+  FailableTracker,
+  isTradingPeer,
+  TRADE_REQUEST_MESSAGE,
+  TradingPeer,
+} from "./utils/utils";
 
 import logo from "./vtlogo.png";
 import clouds from "./clouds.png";
@@ -20,6 +25,7 @@ import { FindProfileIcon } from "./components/FindProfileIcon";
 import { Clippy } from "./components/Clippy";
 import { Contacts } from "./components/Contacts";
 import { makeBlockyIcon } from "./makeBlockyIcon";
+import { TradeRequestPopup } from "./TradeRequest";
 
 enableMapSet();
 
@@ -58,9 +64,7 @@ function Vaportrade({
 }) {
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
   const [sources, updateSources] = useImmer<string[]>([]);
-  const [peers, updatePeers] = useImmer<
-    Set<{ peer: Peer; address: string | null; tradeRequest: boolean }>
-  >(new Set());
+  const [peers, updatePeers] = useImmer<Set<TradingPeer | Peer>>(new Set());
 
   useEffect(() => {
     // fetch(
@@ -82,16 +86,35 @@ function Vaportrade({
     );
   }, [updateSources]);
 
-  const client = useRef<P2PT | null>(null);
-
+  const [p2pClient, setP2pClient] = useState<P2PT | null>(null);
   useEffect(() => {
-    if (!sources.length) {
+    if (p2pClient || !sources.length) {
       return;
     }
     const p2p = new P2PT([...sources], "vaportrade");
 
+    p2p.start();
+    setP2pClient(p2p);
+  }, [p2pClient, sources]);
+
+  const [showContacts, setShowContacts] = useState(false);
+  const [showClippy, setShowClippy] = useState(false);
+
+  const [tradingPartner, setTradingPartner] = useState<TradingPeer | null>(
+    null
+  );
+  // P2P peer connection :)
+  useEffect(() => {
+    if (!sources.length) {
+      return;
+    }
+    const p2p = p2pClient;
+    if (!p2p) {
+      return;
+    }
+
     // If a tracker connection was successful
-    p2p.on("trackerconnect", (tracker, stats) => {
+    const trackerConnect = (tracker: Tracker, stats: object) => {
       updateTrackers((trackers) => {
         if (!sources.some((src) => src === tracker.announceUrl)) {
           throw new Error(
@@ -110,72 +133,90 @@ function Vaportrade({
         }
         trackers.add({ announceUrl: tracker.announceUrl, failed: false });
       });
-    });
+    };
+    p2p.on("trackerconnect", trackerConnect);
 
-    p2p.on("trackerwarning", (err, stats) => {
+    const trackerWarning = (err: object, stats: object) => {
       const msg = err.toString();
       console.error(msg);
-    });
+    };
+    p2p.on("trackerwarning", trackerWarning);
 
-    p2p.on("peerconnect", (peer) => {
+    const peerConnect = (peer: Peer) => {
       updatePeers((peers) => {
-        peers.add({ peer, address: null, tradeRequest: false });
+        peers.add(peer);
       });
       p2p.send(peer, address);
-    });
+    };
+    p2p.on("peerconnect", peerConnect);
 
-    p2p.on("peerclose", (closedPeer) =>
+    const peerClose = (closedPeer: Peer) =>
       updatePeers((peers) => {
         for (const peer of peers) {
-          if (peer.peer.id === closedPeer.id) {
+          const p = isTradingPeer(peer) ? peer.peer : peer;
+          if (p.id === closedPeer.id) {
             peers.delete(peer);
+            if (tradingPartner?.peer.id === closedPeer.id) {
+              setTradingPartner(null);
+            }
           }
         }
-      })
-    );
+      });
+    p2p.on("peerclose", peerClose);
 
-    p2p.on("msg", (peer, msg) => {
+    const msg = (correctPeer: Peer, msg: any) => {
       if (typeof msg === "string" && msg.startsWith("0x")) {
         updatePeers((peers) => {
-          const correctPeer = [...peers].find((p) => p.peer.id === peer.id);
           const incorrectPeers = [...peers].filter(
-            (p) => p.address === msg && peer.id !== correctPeer?.peer.id
+            (p) =>
+              isTradingPeer(p) &&
+              p.address === msg &&
+              correctPeer.id !== p.peer.id
           );
           for (const peer of incorrectPeers) {
             peers.delete(peer);
+            console.log("deleting peer");
           }
-          if (!correctPeer) {
-            return;
-          }
-          correctPeer.address = msg;
+          peers.add({
+            peer: correctPeer,
+            address: msg,
+            hasNewInfo: false,
+            tradeRequest: false,
+          });
         });
       } else if (msg === TRADE_REQUEST_MESSAGE) {
         updatePeers((peers) => {
-          const correctPeer = [...peers].find((p) => p.peer.id === peer.id);
-          if (!correctPeer) {
+          const tradingPeer = [...peers]
+            .filter(isTradingPeer)
+            .find((p) => p.peer.id === correctPeer.id);
+          if (!tradingPeer) {
             return;
           }
-          correctPeer.tradeRequest = true;
+          tradingPeer.tradeRequest = true;
+          tradingPeer.hasNewInfo = true;
         });
       }
-    });
-
-    p2p.start();
-    client.current = p2p;
-    return () => {
-      client.current = null;
-      p2p.destroy();
-      updateTrackers((set) => {
-        set.clear();
-      });
-      updatePeers((set) => {
-        set.clear();
-      });
     };
-  }, [sources, updateTrackers, address, updatePeers]);
+    p2p.on("msg", msg);
 
-  const [showContacts, setShowContacts] = useState(false);
-  const [showClippy, setShowClippy] = useState(false);
+    return () => {
+      p2p.off("trackerconnect", trackerConnect);
+      p2p.off("trackerwarning", trackerWarning);
+      p2p.off("peerconnect", peerConnect);
+      p2p.off("peerclose", peerClose);
+    };
+  }, [
+    sources,
+    updateTrackers,
+    address,
+    updatePeers,
+    tradingPartner,
+    p2pClient,
+  ]);
+
+  const tradeRequests = [...peers]
+    .filter(isTradingPeer)
+    .filter((p) => p.tradeRequest);
 
   return (
     <>
@@ -196,17 +237,38 @@ function Vaportrade({
         <SequenceSessionProvider wallet={wallet}>
           {({ indexer, metadata }) =>
             trackers.size ? (
-              <TradeUI
-                wallet={wallet}
-                indexer={indexer}
-                metadata={metadata}
-                tradeRequests={[...peers].filter((peer): peer is {
-                  address: string;
-                  peer: Peer;
-                  tradeRequest: true;
-                } => Boolean(peer.address && peer.tradeRequest))}
-                p2pt={client.current}
-              />
+              <div>
+                <div>
+                  {tradeRequests.map((trader) => (
+                    <TradeRequestPopup
+                      flash={trader.hasNewInfo}
+                      key={trader.address}
+                      address={trader.address!}
+                      isActive={trader.address === tradingPartner?.address}
+                      onClick={() => {
+                        updatePeers((peers) => {
+                          for (const peer of peers) {
+                            if (
+                              isTradingPeer(peer) &&
+                              peer.address === trader.address
+                            ) {
+                              peer.hasNewInfo = false;
+                            }
+                          }
+                        });
+                        setTradingPartner(trader);
+                      }}
+                    />
+                  ))}
+                </div>
+                <TradeUI
+                  wallet={wallet}
+                  indexer={indexer}
+                  metadata={metadata}
+                  p2pt={p2pClient}
+                  tradingPartner={tradingPartner}
+                />
+              </div>
             ) : (
               <div style={{ padding: "8px" }}>
                 Connecting to trackers
@@ -220,6 +282,7 @@ function Vaportrade({
         <Contacts
           onClose={() => setShowContacts(false)}
           options={[...peers]
+            .filter(isTradingPeer)
             .map((peer) => [peer.peer.id, peer.address] as const)
             .filter((x: any): x is [string, string] => typeof x[1] === "string")
             .filter(([_, peerAddr]) => address !== peerAddr)
@@ -230,17 +293,20 @@ function Vaportrade({
               icon: makeBlockyIcon(peerAddr),
             }))}
           onSubmit={(peerId) => {
-            const correctPeer = [...peers].find((p) => p.peer.id === peerId);
+            const correctPeer = [...peers]
+              .filter(isTradingPeer)
+              .find((p) => p.peer.id === peerId);
             if (correctPeer) {
-              client.current?.send(correctPeer.peer, TRADE_REQUEST_MESSAGE);
+              p2pClient?.send(correctPeer.peer, TRADE_REQUEST_MESSAGE);
               updatePeers((peers) => {
-                const correctPeer = [...peers].find(
-                  (p) => p.peer.id === peerId
-                );
+                const correctPeer = [...peers]
+                  .filter(isTradingPeer)
+                  .find((p) => p.peer.id === peerId);
                 if (correctPeer) {
                   correctPeer.tradeRequest = true;
                 }
               });
+              setTradingPartner(correctPeer);
             }
             setShowContacts(false);
           }}

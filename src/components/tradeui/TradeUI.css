@@ -7,3 +7,22 @@
   flex-grow: 1;
   padding-bottom: 32px;
 }
+
+.flashingTradeRequest {
+  animation: blink 2s step-start infinite;
+}
+
+@keyframes blink {
+  0% {
+    background-color: #0000a2;
+    color: white;
+  }
+  50% {
+    background-color: unset;
+    color: black;
+  }
+  100% {
+    background-color: #0000a2;
+    color: white;
+  }
+}

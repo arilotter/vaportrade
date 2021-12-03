@@ -1,16 +1,24 @@
-.itemsBox {
+:root {
+  --itemWidth: 64px;
+}
+.itemBox {
   background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAICAYAAADaxo44AAAAGklEQVQImWP49OnTfxhGBgxUlEDmICuiogQASpu7mfYC9wcAAAAASUVORK5CYII=")
     repeat;
   background-size: 16px;
   box-shadow: inset -1px -1px 0px #ffffff, inset 1px 1px 0px 0px #808088,
     inset -2px -2px 0px #bbc3c4, inset 2px 2px 0px 0px #0c0c0c;
-  margin: 7.1px; /* why does it need to be 7.1 to line up wtf??? */
 
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
-  padding: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(var(--itemWidth), 1fr));
+  grid-auto-rows: fit-content(1em);
+  padding: calc(var(--itemWidth) / 4);
   height: 100%;
   overflow-y: scroll;
+}
+
+.itemBox .icon.ExplorerIcon {
+  width: 100%;
+  max-width: initial;
 }
 
 .icon.ExplorerIcon:focus .icon__icon,
@@ -24,9 +32,10 @@
 .tokenFolder {
   position: absolute;
   top: 0;
+  z-index: 1;
 }
 
-.itemsBoxContainer {
+.itemBoxContainer {
   position: relative;
   width: 100%;
   height: 100%;

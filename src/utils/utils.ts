@@ -1,6 +1,6 @@
 import { ChainId } from "0xsequence/dist/declarations/src/network";
 import { ethers } from "ethers";
-import { Tracker } from "p2pt";
+import { Peer, Tracker } from "p2pt";
 
 export interface FailableTracker extends Tracker {
   failed: boolean;
@@ -47,14 +47,26 @@ export function getTokenKey(
 }
 export type TokenKey = ReturnType<typeof getTokenKey>;
 
-export const DragItemTypes = {
-  WTF: "wtf",
+export const DragItemType = {
+  MY_ITEM: "my_item",
+  THEIR_ITEM: "their_item",
 };
 
 export interface Item {
   address: string;
   name: string;
-  balance: ethers.BigNumber;
+  balance: ethers.FixedNumber;
   tokenId: string;
   iconUrl: string;
+}
+
+export interface TradingPeer {
+  peer: Peer;
+  address: string;
+  tradeRequest: boolean;
+  hasNewInfo: boolean;
+}
+
+export function isTradingPeer(peer: Peer | TradingPeer): peer is TradingPeer {
+  return "tradeRequest" in peer;
 }

@@ -1,4 +1,4 @@
-import "./ItemsBox.css";
+import "./WalletContentsBox.css";
 import { Window } from "packard-belle";
 import missingIcon from "./missing.png";
 import { TokenBalance } from "@0xsequence/indexer";
@@ -15,15 +15,16 @@ import {
   normalizeAddress,
   Item,
 } from "../../utils/utils";
-import { ethers } from "ethers";
+import { BigNumber, FixedNumber } from "ethers";
 import { sequence } from "0xsequence";
 import { ChainId } from "@0xsequence/network";
 import { Folder } from "./Folder";
 import { DraggableIcon } from "./DraggableIcon";
-interface ItemsBoxProps {
+interface WalletContentsBoxProps {
   accountAddress: string;
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
+  onItemSelected: (item: Item) => void;
 }
 
 const TOKEN_METADATA_MAX_AT_ONCE = 50;
@@ -33,14 +34,19 @@ interface Collectible {
   contractAddress: string;
   tokenId: string;
   image: string;
-  balance: ethers.BigNumber;
+  balance: FixedNumber;
   decimals: number;
   name: string;
   description: string;
   properties: any;
 }
 
-export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
+export function WalletContentsBox({
+  accountAddress,
+  indexer,
+  metadata,
+  onItemSelected,
+}: WalletContentsBoxProps) {
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [collectibles, updateCollectibles] = useImmer<
     Map<TokenKey, Collectible | "fetching">
@@ -169,10 +175,6 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
   const tokenFolderContract = tokenFolderAddress
     ? contracts.get(getContractKey(chainId, tokenFolderAddress))
     : undefined;
-  const tokenFolderContractName =
-    typeof tokenFolderContract === "object"
-      ? `${tokenFolderContract.name} (${tokenFolderContract.address})`
-      : null;
   const erc155sInOpenFolder = tokenFolderAddress
     ? getItems(
         balances.filter((bal) => bal.contractAddress === tokenFolderAddress),
@@ -182,8 +184,8 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
     : null;
 
   return (
-    <div className="itemsBoxContainer">
-      <div className="itemsBox">
+    <div className="itemBoxContainer">
+      <div className="itemBox">
         {erc1155Folders
           .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
           .map(({ name, address, iconUrl }) => (
@@ -203,22 +205,26 @@ export function ItemsBox({ accountAddress, indexer, metadata }: ItemsBoxProps) {
             <DraggableIcon
               item={item}
               key={getTokenKey(ChainId.POLYGON, item.address, item.tokenId)}
+              onDoubleClick={() => onItemSelected(item)}
             />
           ))}
       </div>
-      {erc155sInOpenFolder && erc155sInOpenFolder.length ? (
+      {erc155sInOpenFolder?.length &&
+      typeof tokenFolderContract === "object" ? (
         <Window
-          title={tokenFolderContractName ?? ""}
+          icon={tokenFolderContract.logoURI}
+          title={`${tokenFolderContract.name} (${tokenFolderContract.address})`}
           className="tokenFolder"
           onClose={() => setTokenFolderAddress(null)}
         >
-          <div className="itemsBox">
+          <div className="itemBox">
             {erc155sInOpenFolder
               .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
               .map((item) => (
                 <DraggableIcon
                   item={item}
                   key={getTokenKey(ChainId.POLYGON, item.address, item.tokenId)}
+                  onDoubleClick={() => onItemSelected(item)}
                 />
               ))}
           </div>
@@ -297,8 +303,8 @@ function getItems(
           address: collectible.contractAddress,
           iconUrl: collectible.image,
           name: collectible.name,
-          balance: collectible.balance.div(
-            ethers.BigNumber.from(10).pow(collectible.decimals)
+          balance: collectible.balance.divUnsafe(
+            FixedNumber.from(BigNumber.from(10).pow(collectible.decimals))
           ),
           tokenId: collectible.tokenId,
         };
@@ -308,8 +314,8 @@ function getItems(
       return typeof contract === "object"
         ? {
             address: balance.contractAddress,
-            balance: ethers.BigNumber.from(balance.balance).div(
-              ethers.BigNumber.from(10).pow(contract.decimals ?? 0)
+            balance: FixedNumber.from(balance.balance).divUnsafe(
+              FixedNumber.from(BigNumber.from(10).pow(contract.decimals ?? 0))
             ),
             iconUrl: contract.logoURI,
             name: contract.name,
@@ -340,7 +346,7 @@ async function fetchCollectibles(
     return {
       contractAddress: contract.address,
       image: tokenMetadata?.image ?? "",
-      balance: ethers.BigNumber.from(token.balance),
+      balance: FixedNumber.from(token.balance),
       decimals: tokenMetadata?.decimals ?? contract.decimals ?? 0,
       chainId: contract.chainId,
       name: tokenMetadata?.name ?? "UNKNOWN",
