@@ -104,4 +104,5 @@ declare module "packard-belle" {
     title: string;
     children: React.ReactNode;
   }): JSX.Element;
+  export function InputText(props: any): JSX.Element;
 }

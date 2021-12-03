@@ -24,7 +24,7 @@ export function Contacts<T>({
   const [selectedPeer, setSelectedPeer] = useState<T | null>(null);
 
   return (
-    <div className="contactsModal">
+    <div className="modal">
       <Window
         className="WindowAction"
         title="Pick a trading partner"

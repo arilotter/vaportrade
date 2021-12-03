@@ -60,6 +60,19 @@ export function WalletContentsBox({
     null
   );
 
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setTokenFolderAddress(null);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, []);
+
   // Get all balances for user's address
   useEffect(() => {
     fetchBalances(indexer, accountAddress).then(setBalances);
