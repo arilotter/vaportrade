@@ -141,7 +141,12 @@ export function TradeUI({
                   id="myAccept"
                   label="Accept Offer"
                 />
-                <ButtonForm isDisabled={!bothPlayersAccepted}>
+                <ButtonForm
+                  isDisabled={!bothPlayersAccepted}
+                  onClick={() => {
+                    window.alert("Coming soon!");
+                  }}
+                >
                   <img
                     src={tradeIcon}
                     className={bothPlayersAccepted ? "" : "tradeIconDisabled"}
