@@ -135,7 +135,10 @@ function isSequenceError(err: any): err is SequenceError {
   );
 }
 
-const corsProxy = "https://vaportrade.net/";
+const corsProxy =
+  process.env.NODE_ENV === "production"
+    ? "https://cors.vaportrade.net/"
+    : "http://localhost:8080/";
 
 const services = {
   api: `${corsProxy}https://api.sequence.app`,
