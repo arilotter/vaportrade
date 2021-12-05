@@ -114,13 +114,13 @@ const connectWallet = async (
   authorize: boolean = false
 ) => {
   const connectDetails = await wallet.connect({
-    app: "Vaportrade",
+    app: "vaportrade",
     authorize: true,
   });
 
   if (authorize) {
     if (!connectDetails.proof) {
-      throw new Error("You didn't authorize Vaportrade!");
+      throw new Error("You didn't authorize vaportrade!");
     }
     const ethAuth = new ETHAuth();
 

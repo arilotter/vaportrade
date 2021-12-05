@@ -65,7 +65,7 @@ export function SequenceSessionProvider({
         ],
         threshold: DefaultThreshold,
         metadata: {
-          name: "Vaportrade",
+          name: "vaportrade",
           // 1 day JWT expiry
           expiration: 60 * 60 * 24 * 1,
         },

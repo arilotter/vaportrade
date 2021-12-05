@@ -267,11 +267,15 @@ function Vaportrade({
     <>
       <header>
         <ProfileIcon seed={address} />
-        <img src={logo} alt="Vaportrade Logo" className="logo" />
+        <img
+          src={logo}
+          alt="vaportrade logo: a letter V with a letter T superimposed on top of the right stroke of the V"
+          className="logo"
+        />
         <FindProfileIcon onClick={() => setShowContacts(true)} />
       </header>
       <Window
-        title={`Vaportrade: Wallet ${address}`}
+        title={`vaportrade: Wallet ${address}`}
         icon={logo}
         resizable={false}
         className="window"
