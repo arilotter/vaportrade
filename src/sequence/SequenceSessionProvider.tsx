@@ -135,13 +135,15 @@ function isSequenceError(err: any): err is SequenceError {
   );
 }
 
+const corsProxy = "https://vaportrade.net/";
+
 const services = {
-  api: "http://localhost:8080/https://api.sequence.app",
-  guard: "http://localhost:8080/https://guard.sequence.app",
-  metadata: "http://localhost:8080/https://metadata.sequence.app",
-  indexer: "http://localhost:8080/https://polygon-indexer.sequence.app",
-  relayer: "http://localhost:8080/https://polygon-relayer.sequence.app",
-  nodes: "http://localhost:8080/https://nodes.sequence.app/polygon",
+  api: `${corsProxy}https://api.sequence.app`,
+  guard: `${corsProxy}https://guard.sequence.app`,
+  metadata: `${corsProxy}https://metadata.sequence.app`,
+  indexer: `${corsProxy}https://polygon-indexer.sequence.app`,
+  relayer: `${corsProxy}https://polygon-relayer.sequence.app`,
+  nodes: `${corsProxy}https://nodes.sequence.app/polygon`,
 } as const;
 
 const networks = [
