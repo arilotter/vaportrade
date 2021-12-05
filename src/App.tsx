@@ -9,8 +9,9 @@ import { TradeUI } from "./components/tradeui/TradeUI";
 import {
   FailableTracker,
   isTradingPeer,
-  TRADE_REQUEST_MESSAGE,
+  isVaportradeMessage,
   TradingPeer,
+  VaportradeMessage,
 } from "./utils/utils";
 
 import logo from "./vtlogo.png";
@@ -87,7 +88,9 @@ function Vaportrade({
     );
   }, [updateSources]);
 
-  const [p2pClient, setP2pClient] = useState<P2PT | null>(null);
+  const [p2pClient, setP2pClient] = useState<P2PT<VaportradeMessage> | null>(
+    null
+  );
   useEffect(() => {
     if (p2pClient || !sources.length) {
       return;
@@ -101,7 +104,7 @@ function Vaportrade({
   const [showContacts, setShowContacts] = useState(false);
   const [showClippy, setShowClippy] = useState(false);
 
-  const [tradingPartner, setTradingPartner] = useState<TradingPeer | null>(
+  const [tradingPartner, updateTradingPartner] = useImmer<TradingPeer | null>(
     null
   );
   // P2P peer connection :)
@@ -147,7 +150,7 @@ function Vaportrade({
       updatePeers((peers) => {
         peers.add(peer);
       });
-      p2p.send(peer, address);
+      p2p.send(peer, { type: "address", address });
     };
     p2p.on("peerconnect", peerConnect);
 
@@ -158,7 +161,7 @@ function Vaportrade({
           if (p.id === closedPeer.id) {
             peers.delete(peer);
             if (tradingPartner?.peer.id === closedPeer.id) {
-              setTradingPartner(null);
+              updateTradingPartner(null);
             }
           }
         }
@@ -166,35 +169,65 @@ function Vaportrade({
     p2p.on("peerclose", peerClose);
 
     const msg = (correctPeer: Peer, msg: any) => {
-      if (typeof msg === "string" && msg.startsWith("0x")) {
-        updatePeers((peers) => {
-          const incorrectPeers = [...peers].filter(
-            (p) =>
-              isTradingPeer(p) &&
-              p.address === msg &&
-              correctPeer.id !== p.peer.id
-          );
-          for (const peer of incorrectPeers) {
-            peers.delete(peer);
-          }
-          peers.add({
-            peer: correctPeer,
-            address: msg,
-            hasNewInfo: false,
-            tradeRequest: false,
+      if (isVaportradeMessage(msg)) {
+        if (msg.type === "address") {
+          updatePeers((peers) => {
+            const incorrectPeers = [...peers].filter(
+              (p) =>
+                isTradingPeer(p) &&
+                p.address === msg.address &&
+                correctPeer.id !== p.peer.id
+            );
+            for (const peer of incorrectPeers) {
+              peers.delete(peer);
+            }
+            peers.add({
+              peer: correctPeer,
+              address: msg.address,
+              hasNewInfo: false,
+              tradeRequest: false,
+              tradeOffer: [],
+              offerAccepted: false,
+            });
           });
-        });
-      } else if (msg === TRADE_REQUEST_MESSAGE) {
-        updatePeers((peers) => {
-          const tradingPeer = [...peers]
-            .filter(isTradingPeer)
-            .find((p) => p.peer.id === correctPeer.id);
-          if (!tradingPeer) {
-            return;
-          }
-          tradingPeer.tradeRequest = true;
-          tradingPeer.hasNewInfo = true;
-        });
+        } else if (msg.type === "trade_request") {
+          updatePeers((peers) => {
+            const tradingPeer = [...peers]
+              .filter(isTradingPeer)
+              .find((p) => p.peer.id === correctPeer.id);
+            if (!tradingPeer) {
+              return;
+            }
+            if (!tradingPeer.tradeRequest) {
+              tradingPeer.hasNewInfo = true;
+            }
+            tradingPeer.tradeRequest = true;
+          });
+        } else if (msg.type === "offer") {
+          updatePeers((peers) => {
+            const tradingPeer = [...peers]
+              .filter(isTradingPeer)
+              .find((p) => p.peer.id === correctPeer.id);
+            if (!tradingPeer) {
+              return;
+            }
+            tradingPeer.tradeOffer = msg.offer;
+            tradingPeer.offerAccepted = false;
+            tradingPeer.hasNewInfo = true;
+          });
+        } else if (msg.type === "lockin") {
+          updatePeers((peers) => {
+            const tradingPeer = [...peers]
+              .filter(isTradingPeer)
+              .find((p) => p.peer.id === correctPeer.id);
+            if (!tradingPeer) {
+              return;
+            }
+            tradingPeer.offerAccepted = msg.isLocked;
+          });
+        }
+      } else {
+        console.warn("Got non-vaportrade message", msg);
       }
     };
     p2p.on("msg", msg);
@@ -204,6 +237,7 @@ function Vaportrade({
       p2p.off("trackerwarning", trackerWarning);
       p2p.off("peerconnect", peerConnect);
       p2p.off("peerclose", peerClose);
+      p2p.off("msg", msg);
     };
   }, [
     sources,
@@ -212,7 +246,18 @@ function Vaportrade({
     updatePeers,
     tradingPartner,
     p2pClient,
+    updateTradingPartner,
   ]);
+
+  // Update trading partner info when its associated peer updates
+  useEffect(() => {
+    const partner = [...peers]
+      .filter(isTradingPeer)
+      .find((p) => p.address === tradingPartner?.address);
+    if (partner) {
+      updateTradingPartner(partner);
+    }
+  }, [updateTradingPartner, peers, tradingPartner?.address]);
 
   const tradeRequests = [...peers]
     .filter(isTradingPeer)
@@ -241,7 +286,10 @@ function Vaportrade({
                 <div>
                   {tradeRequests.map((trader) => (
                     <TradeRequestPopup
-                      flash={trader.hasNewInfo}
+                      flash={
+                        trader.address !== tradingPartner?.address &&
+                        trader.hasNewInfo
+                      }
                       key={trader.address}
                       address={trader.address!}
                       isActive={trader.address === tradingPartner?.address}
@@ -256,7 +304,7 @@ function Vaportrade({
                             }
                           }
                         });
-                        setTradingPartner(trader);
+                        updateTradingPartner(trader);
                       }}
                     />
                   ))}
@@ -265,7 +313,7 @@ function Vaportrade({
                   wallet={wallet}
                   indexer={indexer}
                   metadata={metadata}
-                  p2pt={p2pClient}
+                  p2p={p2pClient}
                   tradingPartner={tradingPartner}
                 />
               </div>
@@ -283,30 +331,29 @@ function Vaportrade({
           onClose={() => setShowContacts(false)}
           options={[...peers]
             .filter(isTradingPeer)
-            .map((peer) => [peer.peer.id, peer.address] as const)
-            .filter((x: any): x is [string, string] => typeof x[1] === "string")
-            .filter(([_, peerAddr]) => address !== peerAddr)
-            .map(([peerId, peerAddr]) => ({
+            .map((peer) => peer.address)
+            .filter(([peerAddr]) => address !== peerAddr)
+            .map((peerAddr) => ({
               title: peerAddr,
-              value: peerId,
+              value: peerAddr,
               alt: `Wallet Address ${peerAddr}`,
               icon: makeBlockyIcon(peerAddr),
             }))}
-          onSubmit={(peerId) => {
+          onSubmit={(peerAddr) => {
             const correctPeer = [...peers]
               .filter(isTradingPeer)
-              .find((p) => p.peer.id === peerId);
+              .find((p) => p.address === peerAddr);
             if (correctPeer) {
-              p2pClient?.send(correctPeer.peer, TRADE_REQUEST_MESSAGE);
+              p2pClient?.send(correctPeer.peer, { type: "trade_request" });
               updatePeers((peers) => {
                 const correctPeer = [...peers]
                   .filter(isTradingPeer)
-                  .find((p) => p.peer.id === peerId);
+                  .find((p) => p.address === peerAddr);
                 if (correctPeer) {
                   correctPeer.tradeRequest = true;
                 }
               });
-              setTradingPartner(correctPeer);
+              updateTradingPartner(correctPeer);
             }
             setShowContacts(false);
           }}
@@ -315,9 +362,11 @@ function Vaportrade({
       {showClippy && (
         <Clippy
           message={
-            showContacts
-              ? "Pick someone online to trade with!"
-              : "Click the plus button in the top right to find a trading partner!"
+            tradeRequests.length
+              ? "Double-click items to add them to your trade offer!"
+              : !showContacts
+              ? "Click the plus button in the top right to find a trading partner!"
+              : "Pick someone online to trade with!"
           }
           onOutOfMessages={() => setShowClippy(false)}
         />

@@ -10,7 +10,7 @@
 .pickAmountInput {
   justify-content: center;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
 }
 
@@ -27,6 +27,7 @@
 
 .pickAmountExtraButtons button {
   margin: 0 16px;
+  flex: 0;
 }
 
 .pickAmountExtraButtons button.btn.ButtonForm:active:focus,

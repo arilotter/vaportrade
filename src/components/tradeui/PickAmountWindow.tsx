@@ -82,6 +82,17 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
                 </ButtonForm>
                 <ButtonForm
                   onClick={() => {
+                    const half = item.originalBalance.divUnsafe(
+                      FixedNumber.from("2.0")
+                    );
+                    setAmount(half.toString());
+                    setParsedAmount(half);
+                  }}
+                >
+                  Half
+                </ButtonForm>
+                <ButtonForm
+                  onClick={() => {
                     setAmount(item.originalBalance.toString());
                     setParsedAmount(item.originalBalance);
                   }}

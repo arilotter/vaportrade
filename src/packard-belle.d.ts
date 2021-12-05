@@ -55,9 +55,21 @@ declare module "packard-belle" {
   export function ExplorerIcon(props: any): JSX.Element;
   export function ListIcon(props: any): JSX.Element;
   export function ExplorerView(props: any): JSX.Element;
-  export function Checkbox(props: any): JSX.Element;
+  export function Checkbox(props: {
+    readOnly?: boolean;
+    label: string;
+    id: string;
+    name?: string;
+    checked?: boolean;
+    isDisabled?: boolean;
+    onChange?: () => void;
+  }): JSX.Element;
   export function Radio(props: any): JSX.Element;
-  export function InputText(props: any): JSX.Element;
+  export function InputText(props: {
+    id?: string;
+    value: string;
+    onChange: (val: string) => void;
+  }): JSX.Element;
   export function FakeSelect(props: any): JSX.Element;
   export function SelectBox(props: {
     component?: React.ComponentType;
@@ -104,5 +116,4 @@ declare module "packard-belle" {
     title: string;
     children: React.ReactNode;
   }): JSX.Element;
-  export function InputText(props: any): JSX.Element;
 }

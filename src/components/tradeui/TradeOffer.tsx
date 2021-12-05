@@ -19,7 +19,7 @@ export function TradeOffer({ items, onItemSelected }: TradeOfferProps) {
             .map((item) => (
               <DraggableIcon
                 item={item}
-                key={getTokenKey(ChainId.POLYGON, item.address, item.tokenId)}
+                key={getTokenKey(ChainId.POLYGON, item.address, item.tokenID)}
                 onDoubleClick={() => onItemSelected(item)}
               />
             ))}

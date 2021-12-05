@@ -8,40 +8,31 @@ import { useImmer } from "use-immer";
 import {
   TokenKey,
   ContractKey,
-  unique,
   getContractKey,
   getTokenKey,
-  chunk,
-  normalizeAddress,
   Item,
   useOnKeyDown,
+  NetworkItem,
 } from "../../utils/utils";
 import { BigNumber, FixedNumber } from "ethers";
 import { sequence } from "0xsequence";
 import { ChainId } from "@0xsequence/network";
 import { Folder } from "./Folder";
 import { DraggableIcon } from "./DraggableIcon";
+import {
+  Collectible,
+  fetchCollectibles,
+  fetchContractsForBalances,
+} from "./contracts";
 interface WalletContentsBoxProps {
   accountAddress: string;
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
   onItemSelected: (item: Item) => void;
-  subtractItems: Item[];
+  subtractItems: readonly Item[] | readonly NetworkItem[];
 }
 
-const TOKEN_METADATA_MAX_AT_ONCE = 50;
 const chainId = ChainId.POLYGON;
-
-interface Collectible {
-  contractAddress: string;
-  tokenId: string;
-  image: string;
-  balance: FixedNumber;
-  decimals: number;
-  name: string;
-  description: string;
-  properties: any;
-}
 
 export function WalletContentsBox({
   accountAddress,
@@ -78,7 +69,12 @@ export function WalletContentsBox({
 
   // Get all contracts for user's balances
   useEffect(() => {
-    const ctr = fetchContractsForBalances(metadata, balances, contracts);
+    const ctr = fetchContractsForBalances(
+      chainId,
+      metadata,
+      balances.map((b) => b.contractAddress),
+      contracts
+    );
     if (!ctr) {
       return;
     }
@@ -121,14 +117,14 @@ export function WalletContentsBox({
         const tokens = myUnfetchedTokens.filter(
           (t) => t.contractAddress === contract.address
         );
-        fetchCollectibles(metadata, contract, tokens)
+        fetchCollectibles(chainId, metadata, contract, tokens)
           .then((fetched) =>
             updateCollectibles((collectibles) => {
               for (const item of fetched) {
                 const key = getTokenKey(
                   chainId,
                   item.contractAddress,
-                  item.tokenId
+                  item.tokenID
                 );
                 collectibles.set(key, item);
               }
@@ -224,7 +220,7 @@ export function WalletContentsBox({
           .map((item) => (
             <DraggableIcon
               item={item}
-              key={getTokenKey(ChainId.POLYGON, item.address, item.tokenId)}
+              key={getTokenKey(ChainId.POLYGON, item.address, item.tokenID)}
               onDoubleClick={() => onItemSelected(item)}
             />
           ))}
@@ -243,7 +239,7 @@ export function WalletContentsBox({
               .map((item) => (
                 <DraggableIcon
                   item={item}
-                  key={getTokenKey(ChainId.POLYGON, item.address, item.tokenId)}
+                  key={getTokenKey(ChainId.POLYGON, item.address, item.tokenID)}
                   onDoubleClick={() => onItemSelected(item)}
                 />
               ))}
@@ -252,38 +248,6 @@ export function WalletContentsBox({
       ) : null}
     </div>
   );
-}
-
-function fetchContractsForBalances(
-  metadata: sequence.metadata.Metadata,
-  balances: TokenBalance[],
-  contracts: Map<ContractKey, ContractInfo | "fetching">
-): null | {
-  batchPromise: Promise<sequence.metadata.GetContractInfoBatchReturn>;
-  batchContractAddresses: string[];
-} {
-  const contractAddresses = unique(balances.map((t) => t.contractAddress));
-  if (!contractAddresses.length) {
-    return null;
-  }
-
-  const batchContractAddresses: string[] = [];
-  for (const contractAddress of contractAddresses) {
-    const key = getContractKey(chainId, contractAddress);
-
-    if (contractAddress !== "0x0" && !contracts.has(key)) {
-      batchContractAddresses.push(contractAddress);
-    }
-  }
-
-  if (batchContractAddresses.length) {
-    const batchPromise = metadata.getContractInfoBatch({
-      contractAddresses: batchContractAddresses,
-      chainID: String(chainId),
-    });
-    return { batchPromise, batchContractAddresses };
-  }
-  return null;
 }
 
 async function fetchBalances(
@@ -312,7 +276,7 @@ function getItems(
   balances: TokenBalance[],
   contracts: Map<ContractKey, ContractInfo | "fetching">,
   collectibles: Map<TokenKey, Collectible | "fetching"> | undefined,
-  subtractItems: Item[]
+  subtractItems: readonly Item[] | readonly NetworkItem[]
 ): Item[] {
   return balances
     .map<Item | null>((balance) => {
@@ -328,7 +292,7 @@ function getItems(
           iconUrl: collectible.image,
           name: collectible.name,
           balance: num,
-          tokenId: collectible.tokenId,
+          tokenID: collectible.tokenID,
           originalBalance: num,
         };
       }
@@ -343,7 +307,7 @@ function getItems(
           balance: num,
           iconUrl: contract.logoURI,
           name: contract.name,
-          tokenId: balance.tokenID,
+          tokenID: balance.tokenID,
           originalBalance: num,
         };
       } else {
@@ -352,46 +316,19 @@ function getItems(
     })
     .filter((i): i is Item => i !== null)
     .map((item) => {
-      const associatedSubtractItem = subtractItems.find(
-        (i) => i.address === item.address && i.tokenId === item.tokenId
+      const associatedSubtractItem = [...subtractItems].find(
+        (i) => i.address === item.address && i.tokenID === item.tokenID
       );
       if (associatedSubtractItem) {
         return {
           ...item,
-          balance: item.balance.subUnsafe(associatedSubtractItem.balance),
+          balance: item.balance.subUnsafe(
+            typeof associatedSubtractItem.balance === "string"
+              ? FixedNumber.from(associatedSubtractItem.balance)
+              : associatedSubtractItem.balance
+          ),
         };
       }
       return item;
     });
-}
-async function fetchCollectibles(
-  metadata: sequence.metadata.SequenceMetadataClient,
-  contract: ContractInfo,
-  tokens: Array<{ tokenID: string; balance: string }>
-): Promise<Collectible[]> {
-  const meta = await Promise.all(
-    chunk(tokens, TOKEN_METADATA_MAX_AT_ONCE).map((slice) =>
-      metadata
-        .getTokenMetadata({
-          chainID: String(chainId),
-          contractAddress: normalizeAddress(contract.address),
-          tokenIDs: slice.map((t) => t.tokenID),
-        })
-        .then((meta) => meta.tokenMetadata)
-    )
-  ).then((chunks) => chunks.flat());
-  return tokens.map((token) => {
-    const tokenMetadata = meta.find((x) => x && x.tokenId === token.tokenID);
-    return {
-      contractAddress: contract.address,
-      image: tokenMetadata?.image ?? "",
-      balance: FixedNumber.from(token.balance),
-      decimals: tokenMetadata?.decimals ?? contract.decimals ?? 0,
-      chainId: contract.chainId,
-      name: tokenMetadata?.name ?? "UNKNOWN",
-      description: tokenMetadata?.description ?? "",
-      tokenId: token.tokenID,
-      properties: tokenMetadata?.properties,
-    };
-  });
 }

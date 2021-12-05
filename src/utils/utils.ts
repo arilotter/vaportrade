@@ -1,13 +1,11 @@
 import { ChainId } from "@0xsequence/network";
-import { ethers } from "ethers";
+import { ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { useEffect } from "react";
 
 export interface FailableTracker extends Tracker {
   failed: boolean;
 }
-
-export const TRADE_REQUEST_MESSAGE = "tradeRequest";
 
 export function normalizeAddress(address: string): string {
   return address === "0x0" ? address : ethers.utils.getAddress(address);
@@ -42,9 +40,9 @@ export type ContractKey = ReturnType<typeof getContractKey>;
 export function getTokenKey(
   chainId: ChainId,
   contractAddress: string,
-  tokenId: string
+  tokenID: string
 ) {
-  return `${chainId}-${contractAddress.toLowerCase()}-${tokenId}` as const;
+  return `${chainId}-${contractAddress.toLowerCase()}-${tokenID}` as const;
 }
 export type TokenKey = ReturnType<typeof getTokenKey>;
 
@@ -56,10 +54,36 @@ export const DragItemType = {
 export interface Item {
   address: string;
   name: string;
-  balance: ethers.FixedNumber;
-  tokenId: string;
+  tokenID: string;
   iconUrl: string;
+  balance: ethers.FixedNumber;
   originalBalance: ethers.FixedNumber;
+}
+
+export interface NetworkItem {
+  address: string;
+  tokenID: string;
+  balance: string; // fixedNumber
+  originalBalance: string; // fixedNumber
+}
+
+function isNetworkItem(item: any): item is NetworkItem {
+  if (typeof item !== "object") {
+    return false;
+  }
+  if (typeof item.address !== "string") {
+    return false;
+  }
+  if (typeof item.tokenID !== "string") {
+    return false;
+  }
+  try {
+    FixedNumber.from(item.balance);
+    FixedNumber.from(item.originalBalance);
+  } catch {
+    return false;
+  }
+  return true;
 }
 
 export interface TradingPeer {
@@ -67,6 +91,8 @@ export interface TradingPeer {
   address: string;
   tradeRequest: boolean;
   hasNewInfo: boolean;
+  tradeOffer: NetworkItem[];
+  offerAccepted: boolean;
 }
 
 export function isTradingPeer(peer: Peer | TradingPeer): peer is TradingPeer {
@@ -86,4 +112,58 @@ export function useOnKeyDown(key: "Escape", callback: () => void) {
       window.removeEventListener("keydown", handleEsc);
     };
   }, [key, callback]);
+}
+
+export type VaportradeMessage =
+  | {
+      type: "address";
+      address: string;
+    }
+  | {
+      type: "trade_request";
+    }
+  | {
+      type: "offer";
+      offer: NetworkItem[];
+      hash: string;
+    }
+  | {
+      type: "lockin";
+      isLocked: boolean;
+      hash: string;
+    }
+  | {
+      type: "accept";
+      hash: string;
+    };
+
+export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
+  if (typeof msg !== "object") {
+    return false;
+  }
+  if (!("type" in msg)) {
+    return false;
+  }
+  if (msg.type === "address" && typeof msg.address === "string") {
+    return true;
+  } else if (msg.type === "trade_request") {
+    return true;
+  } else if (
+    msg.type === "offer" &&
+    typeof msg.hash === "string" &&
+    Array.isArray(msg.offer) &&
+    msg.offer.every(isNetworkItem)
+  ) {
+    return true;
+  } else if (
+    msg.type === "lockin" &&
+    typeof msg.hash === "string" &&
+    typeof msg.isLocked === "boolean"
+  ) {
+    return true;
+  } else if (msg.type === "accept" && typeof msg.hash === "string") {
+    return true;
+  } else {
+    return false;
+  }
 }

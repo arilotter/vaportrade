@@ -42,10 +42,8 @@ export function TrackersList({ sources, trackers }: TrackersListProps) {
     <DetailsSection title={`Trackers: ${statusIcon} ${trackerCount}`}>
       <Checkbox
         id="showTrackers"
-        type="checkbox"
         label="Show Details"
         checked={listOpen}
-        value="checked"
         onChange={useCallback(() => {
           setListOpen(!listOpen);
           window.localStorage.setItem(

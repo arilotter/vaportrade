@@ -2,24 +2,25 @@ import { useEffect, useState } from "react";
 import { sequence } from "0xsequence";
 import "./TradeUI.css";
 import P2PT from "p2pt";
-import { DetailsSection } from "packard-belle";
+import { ButtonForm, Checkbox, DetailsSection } from "packard-belle";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { EllipseAnimation } from "../../utils/EllipseAnimation";
 import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
-import { Item, TradingPeer } from "../../utils/utils";
+import { Item, TradingPeer, VaportradeMessage } from "../../utils/utils";
 import { PickAmountWindow } from "./PickAmountWindow";
 import { Tabs } from "../Tabs";
 import { useImmer } from "use-immer";
 
 import tradeIcon from "./send.png";
+import { PartnerTradeOffer } from "./PartnerTradeOffer";
 
 interface TradeUIProps {
   wallet: sequence.Wallet;
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
-  p2pt: P2PT | null;
+  p2p: P2PT<VaportradeMessage> | null;
   tradingPartner: TradingPeer | null;
 }
 
@@ -28,7 +29,7 @@ export function TradeUI({
   indexer,
   metadata,
   tradingPartner,
-  p2pt,
+  p2p,
 }: TradeUIProps) {
   const [address, setAddress] = useState<string | null>(null);
 
@@ -38,13 +39,40 @@ export function TradeUI({
 
   const [pickBalanceItem, setPickBalanceItem] = useState<Item | null>(null);
   const [myTradeOffer, updateMyTradeOffer] = useImmer<Item[]>([]);
-  const [partnerTradeOffer, updatePartnerTradeOffer] = useImmer<Item[]>([]);
+  const [offerAccepted, setOfferAccepted] = useState(false);
 
-  // When your trading partner changes, reset your offer.
   useEffect(() => {
-    updatePartnerTradeOffer(() => []);
-    updateMyTradeOffer(() => []);
-  }, [tradingPartner, updatePartnerTradeOffer, updateMyTradeOffer]);
+    setOfferAccepted(false);
+  }, [myTradeOffer, tradingPartner?.tradeOffer]);
+
+  useEffect(() => {
+    if (!p2p || !tradingPartner?.peer) {
+      return;
+    }
+    p2p.send(tradingPartner.peer, {
+      type: "offer",
+      offer: myTradeOffer.map((item) => ({
+        address: item.address,
+        balance: item.balance.toString(),
+        originalBalance: item.originalBalance.toString(),
+        tokenID: item.tokenID,
+      })),
+      hash: "", // TODO
+    });
+  }, [p2p, tradingPartner?.peer, myTradeOffer]);
+
+  useEffect(() => {
+    if (!p2p || !tradingPartner?.peer) {
+      return;
+    }
+    p2p.send(tradingPartner.peer, {
+      type: "lockin",
+      isLocked: offerAccepted,
+      hash: "",
+    });
+  }, [p2p, tradingPartner?.peer, offerAccepted]);
+
+  const bothPlayersAccepted = offerAccepted && tradingPartner?.offerAccepted;
 
   return (
     <>
@@ -60,7 +88,9 @@ export function TradeUI({
                     accountAddress={address}
                     indexer={indexer}
                     metadata={metadata}
-                    onItemSelected={setPickBalanceItem}
+                    onItemSelected={
+                      tradingPartner ? setPickBalanceItem : () => {}
+                    }
                     subtractItems={myTradeOffer}
                   />
                 ) : (
@@ -82,7 +112,7 @@ export function TradeUI({
                           onItemSelected={() => {
                             //noop
                           }}
-                          subtractItems={partnerTradeOffer}
+                          subtractItems={tradingPartner.tradeOffer}
                         />
                       ),
                     },
@@ -102,18 +132,38 @@ export function TradeUI({
                   }}
                 />
               </DetailsSection>
-              <img
-                src={tradeIcon}
-                alt="Trade icon"
-                style={{
-                  maxWidth: "32px",
-                  margin: "0 auto",
-                }}
-              />
+              <div className="acceptOffer">
+                <Checkbox
+                  checked={offerAccepted}
+                  onChange={() => {
+                    setOfferAccepted(!offerAccepted);
+                  }}
+                  id="myAccept"
+                  label="Accept Offer"
+                />
+                <ButtonForm isDisabled={!bothPlayersAccepted}>
+                  <img
+                    src={tradeIcon}
+                    className={bothPlayersAccepted ? "" : "tradeIconDisabled"}
+                    alt="Trade icon"
+                    style={{
+                      maxWidth: "32px",
+                    }}
+                  />
+                </ButtonForm>
+                <Checkbox
+                  readOnly
+                  checked={tradingPartner.offerAccepted}
+                  id="partnerAccept"
+                  label="Partner Accepts"
+                  isDisabled
+                />
+              </div>
               <DetailsSection title="Partner's trade offer">
-                <TradeOffer
-                  items={partnerTradeOffer}
-                  onItemSelected={() => {}}
+                <PartnerTradeOffer
+                  indexer={indexer}
+                  metadata={metadata}
+                  items={tradingPartner.tradeOffer}
                 />
               </DetailsSection>
             </div>
@@ -130,7 +180,7 @@ export function TradeUI({
               const matchingItem = items.find(
                 (i) =>
                   i.address === pickBalanceItem.address &&
-                  i.tokenId === pickBalanceItem.tokenId
+                  i.tokenID === pickBalanceItem.tokenID
               );
 
               if (matchingItem) {

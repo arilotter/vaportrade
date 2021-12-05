@@ -5,6 +5,7 @@ import {
   ListIcon,
   ButtonForm,
   FakeSelect,
+  InputText,
 } from "packard-belle";
 import { useState } from "react";
 import { useOnKeyDown } from "../utils/utils";
@@ -24,6 +25,12 @@ export function Contacts<T>({
 }: ContactsProps<T>) {
   const [selectedPeer, setSelectedPeer] = useState<T | null>(null);
   useOnKeyDown("Escape", () => onClose?.());
+  const [filter, setFilter] = useState("");
+
+  const filteredOptions = options.filter((option) =>
+    option.title.toLowerCase().includes(filter.toLowerCase())
+  );
+
   return (
     <div className="modal">
       <Window
@@ -33,11 +40,22 @@ export function Contacts<T>({
         onHelp={onHelp}
         resizable={false}
       >
-        <div className="WindowAction__location">
-          <div>Load partners from:</div>
-          <FakeSelect title="The Internet" />
+        <div className="contactsFilters">
+          <div className="WindowAction__location">
+            <label>Load partners from:</label>
+            <FakeSelect title="The Internet" isDisabled />
+          </div>
+          <div className="WindowAction__location">
+            <label htmlFor="contactsFilter">Filter addresses:</label>
+            <InputText
+              id="contactsFilter"
+              value={filter}
+              onChange={setFilter}
+            />
+          </div>
         </div>
-        {options.length ? (
+
+        {filteredOptions.length ? (
           <SelectBox
             options={options}
             selected={selectedPeer}
@@ -48,12 +66,19 @@ export function Contacts<T>({
           <SelectBox
             isDisabled
             options={[
-              {
-                title: "Waiting for peers...",
-                value: "Waiting for peers...",
-                alt: "Waiting for peers...",
-                icon: searchIcon,
-              },
+              options.length
+                ? {
+                    title: "No peers match filter.",
+                    value: "No peers match filter.",
+                    alt: "No peers match filter.",
+                    icon: searchIcon,
+                  }
+                : {
+                    title: "Waiting for peers...",
+                    value: "Waiting for peers...",
+                    alt: "Waiting for peers...",
+                    icon: searchIcon,
+                  },
             ]}
             selected={[]}
             component={ListIcon}

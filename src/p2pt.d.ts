@@ -1,6 +1,6 @@
 declare module "p2pt" {
   import type { EventEmitter } from "events";
-  export default class P2PT extends EventEmitter {
+  export default class P2PT<SendableMessage> extends EventEmitter {
     _peerId: string;
     constructor(announceURLs: Array<string> = [], identifierString = "");
     setIdentifier(identifierString: string): void;
@@ -8,7 +8,7 @@ declare module "p2pt" {
     requestMorePeers(): Promise<object>;
     send(
       peer: Peer,
-      msg: any,
+      msg: SendableMessage,
       msgID: number = ""
     ): Promise<[peer: Peer, msg: object]>;
     destroy(): void;
@@ -28,7 +28,7 @@ declare module "p2pt" {
   }
   export interface Peer {
     id: string;
-    respond(msg: any): Promise<[peer: Peer, msg: any]>;
+    respond(msg: SendableMessage): Promise<[peer: Peer, msg: any]>;
   }
   export interface Tracker {
     announceUrl: string;

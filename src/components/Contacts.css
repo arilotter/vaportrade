@@ -15,3 +15,15 @@
 .icon.ListIcon.is-active .icon__icon {
   filter: contrast(0.3) saturate(2) !important;
 }
+
+.contactsFilters label {
+  width: 96px;
+}
+
+.contactsFilters .WindowAction__location .FakeSelect {
+  margin: 0;
+}
+
+.contactsFilters input {
+  flex-grow: 1;
+}
