@@ -1,0 +1,39 @@
+.btn.ButtonForm.tab {
+  padding: 5px !important;
+  border-top-left-radius: 2px;
+  border-top-right-radius: 2px;
+  box-shadow: inset -1px 0px 0px #0c0c0c, inset 1px 1px 0px #ffffff,
+    inset -2px 0px 0px #808088, inset 2px 2px 0px #bbc3c4;
+}
+
+.tab:active:focus,
+.tab:active,
+.tab.active,
+.tab.clicked {
+  padding: 5px !important;
+}
+
+.tabContents {
+  padding: 6px;
+  box-shadow: inset -1px -1px 0px #0c0c0c, inset -2px -2px 0px #808088,
+    inset 1px 1px 0px 0px #fff;
+}
+
+.btn.ButtonForm.tab.selectedTab {
+  box-shadow: inset -1px 0px 0px #0c0c0c, inset 1px 1px 0px #ffffff,
+    inset -2px 0px 0px #808088, inset 2px 2px 0px #bbc3c4;
+}
+
+.selectedTab::after {
+  background: #bbc3c4;
+  content: " ";
+  height: 6px;
+  display: inline-block;
+  position: absolute;
+  bottom: -1px;
+  left: 0px;
+  right: 1px;
+  border-right: 1px solid #808088;
+  border-left: 1px solid #ffffff;
+  z-index: 1;
+}
