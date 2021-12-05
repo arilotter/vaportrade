@@ -12,7 +12,7 @@ export function TradeOffer({ items, onItemSelected }: TradeOfferProps) {
     <div className="tradeOffer">
       <div className="itemBoxContainer">
         <div className="itemBox">
-          {items
+          {[...items]
             // sort assets with icons first :)
             // really should sort by price tho
             .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))

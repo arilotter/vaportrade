@@ -23,10 +23,6 @@ export function Tabs({ tabs, style, className }: TabsProps) {
     }
   }, [selectedTab, tabs]);
 
-  console.log(
-    tabs.map((tab) => tab.title),
-    selectedTab
-  );
   const realSelectedTab = Math.min(selectedTab, tabs.length - 1);
 
   return (

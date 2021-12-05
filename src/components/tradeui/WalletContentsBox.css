@@ -31,12 +31,13 @@
 
 .tokenFolder {
   position: absolute;
-  top: 0;
   z-index: 1;
+  top: 16px;
+  right: 16px;
+  left: 16px;
 }
 
 .itemBoxContainer {
-  position: relative;
-  width: 100%;
   height: 100%;
+  position: relative;
 }

@@ -1,24 +1,28 @@
 import { BigNumber, FixedNumber } from "@ethersproject/bignumber";
 import { ButtonForm, InputText, WindowAlert } from "packard-belle";
 import { useState } from "react";
-import { Item, useOnEscapePressed } from "../../utils/utils";
+import { Item, useOnKeyDown } from "../../utils/utils";
 import "./PickAmount.css";
 interface PickAmountProps {
   item: Item;
   onClose: () => void;
   onAdd: (amount: FixedNumber) => void;
 }
-export function PickAmountWindow({ item, onClose }: PickAmountProps) {
-  useOnEscapePressed(onClose);
+export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
+  useOnKeyDown("Escape", onClose);
+  const amountInTrade = item.originalBalance.subUnsafe(item.balance);
 
-  const [amount, setAmount] = useState("0");
-  const [parsedAmount, setParsedAmount] = useState(FixedNumber.from(0));
+  const [amount, setAmount] = useState(amountInTrade.toString());
+  const [parsedAmount, setParsedAmount] = useState(amountInTrade);
 
   const notEnoughMoney = BigNumber.from(
     parsedAmount.mulUnsafe(hugeNum).toString().split(".")[0]
   ).gt(
-    BigNumber.from(item.balance.mulUnsafe(hugeNum).toString().split(".")[0])
+    BigNumber.from(
+      item.originalBalance.mulUnsafe(hugeNum).toString().split(".")[0]
+    )
   );
+
   return (
     <div
       className="modal"
@@ -27,12 +31,12 @@ export function PickAmountWindow({ item, onClose }: PickAmountProps) {
       }}
     >
       <WindowAlert
-        title={`Add ${item.name} to the trade?`}
+        title={`Offer some ${item.name}?`}
         className="pickAmount"
         onClose={onClose}
       >
         <div>
-          <div className="pickAmountInput">
+          <div className="pickAmountContentsContainer">
             <img
               src={item.iconUrl}
               alt={item.name}
@@ -41,38 +45,61 @@ export function PickAmountWindow({ item, onClose }: PickAmountProps) {
                 padding: "8px",
               }}
             />
-            <InputText
-              value={amount.toString()}
-              onChange={(c: string) => {
-                let fakeNum = c;
-                try {
-                  if (fakeNum.endsWith(".")) {
-                    fakeNum += "0";
-                  }
-                  if (fakeNum.length === 0) {
-                    fakeNum = "0";
-                  }
-                  const num = FixedNumber.from(fakeNum);
-                  const numString = num.toString();
-                  console.log(c, numString, numString === c);
-                  setAmount(c);
-                  setParsedAmount(num);
-                } catch {
-                  // lulw
-                }
-              }}
-            />
-            / {item.balance.toString()}
+            <div className="pickAmountInput">
+              {amountInTrade.isZero()
+                ? ""
+                : `Current Offer:\n${amountInTrade.toString()}`}
+              <div>
+                <InputText
+                  value={amount.toString()}
+                  onChange={(c: string) => {
+                    let fakeNum = c;
+                    try {
+                      if (fakeNum.endsWith(".")) {
+                        fakeNum += "0";
+                      }
+                      if (fakeNum.length === 0) {
+                        fakeNum = "0";
+                      }
+                      const num = FixedNumber.from(fakeNum);
+                      setAmount(c);
+                      setParsedAmount(num);
+                    } catch {
+                      // lulw
+                    }
+                  }}
+                />
+                / {item.originalBalance.toString()}
+              </div>
+              <div className="pickAmountExtraButtons">
+                <ButtonForm
+                  onClick={() => {
+                    setAmount("0");
+                    setParsedAmount(FixedNumber.from(0));
+                  }}
+                >
+                  Zero
+                </ButtonForm>
+                <ButtonForm
+                  onClick={() => {
+                    setAmount(item.originalBalance.toString());
+                    setParsedAmount(item.originalBalance);
+                  }}
+                >
+                  Maximum
+                </ButtonForm>
+              </div>
+            </div>
           </div>
           <div className="error">
             {notEnoughMoney ? `not enough ${item.name}` : ""}
           </div>
           <div className="pickAmountButtons">
             <ButtonForm
-              isDisabled={parsedAmount.isZero() || notEnoughMoney}
-              onClick={() => {}}
+              isDisabled={notEnoughMoney}
+              onClick={() => onAdd(parsedAmount)}
             >
-              Add
+              Offer
             </ButtonForm>
             <ButtonForm onClick={onClose}>Cancel</ButtonForm>
           </div>

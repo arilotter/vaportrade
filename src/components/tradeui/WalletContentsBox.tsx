@@ -14,7 +14,7 @@ import {
   chunk,
   normalizeAddress,
   Item,
-  useOnEscapePressed,
+  useOnKeyDown,
 } from "../../utils/utils";
 import { BigNumber, FixedNumber } from "ethers";
 import { sequence } from "0xsequence";
@@ -26,6 +26,7 @@ interface WalletContentsBoxProps {
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
   onItemSelected: (item: Item) => void;
+  subtractItems: Item[];
 }
 
 const TOKEN_METADATA_MAX_AT_ONCE = 50;
@@ -47,6 +48,7 @@ export function WalletContentsBox({
   indexer,
   metadata,
   onItemSelected,
+  subtractItems,
 }: WalletContentsBoxProps) {
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
@@ -62,7 +64,10 @@ export function WalletContentsBox({
     null
   );
 
-  useOnEscapePressed(useCallback(() => setTokenFolderAddress(null), []));
+  useOnKeyDown(
+    "Escape",
+    useCallback(() => setTokenFolderAddress(null), [])
+  );
 
   // Get all balances for user's address
   useEffect(() => {
@@ -165,7 +170,8 @@ export function WalletContentsBox({
     ...getItems(
       balances.filter((b) => b.contractType !== "ERC1155"),
       contracts,
-      collectibles
+      collectibles,
+      subtractItems
     ),
   ];
   const erc1155Folders = getItems(
@@ -179,7 +185,9 @@ export function WalletContentsBox({
       }
       return acc;
     }, []),
-    contracts
+    contracts,
+    undefined,
+    subtractItems
   );
 
   const tokenFolderContract = tokenFolderAddress
@@ -189,7 +197,8 @@ export function WalletContentsBox({
     ? getItems(
         balances.filter((bal) => bal.contractAddress === tokenFolderAddress),
         contracts,
-        collectibles
+        collectibles,
+        subtractItems
       )
     : null;
 
@@ -302,7 +311,8 @@ async function fetchBalances(
 function getItems(
   balances: TokenBalance[],
   contracts: Map<ContractKey, ContractInfo | "fetching">,
-  collectibles?: Map<TokenKey, Collectible | "fetching">
+  collectibles: Map<TokenKey, Collectible | "fetching"> | undefined,
+  subtractItems: Item[]
 ): Item[] {
   return balances
     .map<Item | null>((balance) => {
@@ -310,31 +320,49 @@ function getItems(
         getTokenKey(chainId, balance.contractAddress, balance.tokenID)
       );
       if (typeof collectible === "object") {
+        const num = collectible.balance.divUnsafe(
+          FixedNumber.from(BigNumber.from(10).pow(collectible.decimals))
+        );
         return {
           address: collectible.contractAddress,
           iconUrl: collectible.image,
           name: collectible.name,
-          balance: collectible.balance.divUnsafe(
-            FixedNumber.from(BigNumber.from(10).pow(collectible.decimals))
-          ),
+          balance: num,
           tokenId: collectible.tokenId,
+          originalBalance: num,
         };
       }
       const key = getContractKey(chainId, balance.contractAddress);
       const contract = contracts.get(key);
-      return typeof contract === "object"
-        ? {
-            address: balance.contractAddress,
-            balance: FixedNumber.from(balance.balance).divUnsafe(
-              FixedNumber.from(BigNumber.from(10).pow(contract.decimals ?? 0))
-            ),
-            iconUrl: contract.logoURI,
-            name: contract.name,
-            tokenId: balance.tokenID,
-          }
-        : null;
+      if (typeof contract === "object") {
+        const num = FixedNumber.from(balance.balance).divUnsafe(
+          FixedNumber.from(BigNumber.from(10).pow(contract.decimals ?? 0))
+        );
+        return {
+          address: balance.contractAddress,
+          balance: num,
+          iconUrl: contract.logoURI,
+          name: contract.name,
+          tokenId: balance.tokenID,
+          originalBalance: num,
+        };
+      } else {
+        return null;
+      }
     })
-    .filter((i): i is Item => i !== null);
+    .filter((i): i is Item => i !== null)
+    .map((item) => {
+      const associatedSubtractItem = subtractItems.find(
+        (i) => i.address === item.address && i.tokenId === item.tokenId
+      );
+      if (associatedSubtractItem) {
+        return {
+          ...item,
+          balance: item.balance.subUnsafe(associatedSubtractItem.balance),
+        };
+      }
+      return item;
+    });
 }
 async function fetchCollectibles(
   metadata: sequence.metadata.SequenceMetadataClient,

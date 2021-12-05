@@ -2,9 +2,20 @@
   max-width: 100vw;
 }
 
-.pickAmountInput {
+.pickAmountContentsContainer {
   display: flex;
   align-items: center;
+}
+
+.pickAmountInput {
+  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pickAmountInput > * {
+  margin: 16px;
 }
 
 .pickAmountButtons {
@@ -12,4 +23,15 @@
   align-items: center;
   justify-content: space-around;
   padding-top: 16px;
+}
+
+.pickAmountExtraButtons button {
+  margin: 0 16px;
+}
+
+.pickAmountExtraButtons button.btn.ButtonForm:active:focus,
+.pickAmountExtraButtons button.btn.ButtonForm:active,
+.pickAmountExtraButtons button.btn.ButtonForm.active,
+.pickAmountExtraButtons button.btn.ButtonForm.clicked {
+  padding: 5px 1px;
 }

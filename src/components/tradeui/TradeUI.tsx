@@ -12,6 +12,9 @@ import { Item, TradingPeer } from "../../utils/utils";
 import { PickAmountWindow } from "./PickAmountWindow";
 import { Tabs } from "../Tabs";
 import { useImmer } from "use-immer";
+
+import tradeIcon from "./send.png";
+
 interface TradeUIProps {
   wallet: sequence.Wallet;
   indexer: sequence.indexer.Indexer;
@@ -58,6 +61,7 @@ export function TradeUI({
                     indexer={indexer}
                     metadata={metadata}
                     onItemSelected={setPickBalanceItem}
+                    subtractItems={myTradeOffer}
                   />
                 ) : (
                   <div>
@@ -78,6 +82,7 @@ export function TradeUI({
                           onItemSelected={() => {
                             //noop
                           }}
+                          subtractItems={partnerTradeOffer}
                         />
                       ),
                     },
@@ -88,8 +93,23 @@ export function TradeUI({
           {tradingPartner ? (
             <div className="offers">
               <DetailsSection title="My trade offer">
-                <TradeOffer items={myTradeOffer} onItemSelected={() => {}} />
+                <TradeOffer
+                  items={myTradeOffer}
+                  onItemSelected={(item) => {
+                    // swap current balance :)
+                    const diff = item.originalBalance.subUnsafe(item.balance);
+                    setPickBalanceItem({ ...item, balance: diff });
+                  }}
+                />
               </DetailsSection>
+              <img
+                src={tradeIcon}
+                alt="Trade icon"
+                style={{
+                  maxWidth: "32px",
+                  margin: "0 auto",
+                }}
+              />
               <DetailsSection title="Partner's trade offer">
                 <TradeOffer
                   items={partnerTradeOffer}
@@ -105,8 +125,24 @@ export function TradeUI({
           item={pickBalanceItem}
           onClose={() => setPickBalanceItem(null)}
           onAdd={(amount) => {
-            alert(`Adding ${amount} ${pickBalanceItem} to trade. TODO.`);
             setPickBalanceItem(null);
+            updateMyTradeOffer((items) => {
+              const matchingItem = items.find(
+                (i) =>
+                  i.address === pickBalanceItem.address &&
+                  i.tokenId === pickBalanceItem.tokenId
+              );
+
+              if (matchingItem) {
+                if (amount.isZero()) {
+                  items.splice(items.indexOf(matchingItem), 1);
+                } else {
+                  matchingItem.balance = amount;
+                }
+              } else if (!amount.isZero()) {
+                items.push({ ...pickBalanceItem, balance: amount });
+              }
+            });
           }}
         />
       ) : null}

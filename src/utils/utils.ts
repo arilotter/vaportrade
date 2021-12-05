@@ -59,6 +59,7 @@ export interface Item {
   balance: ethers.FixedNumber;
   tokenId: string;
   iconUrl: string;
+  originalBalance: ethers.FixedNumber;
 }
 
 export interface TradingPeer {
@@ -72,10 +73,10 @@ export function isTradingPeer(peer: Peer | TradingPeer): peer is TradingPeer {
   return "tradeRequest" in peer;
 }
 
-export function useOnEscapePressed(callback: () => void) {
+export function useOnKeyDown(key: "Escape", callback: () => void) {
   return useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === key) {
         callback();
       }
     };
@@ -84,5 +85,5 @@ export function useOnEscapePressed(callback: () => void) {
     return () => {
       window.removeEventListener("keydown", handleEsc);
     };
-  }, [callback]);
+  }, [key, callback]);
 }

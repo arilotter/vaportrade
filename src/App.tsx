@@ -176,7 +176,6 @@ function Vaportrade({
           );
           for (const peer of incorrectPeers) {
             peers.delete(peer);
-            console.log("deleting peer");
           }
           peers.add({
             peer: correctPeer,
