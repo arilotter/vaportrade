@@ -37,3 +37,13 @@ header {
   color: darkred;
   text-align: center;
 }
+
+.Frame {
+  margin: -5px;
+}
+
+.w98.container {
+  height: calc(100% - 16px);
+  margin-left: 16px;
+  width: calc(100% - 32px);
+}

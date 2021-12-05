@@ -322,6 +322,7 @@ function Vaportrade({
       </Window>
       {showContacts ? (
         <Contacts
+          requestMorePeers={() => p2pClient?.requestMorePeers()}
           onClose={() => setShowContacts(false)}
           options={[...peers]
             .filter(isTradingPeer)

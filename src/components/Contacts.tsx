@@ -16,12 +16,14 @@ interface ContactsProps<T> {
   onHelp?: () => void;
   onSubmit: (peer: T) => void;
   options: Array<SelectBoxOption<T>>;
+  requestMorePeers: () => void;
 }
 export function Contacts<T>({
   onClose,
   onHelp,
   onSubmit,
   options,
+  requestMorePeers,
 }: ContactsProps<T>) {
   const [selectedPeer, setSelectedPeer] = useState<T | null>(null);
   useOnKeyDown("Escape", () => onClose?.());
@@ -40,59 +42,64 @@ export function Contacts<T>({
         onHelp={onHelp}
         resizable={false}
       >
-        <div className="contactsFilters">
-          <div className="WindowAction__location">
-            <label>Load partners from:</label>
-            <FakeSelect title="The Internet" isDisabled />
-          </div>
-          <div className="WindowAction__location">
-            <label htmlFor="contactsFilter">Filter addresses:</label>
-            <InputText
-              id="contactsFilter"
-              value={filter}
-              onChange={setFilter}
-            />
-          </div>
-        </div>
+        <div className="contactsContents">
+          <div className="contactsSearch">
+            <div className="contactsFilters">
+              <div className="WindowAction__location">
+                <label>Load partners from:</label>
+                <FakeSelect title="The Internet" isDisabled />
+              </div>
+              <div className="WindowAction__location">
+                <label htmlFor="contactsFilter">Filter addresses:</label>
+                <InputText
+                  id="contactsFilter"
+                  value={filter}
+                  onChange={setFilter}
+                />
+              </div>
+            </div>
 
-        {filteredOptions.length ? (
-          <SelectBox
-            options={options}
-            selected={selectedPeer}
-            component={ListIcon}
-            onClick={setSelectedPeer}
-          />
-        ) : (
-          <SelectBox
-            isDisabled
-            options={[
-              options.length
-                ? {
-                    title: "No peers match filter.",
-                    value: "No peers match filter.",
-                    alt: "No peers match filter.",
-                    icon: searchIcon,
-                  }
-                : {
-                    title: "Waiting for peers...",
-                    value: "Waiting for peers...",
-                    alt: "Waiting for peers...",
-                    icon: searchIcon,
-                  },
-            ]}
-            selected={[]}
-            component={ListIcon}
-            onClick={() => {}}
-          />
-        )}
-        <div className="WindowAction__footer">
+            {filteredOptions.length ? (
+              <SelectBox
+                options={options}
+                selected={selectedPeer}
+                component={ListIcon}
+                onClick={setSelectedPeer}
+              />
+            ) : (
+              <SelectBox
+                isDisabled
+                options={[
+                  options.length
+                    ? {
+                        title: "No peers match filter.",
+                        value: "No peers match filter.",
+                        alt: "No peers match filter.",
+                        icon: searchIcon,
+                      }
+                    : {
+                        title: "Waiting for peers...",
+                        value: "Waiting for peers...",
+                        alt: "Waiting for peers...",
+                        icon: searchIcon,
+                      },
+                ]}
+                selected={[]}
+                component={ListIcon}
+                onClick={() => {}}
+              />
+            )}
+          </div>
           <div className="WindowAction__action-buttons contactSaveButtons">
             <ButtonForm
               onClick={() => onSubmit(selectedPeer!)}
               className="pre"
               isDisabled={selectedPeer === null}
             >
-              {"   "}Send Trade Request{"   "}
+              Send Trade Request
+            </ButtonForm>
+            <ButtonForm onClick={requestMorePeers} className="pre">
+              Request more peers
             </ButtonForm>
             <ButtonForm onClick={onClose} className="pre">
               Cancel
