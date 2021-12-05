@@ -1,11 +1,10 @@
 .itemSections {
-  max-height: calc(100vh - 168px);
   display: flex;
+  height: calc(100vh - 168px);
 }
 
 .itemSections .DetailsSection {
   flex-grow: 1;
-  padding-bottom: 32px;
 }
 
 .flashingTradeRequest {
@@ -25,4 +24,10 @@
     background-color: #0000a2;
     color: white;
   }
+}
+
+.offers {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }

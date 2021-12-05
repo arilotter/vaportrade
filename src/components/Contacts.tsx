@@ -7,6 +7,7 @@ import {
   FakeSelect,
 } from "packard-belle";
 import { useState } from "react";
+import { useOnEscapePressed } from "../utils/utils";
 import "./Contacts.css";
 import searchIcon from "./search.png";
 interface ContactsProps<T> {
@@ -22,7 +23,7 @@ export function Contacts<T>({
   options,
 }: ContactsProps<T>) {
   const [selectedPeer, setSelectedPeer] = useState<T | null>(null);
-
+  useOnEscapePressed(() => onClose?.());
   return (
     <div className="modal">
       <Window

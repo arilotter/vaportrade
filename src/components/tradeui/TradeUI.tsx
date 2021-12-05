@@ -10,6 +10,8 @@ import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import { Item, TradingPeer } from "../../utils/utils";
 import { PickAmountWindow } from "./PickAmountWindow";
+import { Tabs } from "../Tabs";
+import { useImmer } from "use-immer";
 interface TradeUIProps {
   wallet: sequence.Wallet;
   indexer: sequence.indexer.Indexer;
@@ -32,45 +34,69 @@ export function TradeUI({
   }, [wallet]);
 
   const [pickBalanceItem, setPickBalanceItem] = useState<Item | null>(null);
+  const [myTradeOffer, updateMyTradeOffer] = useImmer<Item[]>([]);
+  const [partnerTradeOffer, updatePartnerTradeOffer] = useImmer<Item[]>([]);
+
+  // When your trading partner changes, reset your offer.
+  useEffect(() => {
+    updatePartnerTradeOffer(() => []);
+    updateMyTradeOffer(() => []);
+  }, [tradingPartner, updatePartnerTradeOffer, updateMyTradeOffer]);
 
   return (
     <>
       <DndProvider backend={HTML5Backend}>
         <div className="itemSections">
-          <DetailsSection title="My Wallet">
-            {address ? (
-              <WalletContentsBox
-                accountAddress={address}
-                indexer={indexer}
-                metadata={metadata}
-                onItemSelected={setPickBalanceItem}
-              />
-            ) : (
-              <div>
-                Loading wallet address
-                <EllipseAnimation />
-              </div>
-            )}
-          </DetailsSection>
+          <Tabs
+            style={{ flex: "1", height: "100%" }}
+            tabs={[
+              {
+                title: "My Wallet",
+                contents: address ? (
+                  <WalletContentsBox
+                    accountAddress={address}
+                    indexer={indexer}
+                    metadata={metadata}
+                    onItemSelected={setPickBalanceItem}
+                  />
+                ) : (
+                  <div>
+                    Loading your wallet
+                    <EllipseAnimation />
+                  </div>
+                ),
+              },
+              ...(tradingPartner
+                ? [
+                    {
+                      title: "Trading Partner's Wallet",
+                      contents: (
+                        <WalletContentsBox
+                          accountAddress={tradingPartner.address}
+                          indexer={indexer}
+                          metadata={metadata}
+                          onItemSelected={() => {
+                            //noop
+                          }}
+                        />
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
+          />
           {tradingPartner ? (
-            <>
-              <TradeOffer title="My trade offer" kind="MY_ITEM">
-                grungus
-              </TradeOffer>
-              <TradeOffer title="Partner's trade offer" kind="THEIR_ITEM">
-                chungus
-              </TradeOffer>
-              <DetailsSection title="Their Wallet">
-                <WalletContentsBox
-                  accountAddress={tradingPartner.address}
-                  indexer={indexer}
-                  metadata={metadata}
-                  onItemSelected={() => {
-                    //noop
-                  }}
+            <div className="offers">
+              <DetailsSection title="My trade offer">
+                <TradeOffer items={myTradeOffer} onItemSelected={() => {}} />
+              </DetailsSection>
+              <DetailsSection title="Partner's trade offer">
+                <TradeOffer
+                  items={partnerTradeOffer}
+                  onItemSelected={() => {}}
                 />
               </DetailsSection>
-            </>
+            </div>
           ) : null}
         </div>
       </DndProvider>

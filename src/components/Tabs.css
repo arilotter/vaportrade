@@ -17,6 +17,7 @@
   padding: 6px;
   box-shadow: inset -1px -1px 0px #0c0c0c, inset -2px -2px 0px #808088,
     inset 1px 1px 0px 0px #fff;
+  overflow: hidden;
 }
 
 .btn.ButtonForm.tab.selectedTab {
@@ -35,5 +36,9 @@
   right: 1px;
   border-right: 1px solid #808088;
   border-left: 1px solid #ffffff;
-  z-index: 1;
+}
+
+.tabsContainer {
+  display: flex;
+  flex-direction: column;
 }

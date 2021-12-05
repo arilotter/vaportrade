@@ -1,27 +1,30 @@
-import { DetailsSection } from "packard-belle";
-import { useDrop } from "react-dnd";
-import { useImmer } from "use-immer";
-import { DragItemType, Item } from "../../utils/utils";
+import { ChainId } from "@0xsequence/network";
+import { getTokenKey, Item } from "../../utils/utils";
+import { DraggableIcon } from "./DraggableIcon";
+import "./TradeOffer.css";
 
 interface TradeOfferProps {
-  title: string;
-  children?: React.ReactNode;
-  kind: keyof typeof DragItemType;
+  items: Item[];
+  onItemSelected: (item: Item) => void;
 }
-export function TradeOffer({ title, children, kind }: TradeOfferProps) {
-  const [items, updateItems] = useImmer<Item[]>([]);
-  const [{ isOver }, drop] = useDrop(() => ({
-    accept: kind,
-    drop: () => {
-      console.log("DROPPED!");
-    },
-    collect: (monitor) => ({
-      isOver: !!monitor.isOver(),
-    }),
-  }));
+export function TradeOffer({ items, onItemSelected }: TradeOfferProps) {
   return (
-    <div className="tradeOffer" ref={drop}>
-      <DetailsSection title={title}>{children}</DetailsSection>
+    <div className="tradeOffer">
+      <div className="itemBoxContainer">
+        <div className="itemBox">
+          {items
+            // sort assets with icons first :)
+            // really should sort by price tho
+            .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
+            .map((item) => (
+              <DraggableIcon
+                item={item}
+                key={getTokenKey(ChainId.POLYGON, item.address, item.tokenId)}
+                onDoubleClick={() => onItemSelected(item)}
+              />
+            ))}
+        </div>
+      </div>
     </div>
   );
 }

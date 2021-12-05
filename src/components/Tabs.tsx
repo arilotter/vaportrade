@@ -1,5 +1,5 @@
 import { ButtonForm } from "packard-belle";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import "./Tabs.css";
 
@@ -10,9 +10,11 @@ interface Tab {
 
 interface TabsProps {
   tabs: [Tab, ...Tab[]];
+  style?: React.CSSProperties;
+  className?: string;
 }
 
-export function Tabs({ tabs }: TabsProps) {
+export function Tabs({ tabs, style, className }: TabsProps) {
   const [selectedTab, setSelectedTab] = useState(0);
 
   useEffect(() => {
@@ -28,7 +30,10 @@ export function Tabs({ tabs }: TabsProps) {
   const realSelectedTab = Math.min(selectedTab, tabs.length - 1);
 
   return (
-    <div>
+    <div
+      style={style}
+      className={`tabsContainer ${className ? className : ""}`}
+    >
       <div>
         {tabs.map((tab, i) => (
           <ButtonForm

@@ -3,7 +3,7 @@ import { Window } from "packard-belle";
 import missingIcon from "./missing.png";
 import { TokenBalance } from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import {
   TokenKey,
@@ -14,6 +14,7 @@ import {
   chunk,
   normalizeAddress,
   Item,
+  useOnEscapePressed,
 } from "../../utils/utils";
 import { BigNumber, FixedNumber } from "ethers";
 import { sequence } from "0xsequence";
@@ -47,6 +48,7 @@ export function WalletContentsBox({
   metadata,
   onItemSelected,
 }: WalletContentsBoxProps) {
+  const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
   const [collectibles, updateCollectibles] = useImmer<
     Map<TokenKey, Collectible | "fetching">
@@ -60,22 +62,13 @@ export function WalletContentsBox({
     null
   );
 
-  useEffect(() => {
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setTokenFolderAddress(null);
-      }
-    };
-    window.addEventListener("keydown", handleEsc);
-
-    return () => {
-      window.removeEventListener("keydown", handleEsc);
-    };
-  }, []);
+  useOnEscapePressed(useCallback(() => setTokenFolderAddress(null), []));
 
   // Get all balances for user's address
   useEffect(() => {
-    fetchBalances(indexer, accountAddress).then(setBalances);
+    fetchBalances(indexer, accountAddress)
+      .then(setBalances)
+      .catch((err) => setError(`${err}`));
   }, [indexer, accountAddress]);
 
   // Get all contracts for user's balances
@@ -85,14 +78,16 @@ export function WalletContentsBox({
       return;
     }
 
-    ctr.batchPromise.then(({ contractInfoMap }) => {
-      updateContracts((contracts) => {
-        for (const contractAddress of ctr.batchContractAddresses) {
-          const key = getContractKey(chainId, contractAddress);
-          contracts.set(key, contractInfoMap[contractAddress.toLowerCase()]);
-        }
-      });
-    });
+    ctr.batchPromise
+      .then(({ contractInfoMap }) => {
+        updateContracts((contracts) => {
+          for (const contractAddress of ctr.batchContractAddresses) {
+            const key = getContractKey(chainId, contractAddress);
+            contracts.set(key, contractInfoMap[contractAddress.toLowerCase()]);
+          }
+        });
+      })
+      .catch((err) => setError(`${err}`));
 
     updateContracts((contracts) => {
       for (const contractAddress of ctr.batchContractAddresses) {
@@ -121,18 +116,20 @@ export function WalletContentsBox({
         const tokens = myUnfetchedTokens.filter(
           (t) => t.contractAddress === contract.address
         );
-        fetchCollectibles(metadata, contract, tokens).then((fetched) =>
-          updateCollectibles((collectibles) => {
-            for (const item of fetched) {
-              const key = getTokenKey(
-                chainId,
-                item.contractAddress,
-                item.tokenId
-              );
-              collectibles.set(key, item);
-            }
-          })
-        );
+        fetchCollectibles(metadata, contract, tokens)
+          .then((fetched) =>
+            updateCollectibles((collectibles) => {
+              for (const item of fetched) {
+                const key = getTokenKey(
+                  chainId,
+                  item.contractAddress,
+                  item.tokenId
+                );
+                collectibles.set(key, item);
+              }
+            })
+          )
+          .catch((err) => setError(`${err}`));
       }
 
       updateCollectibles((collectibles) => {
@@ -198,6 +195,7 @@ export function WalletContentsBox({
 
   return (
     <div className="itemBoxContainer">
+      {error ? <div className="error">{error}</div> : null}
       <div className="itemBox">
         {erc1155Folders
           .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
 import { Window, Theme } from "packard-belle";
@@ -34,6 +34,7 @@ function App() {
     <div
       style={{
         background: `url(${clouds})`,
+        backgroundSize: "cover",
         imageRendering: "pixelated",
         height: "100%",
       }}

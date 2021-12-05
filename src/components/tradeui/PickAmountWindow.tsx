@@ -1,7 +1,7 @@
 import { BigNumber, FixedNumber } from "@ethersproject/bignumber";
 import { ButtonForm, InputText, WindowAlert } from "packard-belle";
-import { useEffect, useState } from "react";
-import { Item } from "../../utils/utils";
+import { useState } from "react";
+import { Item, useOnEscapePressed } from "../../utils/utils";
 import "./PickAmount.css";
 interface PickAmountProps {
   item: Item;
@@ -9,18 +9,7 @@ interface PickAmountProps {
   onAdd: (amount: FixedNumber) => void;
 }
 export function PickAmountWindow({ item, onClose }: PickAmountProps) {
-  useEffect(() => {
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleEsc);
-
-    return () => {
-      window.removeEventListener("keydown", handleEsc);
-    };
-  }, [onClose]);
+  useOnEscapePressed(onClose);
 
   const [amount, setAmount] = useState("0");
   const [parsedAmount, setParsedAmount] = useState(FixedNumber.from(0));
@@ -75,7 +64,7 @@ export function PickAmountWindow({ item, onClose }: PickAmountProps) {
             />
             / {item.balance.toString()}
           </div>
-          <div className="pickAmountError">
+          <div className="error">
             {notEnoughMoney ? `not enough ${item.name}` : ""}
           </div>
           <div className="pickAmountButtons">

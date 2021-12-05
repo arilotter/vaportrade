@@ -1,6 +1,7 @@
-import { ChainId } from "0xsequence/dist/declarations/src/network";
+import { ChainId } from "@0xsequence/network";
 import { ethers } from "ethers";
 import { Peer, Tracker } from "p2pt";
+import { useEffect } from "react";
 
 export interface FailableTracker extends Tracker {
   failed: boolean;
@@ -69,4 +70,19 @@ export interface TradingPeer {
 
 export function isTradingPeer(peer: Peer | TradingPeer): peer is TradingPeer {
   return "tradeRequest" in peer;
+}
+
+export function useOnEscapePressed(callback: () => void) {
+  return useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        callback();
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+
+    return () => {
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [callback]);
 }

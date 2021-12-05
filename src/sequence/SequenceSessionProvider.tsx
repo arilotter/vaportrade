@@ -136,12 +136,12 @@ function isSequenceError(err: any): err is SequenceError {
 }
 
 const services = {
-  api: "https://api.sequence.app",
-  guard: "https://guard.sequence.app",
-  metadata: "https://metadata.sequence.app",
+  api: "http://localhost:8080/https://api.sequence.app",
+  guard: "http://localhost:8080/https://guard.sequence.app",
+  metadata: "http://localhost:8080/https://metadata.sequence.app",
   indexer: "http://localhost:8080/https://polygon-indexer.sequence.app",
   relayer: "http://localhost:8080/https://polygon-relayer.sequence.app",
-  nodes: "https://nodes.sequence.app/polygon",
+  nodes: "http://localhost:8080/https://nodes.sequence.app/polygon",
 } as const;
 
 const networks = [

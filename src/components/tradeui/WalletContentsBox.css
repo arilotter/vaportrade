@@ -12,7 +12,7 @@
   grid-template-columns: repeat(auto-fill, minmax(var(--itemWidth), 1fr));
   grid-auto-rows: fit-content(1em);
   padding: calc(var(--itemWidth) / 4);
-  height: 100%;
+  height: calc(100% - var(--itemWidth) / 2);
   overflow-y: scroll;
 }
 
