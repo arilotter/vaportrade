@@ -1,6 +1,8 @@
 # vaportrade
 It's lit!
 
+PRs welcome! The CSS is super hacky, the design needs work, I depend on a weird library called packard-belle when I should really be writing these styles myself, there's `<div><div><div></div></div></div>`s everywhere, and it scales terribly on different screen sizes. <3 to anyone who contributes :)
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
