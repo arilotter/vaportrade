@@ -1,0 +1,8 @@
+.chat {
+  padding: 8px;
+  background: white;
+}
+.chatMessages {
+  max-height: 96px;
+  overflow-y: scroll;
+}

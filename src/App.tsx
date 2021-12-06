@@ -27,6 +27,7 @@ import { Clippy } from "./components/Clippy";
 import { Contacts } from "./components/Contacts";
 import { makeBlockyIcon } from "./makeBlockyIcon";
 import { TradeRequestPopup } from "./TradeRequest";
+import { Chat } from "./Chat";
 
 enableMapSet();
 
@@ -178,9 +179,11 @@ function Vaportrade({
               tradeRequest: false,
               tradeOffer: [],
               offerAccepted: false,
+              chat: [],
             });
           });
-        } else if (msg.type === "trade_request") {
+        } else {
+          // Rest of the messages involve a trading peer
           updatePeers((peers) => {
             const tradingPeer = [...peers]
               .filter(isTradingPeer)
@@ -188,32 +191,23 @@ function Vaportrade({
             if (!tradingPeer) {
               return;
             }
-            if (!tradingPeer.tradeRequest) {
+            if (msg.type === "trade_request") {
+              if (!tradingPeer.tradeRequest) {
+                tradingPeer.hasNewInfo = true;
+              }
+              tradingPeer.tradeRequest = true;
+            } else if (msg.type === "offer") {
+              tradingPeer.tradeOffer = msg.offer;
+              tradingPeer.offerAccepted = false;
               tradingPeer.hasNewInfo = true;
+            } else if (msg.type === "lockin") {
+              tradingPeer.offerAccepted = msg.isLocked;
+            } else if (msg.type === "chat") {
+              tradingPeer.chat.push({
+                chatter: "them",
+                message: msg.message,
+              });
             }
-            tradingPeer.tradeRequest = true;
-          });
-        } else if (msg.type === "offer") {
-          updatePeers((peers) => {
-            const tradingPeer = [...peers]
-              .filter(isTradingPeer)
-              .find((p) => p.peer.id === correctPeer.id);
-            if (!tradingPeer) {
-              return;
-            }
-            tradingPeer.tradeOffer = msg.offer;
-            tradingPeer.offerAccepted = false;
-            tradingPeer.hasNewInfo = true;
-          });
-        } else if (msg.type === "lockin") {
-          updatePeers((peers) => {
-            const tradingPeer = [...peers]
-              .filter(isTradingPeer)
-              .find((p) => p.peer.id === correctPeer.id);
-            if (!tradingPeer) {
-              return;
-            }
-            tradingPeer.offerAccepted = msg.isLocked;
           });
         }
       } else {
@@ -276,7 +270,7 @@ function Vaportrade({
         <SequenceSessionProvider wallet={wallet}>
           {({ indexer, metadata }) =>
             trackers.size ? (
-              <div>
+              <div className="appWindowContents">
                 <div>
                   {tradeRequests.map((trader) => (
                     <TradeRequestPopup
@@ -310,6 +304,28 @@ function Vaportrade({
                   p2p={p2pClient}
                   tradingPartner={tradingPartner}
                 />
+                {tradingPartner ? (
+                  <Chat
+                    messages={tradingPartner.chat}
+                    onSendMessage={(message) => {
+                      p2pClient?.send(tradingPartner.peer, {
+                        type: "chat",
+                        message,
+                      });
+                      updatePeers((peers) => {
+                        const correctPeer = [...peers]
+                          .filter(isTradingPeer)
+                          .find((p) => p.address === tradingPartner.address);
+                        if (correctPeer) {
+                          correctPeer.chat.push({
+                            chatter: "me",
+                            message,
+                          });
+                        }
+                      });
+                    }}
+                  />
+                ) : null}
               </div>
             ) : (
               <div style={{ padding: "8px" }}>
@@ -354,6 +370,7 @@ function Vaportrade({
           }}
         />
       ) : null}
+
       {showClippy && (
         <Clippy
           message={

@@ -1,6 +1,6 @@
 .itemSections {
   display: flex;
-  height: calc(100vh - 168px);
+  height: calc(80vh - 168px);
 }
 
 .itemSections .DetailsSection {

@@ -93,6 +93,12 @@ export interface TradingPeer {
   hasNewInfo: boolean;
   tradeOffer: NetworkItem[];
   offerAccepted: boolean;
+  chat: ChatMessage[];
+}
+
+export interface ChatMessage {
+  chatter: "me" | "them";
+  message: string;
 }
 
 export function isTradingPeer(peer: Peer | TradingPeer): peer is TradingPeer {
@@ -135,7 +141,8 @@ export type VaportradeMessage =
   | {
       type: "accept";
       hash: string;
-    };
+    }
+  | { type: "chat"; message: string };
 
 export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
   if (typeof msg !== "object") {
@@ -162,6 +169,8 @@ export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
   ) {
     return true;
   } else if (msg.type === "accept" && typeof msg.hash === "string") {
+    return true;
+  } else if (msg.type === "chat" && typeof msg.message === "string") {
     return true;
   } else {
     return false;
