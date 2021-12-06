@@ -26,7 +26,7 @@
 .icon.ExplorerIcon:active:focus .icon__icon,
 .icon.ExplorerIcon.is-active .icon__icon {
   filter: sepia(100%) saturate(374%) brightness(70%) hue-rotate(180deg)
-    saturate(80%);
+    saturate(80%) !important;
 }
 
 .tokenFolder {
