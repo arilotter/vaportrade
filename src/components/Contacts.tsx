@@ -61,7 +61,7 @@ export function Contacts<T>({
 
             {filteredOptions.length ? (
               <SelectBox
-                options={options}
+                options={filteredOptions}
                 selected={selectedPeer}
                 component={ListIcon}
                 onClick={setSelectedPeer}
