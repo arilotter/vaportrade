@@ -36,7 +36,7 @@ export function Contacts<T>({
   return (
     <div className="modal">
       <Window
-        className="WindowAction"
+        className="WindowAction contactsWindow"
         title="Pick a trading partner"
         onClose={onClose}
         onHelp={onHelp}

@@ -25,6 +25,11 @@
   padding-top: 16px;
 }
 
+.pickAmountExtraButtons {
+  display: flex;
+  flex-direction: column;
+}
+
 .pickAmountExtraButtons button {
   margin: 0 16px;
   flex: 0;
