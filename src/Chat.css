@@ -6,3 +6,7 @@
   max-height: 96px;
   overflow-y: scroll;
 }
+
+.chatSender {
+  font-weight: bold;
+}
