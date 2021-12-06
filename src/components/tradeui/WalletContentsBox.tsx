@@ -199,31 +199,33 @@ export function WalletContentsBox({
     : null;
 
   return (
-    <div className="itemBoxContainer">
-      {error ? <div className="error">{error}</div> : null}
-      <div className="itemBox">
-        {erc1155Folders
-          .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-          .map(({ name, address, iconUrl }) => (
-            <Folder
-              key={getContractKey(chainId, address)}
-              name={name}
-              address={address}
-              iconUrl={iconUrl.length ? iconUrl : missingIcon}
-              onFolderOpen={() => setTokenFolderAddress(address)}
-            />
-          ))}
-        {erc20And721
-          // sort assets with icons first :)
-          // really should sort by price tho
-          .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-          .map((item) => (
-            <DraggableIcon
-              item={item}
-              key={getTokenKey(ChainId.POLYGON, item.address, item.tokenID)}
-              onDoubleClick={() => onItemSelected(item)}
-            />
-          ))}
+    <>
+      <div className="itemBoxContainer">
+        {error ? <div className="error">{error}</div> : null}
+        <div className="itemBox">
+          {erc1155Folders
+            .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
+            .map(({ name, address, iconUrl }) => (
+              <Folder
+                key={getContractKey(chainId, address)}
+                name={name}
+                address={address}
+                iconUrl={iconUrl.length ? iconUrl : missingIcon}
+                onFolderOpen={() => setTokenFolderAddress(address)}
+              />
+            ))}
+          {erc20And721
+            // sort assets with icons first :)
+            // really should sort by price tho
+            .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
+            .map((item) => (
+              <DraggableIcon
+                item={item}
+                key={getTokenKey(ChainId.POLYGON, item.address, item.tokenID)}
+                onDoubleClick={() => onItemSelected(item)}
+              />
+            ))}
+        </div>
       </div>
       {erc155sInOpenFolder?.length &&
       typeof tokenFolderContract === "object" ? (
@@ -246,7 +248,7 @@ export function WalletContentsBox({
           </div>
         </Window>
       ) : null}
-    </div>
+    </>
   );
 }
 
