@@ -29,11 +29,12 @@
     saturate(80%) !important;
 }
 
-.tokenFolder {
+.Frame.Window.tokenFolder {
   position: absolute;
   z-index: 1;
   right: 16px;
   left: 16px;
+  top: 128px;
 }
 
 .itemBoxContainer {
