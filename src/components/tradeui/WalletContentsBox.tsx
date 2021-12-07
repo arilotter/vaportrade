@@ -13,8 +13,10 @@ import {
   Item,
   useOnKeyDown,
   NetworkItem,
+  ContractType,
+  isKnownContractType,
 } from "../../utils/utils";
-import { BigNumber, FixedNumber } from "ethers";
+import { BigNumber } from "ethers";
 import { sequence } from "0xsequence";
 import { ChainId } from "@0xsequence/network";
 import { Folder } from "./Folder";
@@ -286,32 +288,36 @@ function getItems(
         getTokenKey(chainId, balance.contractAddress, balance.tokenID)
       );
       if (typeof collectible === "object") {
-        const num = collectible.balance.divUnsafe(
-          FixedNumber.from(BigNumber.from(10).pow(collectible.decimals))
-        );
-        return {
+        const item: Item = {
+          type: "ERC1155",
           address: collectible.contractAddress,
           iconUrl: collectible.image,
           name: collectible.name,
-          balance: num,
+          balance: collectible.balance,
           tokenID: collectible.tokenID,
-          originalBalance: num,
+          originalBalance: collectible.balance,
+          decimals: collectible.decimals,
         };
+        return item;
       }
       const key = getContractKey(chainId, balance.contractAddress);
       const contract = contracts.get(key);
       if (typeof contract === "object") {
-        const num = FixedNumber.from(balance.balance).divUnsafe(
-          FixedNumber.from(BigNumber.from(10).pow(contract.decimals ?? 0))
-        );
-        return {
+        const type: ContractType = isKnownContractType(contract.type)
+          ? contract.type
+          : { other: contract.type };
+
+        const item: Item = {
+          type,
           address: balance.contractAddress,
-          balance: num,
+          balance: BigNumber.from(balance.balance),
           iconUrl: contract.logoURI,
           name: contract.name,
           tokenID: balance.tokenID,
-          originalBalance: num,
+          originalBalance: BigNumber.from(balance.balance),
+          decimals: contract.decimals || 1,
         };
+        return item;
       } else {
         return null;
       }
@@ -324,9 +330,9 @@ function getItems(
       if (associatedSubtractItem) {
         return {
           ...item,
-          balance: item.balance.subUnsafe(
+          balance: item.balance.sub(
             typeof associatedSubtractItem.balance === "string"
-              ? FixedNumber.from(associatedSubtractItem.balance)
+              ? BigNumber.from(associatedSubtractItem.balance)
               : associatedSubtractItem.balance
           ),
         };

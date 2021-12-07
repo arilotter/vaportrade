@@ -8,13 +8,19 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { EllipseAnimation } from "../../utils/EllipseAnimation";
 import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
-import { Item, TradingPeer, VaportradeMessage } from "../../utils/utils";
+import {
+  buildOrder,
+  Item,
+  TradingPeer,
+  VaportradeMessage,
+} from "../../utils/utils";
 import { PickAmountWindow } from "./PickAmountWindow";
 import { Tabs } from "../Tabs";
 import { useImmer } from "use-immer";
-
 import tradeIcon from "./send.png";
 import { PartnerTradeOffer } from "./PartnerTradeOffer";
+import { ChainId } from "@0xsequence/network";
+import { NftSwap } from "@traderxyz/nft-swap-sdk";
 
 interface TradeUIProps {
   wallet: sequence.Wallet;
@@ -32,9 +38,24 @@ export function TradeUI({
   p2p,
 }: TradeUIProps) {
   const [address, setAddress] = useState<string | null>(null);
+  const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
 
   useEffect(() => {
     wallet.getAddress().then(setAddress);
+  }, [wallet]);
+
+  useEffect(() => {
+    const provider = wallet.getProvider(ChainId.POLYGON);
+    if (!provider) {
+      throw new Error("Failed to get Provider from Sequence");
+    }
+
+    const nftSwap = new NftSwap(
+      provider,
+      // HACK :D omg i hope this doesn't explode
+      ChainId.POLYGON as 1
+    );
+    setNFTSwap(nftSwap);
   }, [wallet]);
 
   const [pickBalanceItem, setPickBalanceItem] = useState<Item | null>(null);
@@ -56,22 +77,32 @@ export function TradeUI({
         balance: item.balance.toString(),
         originalBalance: item.originalBalance.toString(),
         tokenID: item.tokenID,
+        decimals: item.decimals,
       })),
-      hash: "", // TODO
     });
   }, [p2p, tradingPartner?.peer, myTradeOffer]);
 
   useEffect(() => {
-    if (!p2p || !tradingPartner?.peer) {
+    if (!p2p || !tradingPartner?.peer || !nftSwap || !address) {
       return;
     }
     p2p.send(tradingPartner.peer, {
       type: "lockin",
       isLocked: offerAccepted,
-      hash: "",
+      order: buildOrder(nftSwap, [
+        {
+          address: address,
+          items: myTradeOffer,
+        },
+        {
+          address: tradingPartner.address,
+          items: [
+            /* TODO */
+          ],
+        },
+      ]),
     });
-  }, [p2p, tradingPartner?.peer, offerAccepted]);
-
+  }, [nftSwap, p2p, tradingPartner, offerAccepted, address, myTradeOffer]);
   const bothPlayersAccepted = offerAccepted && tradingPartner?.offerAccepted;
 
   return (
@@ -127,7 +158,7 @@ export function TradeUI({
                   items={myTradeOffer}
                   onItemSelected={(item) => {
                     // swap current balance :)
-                    const diff = item.originalBalance.subUnsafe(item.balance);
+                    const diff = item.originalBalance.sub(item.balance);
                     setPickBalanceItem({ ...item, balance: diff });
                   }}
                 />
@@ -180,6 +211,7 @@ export function TradeUI({
           item={pickBalanceItem}
           onClose={() => setPickBalanceItem(null)}
           onAdd={(amount) => {
+            console.log("adding amount", amount);
             setPickBalanceItem(null);
             updateMyTradeOffer((items) => {
               const matchingItem = items.find(

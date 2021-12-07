@@ -22,3 +22,11 @@ Make sure you're running a cors-anywhere proxy at localhost:8080.
 ### `npm run build`
 
 Builds the app for production to the `build` folder.
+
+
+# TODO:
+1. clicking folders in your wallet can show contents of your trading partner's wallet
+2. trading partner's offer doesn't load tokenID metadata, just shows parent contract
+3. make trading work, lol
+4. add drag & drop (partially implemented, but doesn't work hehe)
+5. buggy buggy css, please flexbox wizards, save me

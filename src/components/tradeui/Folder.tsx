@@ -48,6 +48,20 @@ export function Folder({ name, address, iconUrl, onFolderOpen }: FolderProps) {
         icon={folderFg}
         title={name}
       />
+      <div
+        style={{
+          fontSize: "50%",
+          position: "absolute",
+          textAlign: "center",
+          top: "21px",
+          left: "6px",
+          right: "0",
+          margin: "0 auto",
+          pointerEvents: "none",
+        }}
+      >
+        ERC1155
+      </div>
     </div>
   );
 }

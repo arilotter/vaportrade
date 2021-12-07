@@ -1,13 +1,15 @@
 import { sequence } from "0xsequence";
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
-import { FixedNumber } from "@ethersproject/bignumber";
+import { BigNumber } from "@ethersproject/bignumber";
 import { useEffect } from "react";
 import { useImmer } from "use-immer";
 import {
   ContractKey,
+  ContractType,
   getContractKey,
   getTokenKey,
+  isKnownContractType,
   Item,
   NetworkItem,
   TokenKey,
@@ -118,21 +120,29 @@ export function PartnerTradeOffer({
   }, [indexer, metadata, contracts, collectibles, updateCollectibles, items]);
 
   const loadedItems = items
-    .map<Item | null>((item) => {
+    .map<Item | null>((networkItem) => {
       const contract = contracts.get(
-        getContractKey(ChainId.POLYGON, item.address)
+        getContractKey(ChainId.POLYGON, networkItem.address)
       );
       if (typeof contract !== "object") {
         return null;
       }
-      return {
-        address: item.address,
-        balance: FixedNumber.from(item.balance),
-        originalBalance: FixedNumber.from(item.balance),
+
+      const type: ContractType = isKnownContractType(contract.type)
+        ? contract.type
+        : { other: contract.type };
+
+      const item: Item = {
+        type,
+        address: networkItem.address,
+        balance: BigNumber.from(networkItem.balance),
+        originalBalance: BigNumber.from(networkItem.balance),
         iconUrl: contract.logoURI,
         name: contract.name,
-        tokenID: item.tokenID,
+        tokenID: networkItem.tokenID,
+        decimals: contract.decimals || 1,
       };
+      return item;
     })
     .filter((item): item is Item => item !== null);
   return <TradeOffer items={loadedItems} onItemSelected={() => {}} />;

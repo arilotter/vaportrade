@@ -1,5 +1,7 @@
 import { ChainId } from "@0xsequence/network";
-import { ethers, FixedNumber } from "ethers";
+import { NftSwap } from "@traderxyz/nft-swap-sdk";
+import { Order, SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
+import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { useEffect } from "react";
 
@@ -46,25 +48,35 @@ export function getTokenKey(
 }
 export type TokenKey = ReturnType<typeof getTokenKey>;
 
+// TODO Drag & Drop
 export const DragItemType = {
   MY_ITEM: "my_item",
   THEIR_ITEM: "their_item",
 };
 
+export type ContractType = `ERC${20 | 721 | 1155}` | { other: string };
+export function isKnownContractType(
+  s: string
+): s is Exclude<ContractType, { other: string }> {
+  return s === "ERC20" || s === "ERC721" || s === "ERC1155";
+}
+
 export interface Item {
+  type: ContractType;
   address: string;
   name: string;
   tokenID: string;
   iconUrl: string;
-  balance: ethers.FixedNumber;
-  originalBalance: ethers.FixedNumber;
+  balance: ethers.BigNumber;
+  originalBalance: ethers.BigNumber;
+  decimals: number;
 }
 
 export interface NetworkItem {
   address: string;
   tokenID: string;
-  balance: string; // fixedNumber
-  originalBalance: string; // fixedNumber
+  balance: string; // bignumber
+  originalBalance: string; // bignumber
 }
 
 function isNetworkItem(item: any): item is NetworkItem {
@@ -105,7 +117,7 @@ export function isTradingPeer(peer: Peer | TradingPeer): peer is TradingPeer {
   return "tradeRequest" in peer;
 }
 
-export function useOnKeyDown(key: "Escape", callback: () => void) {
+export function useOnKeyDown(key: "Escape" | "Enter", callback: () => void) {
   return useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === key) {
@@ -131,16 +143,15 @@ export type VaportradeMessage =
   | {
       type: "offer";
       offer: NetworkItem[];
-      hash: string;
     }
   | {
       type: "lockin";
       isLocked: boolean;
-      hash: string;
+      order: Order;
     }
   | {
       type: "accept";
-      hash: string;
+      order: SignedOrder;
     }
   | { type: "chat"; message: string };
 
@@ -176,3 +187,71 @@ export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
     return false;
   }
 }
+
+export function doIGoFirst(myAddress: string, theirAddress: string) {
+  return BigNumber.from(myAddress).lt(BigNumber.from(theirAddress));
+}
+
+export function buildOrder(
+  swap: NftSwap,
+  participants: [
+    { address: string; items: Item[] },
+    { address: string; items: Item[] }
+  ]
+): Order {
+  if (participants[0].address === participants[1].address) {
+    throw new Error("Can't trade with yourself.");
+  }
+
+  const doesFirstParticipantGoFirst = doIGoFirst(
+    participants[0].address,
+    participants[1].address
+  );
+
+  const maker = doesFirstParticipantGoFirst ? participants[0] : participants[1];
+  const taker = doesFirstParticipantGoFirst ? participants[1] : participants[0];
+  return swap.buildOrder(
+    maker.items.map(itemToSwapItem),
+    taker.items.map(itemToSwapItem),
+    maker.address
+  );
+}
+
+function itemToSwapItem(item: Item) {
+  if (typeof item.type === "object") {
+    throw new Error(
+      `Unknown contract type ${item.type.other} for item ${item.address} ${item.tokenID}`
+    );
+  }
+  return {
+    type: item.type,
+    amount: item.balance.toString(), // TODO right number of decimals eek
+    tokenAddress: item.address,
+    tokenId: item.tokenID,
+  };
+}
+
+export function balanceToFixedNumber(
+  balance: BigNumber,
+  decimals: number
+): FixedNumber {
+  return FixedNumber.from(balance.toString()).divUnsafe(
+    FixedNumber.from(ten.pow(decimals))
+  );
+}
+
+export function fixedNumberToBalance(
+  num: FixedNumber,
+  decimals: number
+): BigNumber {
+  const noDecimals = num.mulUnsafe(FixedNumber.from(ten.pow(decimals)));
+  const flooredRounded = noDecimals.floor().toString();
+  if (flooredRounded !== noDecimals.toString()) {
+    throw new Error(
+      `Rounding error when converting FixedNumber to BigNumber! Expected ${flooredRounded}, but got ${noDecimals}`
+    );
+  }
+  return BigNumber.from(noDecimals.toString().split(".")[0]);
+}
+
+const ten = BigNumber.from(10);

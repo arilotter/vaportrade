@@ -1,27 +1,38 @@
 import { BigNumber, FixedNumber } from "@ethersproject/bignumber";
-import { ButtonForm, InputText, WindowAlert } from "packard-belle";
-import { useState } from "react";
-import { Item, useOnKeyDown } from "../../utils/utils";
+import { ButtonForm, WindowAlert } from "packard-belle";
+import { useEffect, useRef, useState } from "react";
+import {
+  balanceToFixedNumber,
+  fixedNumberToBalance,
+  Item,
+  useOnKeyDown,
+} from "../../utils/utils";
 import "./PickAmount.css";
 interface PickAmountProps {
   item: Item;
   onClose: () => void;
-  onAdd: (amount: FixedNumber) => void;
+  onAdd: (amount: BigNumber) => void;
 }
 export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
   useOnKeyDown("Escape", onClose);
-  const amountInTrade = item.originalBalance.subUnsafe(item.balance);
 
-  const [amount, setAmount] = useState(amountInTrade.toString());
-  const [parsedAmount, setParsedAmount] = useState(amountInTrade);
+  const amountInTrade = item.originalBalance.sub(item.balance);
 
-  const notEnoughMoney = BigNumber.from(
-    parsedAmount.mulUnsafe(hugeNum).toString().split(".")[0]
-  ).gt(
-    BigNumber.from(
-      item.originalBalance.mulUnsafe(hugeNum).toString().split(".")[0]
-    )
+  const [amount, setAmount] = useState(
+    balanceToFixedNumber(amountInTrade, item.decimals).toString()
   );
+  const [parsedAmount, setParsedAmount] = useState(amountInTrade);
+  useOnKeyDown("Enter", () => onAdd(parsedAmount));
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, []);
+
+  const notEnoughMoney = parsedAmount.gt(item.originalBalance);
 
   return (
     <div
@@ -48,44 +59,60 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
             <div className="pickAmountInput">
               {amountInTrade.isZero()
                 ? ""
-                : `Current Offer:\n${amountInTrade.toString()}`}
+                : `Current Offer:\n${balanceToFixedNumber(
+                    amountInTrade,
+                    item.decimals
+                  )}`}
               <div>
-                <InputText
-                  value={amount.toString()}
-                  onChange={(c: string) => {
-                    let fakeNum = c;
+                <input
+                  type="text"
+                  className="InputText text"
+                  value={amount}
+                  placeholder="Enter an amount (or 0)"
+                  onChange={(ev) => {
+                    let fakeNum = ev.target.value;
+                    if (fakeNum.endsWith(".")) {
+                      fakeNum += "0";
+                    }
+                    if (fakeNum.length === 0) {
+                      fakeNum = "0";
+                    }
                     try {
-                      if (fakeNum.endsWith(".")) {
-                        fakeNum += "0";
-                      }
-                      if (fakeNum.length === 0) {
-                        fakeNum = "0";
-                      }
                       const num = FixedNumber.from(fakeNum);
-                      setAmount(c);
-                      setParsedAmount(num);
-                    } catch {
+                      const bigNumAmount = fixedNumberToBalance(
+                        num,
+                        item.decimals
+                      );
+                      setAmount(ev.target.value);
+                      setParsedAmount(bigNumAmount);
+                    } catch (err) {
+                      console.warn("Failed to parse balance", err);
                       // lulw
                     }
                   }}
+                  ref={inputRef}
                 />
-                / {item.originalBalance.toString()}
+                /
+                {balanceToFixedNumber(
+                  item.originalBalance,
+                  item.decimals
+                ).toString()}
               </div>
               <div className="pickAmountExtraButtons">
                 <ButtonForm
                   onClick={() => {
                     setAmount("0");
-                    setParsedAmount(FixedNumber.from(0));
+                    setParsedAmount(BigNumber.from(0));
                   }}
                 >
                   Zero
                 </ButtonForm>
                 <ButtonForm
                   onClick={() => {
-                    const half = item.originalBalance.divUnsafe(
-                      FixedNumber.from("2.0")
+                    const half = item.originalBalance.div(BigNumber.from(2));
+                    setAmount(
+                      balanceToFixedNumber(half, item.decimals).toString()
                     );
-                    setAmount(half.toString());
                     setParsedAmount(half);
                   }}
                 >
@@ -94,6 +121,12 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
                 <ButtonForm
                   onClick={() => {
                     setAmount(item.originalBalance.toString());
+                    setAmount(
+                      balanceToFixedNumber(
+                        item.originalBalance,
+                        item.decimals
+                      ).toString()
+                    );
                     setParsedAmount(item.originalBalance);
                   }}
                 >
@@ -103,7 +136,9 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
             </div>
           </div>
           <div className="error">
-            {notEnoughMoney ? `not enough ${item.name}` : ""}
+            {notEnoughMoney
+              ? `not enough ${item.name}, you offered ${parsedAmount} but you only have ${item.originalBalance}.`
+              : ""}
           </div>
           <div className="pickAmountButtons">
             <ButtonForm
@@ -119,5 +154,3 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
     </div>
   );
 }
-
-const hugeNum = FixedNumber.from("10000000000000");

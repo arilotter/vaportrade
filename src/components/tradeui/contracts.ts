@@ -1,7 +1,7 @@
 import { sequence } from "0xsequence";
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
-import { FixedNumber } from "ethers";
+import { BigNumber } from "ethers";
 import {
   ContractKey,
   unique,
@@ -47,7 +47,7 @@ export interface Collectible {
   contractAddress: string;
   tokenID: string;
   image: string;
-  balance: FixedNumber;
+  balance: BigNumber;
   decimals: number;
   name: string;
   description: string;
@@ -74,16 +74,16 @@ export async function fetchCollectibles(
   ).then((chunks) => chunks.flat());
   return tokens.map((token) => {
     const tokenMetadata = meta.find((x) => x && x.tokenId === token.tokenID);
-    return {
+    const collectible: Collectible = {
       contractAddress: contract.address,
       image: tokenMetadata?.image ?? "",
-      balance: FixedNumber.from(token.balance),
+      balance: BigNumber.from(token.balance),
       decimals: tokenMetadata?.decimals ?? contract.decimals ?? 0,
-      chainId: contract.chainId,
       name: tokenMetadata?.name ?? "UNKNOWN",
       description: tokenMetadata?.description ?? "",
       tokenID: token.tokenID,
       properties: tokenMetadata?.properties,
     };
+    return collectible;
   });
 }

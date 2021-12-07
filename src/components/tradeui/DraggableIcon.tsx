@@ -1,7 +1,7 @@
 import { BigNumber } from "ethers";
 import { ExplorerIcon } from "packard-belle";
 import { useDrag } from "react-dnd";
-import { DragItemType, Item } from "../../utils/utils";
+import { balanceToFixedNumber, DragItemType, Item } from "../../utils/utils";
 import missingIcon from "./missing.png";
 
 interface DraggableIconProps {
@@ -10,16 +10,22 @@ interface DraggableIconProps {
 }
 
 export function DraggableIcon({ item, onDoubleClick }: DraggableIconProps) {
+  // TODO Drag & Drop
   const [{ isDragging }, drag] = useDrag(() => ({
     type: DragItemType.MY_ITEM,
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
   }));
+  const decimalBalance = balanceToFixedNumber(
+    item.balance,
+    item.decimals
+  ).toString();
+
   const title = `${
-    BigNumber.from(item.balance.toString().split(".")[0]).gt(1_000_000_000)
+    BigNumber.from(decimalBalance.split(".")[0]).gt(1_000_000_000)
       ? "a lot of"
-      : addNumberCommas(item.balance.toString())
+      : addNumberCommas(decimalBalance)
   }\n${item.name}`;
 
   return (
@@ -27,17 +33,34 @@ export function DraggableIcon({ item, onDoubleClick }: DraggableIconProps) {
       ref={drag}
       style={{
         opacity: isDragging ? 0.25 : 1,
-        fontSize: 25,
-        fontWeight: "bold",
         cursor: "move",
+        position: "relative",
       }}
     >
       <ExplorerIcon
         onDoubleClick={onDoubleClick}
-        alt={`${item.balance} ${item.name} (${item.address})`}
+        alt={`${decimalBalance} ${item.name} (${item.address})`}
         icon={item.iconUrl || missingIcon}
         title={title}
       />
+      {typeof item.type === "string" ? (
+        <div
+          style={{
+            fontSize: "50%",
+            position: "absolute",
+            textAlign: "right",
+            top: "30px",
+            right: "6px",
+            width: "auto",
+            padding: "1px",
+            color: "white",
+            background: "black",
+            pointerEvents: "none",
+          }}
+        >
+          {item.type}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -45,7 +68,9 @@ export function DraggableIcon({ item, onDoubleClick }: DraggableIconProps) {
 function addNumberCommas(number: string) {
   const [whole, fractional] = number.split(".");
   const fractionalStripped =
-    fractional.length && fractional !== "0" ? `.${fractional.slice(0, 5)}` : "";
+    fractional && fractional.length && fractional !== "0"
+      ? `.${fractional.slice(0, 5)}`
+      : "";
   return (
     whole
       .split("")
