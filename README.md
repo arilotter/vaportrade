@@ -25,8 +25,11 @@ Builds the app for production to the `build` folder.
 
 
 # TODO:
-1. clicking folders in your wallet can show contents of your trading partner's wallet
-2. trading partner's offer doesn't load tokenID metadata, just shows parent contract
-3. make trading work, lol
-4. add drag & drop (partially implemented, but doesn't work hehe)
-5. buggy buggy css, please flexbox wizards, save me
+- [x] ~~deploy 0x v3 to polygon yeesh~~ done, polygon did it!
+- [x] ~~clicking folders in your wallet can show contents of your trading partner's wallet~~ can't repro
+- [x] ~~trading partner's offer doesn't load tokenID metadata, just shows parent contract~~
+- [] make trading work, lol
+- [] use hashing of orders to verify integrity of trades
+- [] add drag & drop (partially implemented, but doesn't work hehe)
+- [] buggy buggy css, please flexbox wizards, save me
+- [] rip out 0x, it's huge.. once trader.xyz adds order hashing & polygon we good

@@ -172,6 +172,11 @@ function Vaportrade({
             for (const peer of incorrectPeers) {
               peers.delete(peer);
             }
+
+            if (msg.address === address) {
+              // can't trade with yourself :P
+              return;
+            }
             peers.add({
               peer: correctPeer,
               address: msg.address,

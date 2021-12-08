@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { sequence } from "0xsequence";
 import "./TradeUI.css";
 import P2PT from "p2pt";
@@ -10,7 +10,11 @@ import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import {
   buildOrder,
+  getContractKey,
+  getTokenKey,
+  isItemWithKnownContractType,
   Item,
+  KnownContractType,
   TradingPeer,
   VaportradeMessage,
 } from "../../utils/utils";
@@ -18,10 +22,19 @@ import { PickAmountWindow } from "./PickAmountWindow";
 import { Tabs } from "../Tabs";
 import { useImmer } from "use-immer";
 import tradeIcon from "./send.png";
-import { PartnerTradeOffer } from "./PartnerTradeOffer";
 import { ChainId } from "@0xsequence/network";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
-
+import { orderHashUtils } from "@0x/order-utils";
+import { ContractInfo } from "0xsequence/dist/declarations/src/metadata";
+import {
+  chainId,
+  CollectiblesDB,
+  ContractsDB,
+  FetchableToken,
+  fetchCollectibles,
+  fetchContractsForBalances,
+  getItems,
+} from "./contracts";
 interface TradeUIProps {
   wallet: sequence.Wallet;
   indexer: sequence.indexer.Indexer;
@@ -39,6 +52,39 @@ export function TradeUI({
 }: TradeUIProps) {
   const [address, setAddress] = useState<string | null>(null);
   const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
+  const [offerAccepted, setOfferAccepted] = useState(false);
+  const [
+    pickBalanceItem,
+    setPickBalanceItem,
+  ] = useState<Item<KnownContractType> | null>(null);
+  const [myTradeOffer, updateMyTradeOffer] = useImmer<
+    Array<Item<KnownContractType>>
+  >([]);
+
+  // Metadata about assets
+  const [tokensToFetch, updateTokensToFetch] = useImmer<FetchableToken[]>([]);
+  const [collectibles, updateCollectibles] = useImmer<CollectiblesDB>(
+    new Map()
+  );
+  const [contracts, updateContracts] = useImmer<ContractsDB>(new Map());
+
+  const [error, setError] = useState<string | null>(null);
+
+  const requestTokensFetch = useCallback(
+    (tokens: FetchableToken[]) =>
+      updateTokensToFetch((balances) => {
+        const newTokens = tokens.filter(
+          (tok) =>
+            !balances.some(
+              (b) =>
+                b.contractAddress === tok.contractAddress &&
+                b.tokenID === tok.tokenID
+            )
+        );
+        balances.push(...newTokens);
+      }),
+    [updateTokensToFetch]
+  );
 
   useEffect(() => {
     wallet.getAddress().then(setAddress);
@@ -53,18 +99,25 @@ export function TradeUI({
     const nftSwap = new NftSwap(
       provider,
       // HACK :D omg i hope this doesn't explode
-      ChainId.POLYGON as 1
+      ChainId.POLYGON as 1,
+      {
+        // also maybe a bug? this doesn't fill in the exchangeAddress in buildOrder
+        exchangeContractAddress: "0x1119E3e8919d68366f56B74445eA2d10670Ac9eF",
+      }
     );
     setNFTSwap(nftSwap);
   }, [wallet]);
 
-  const [pickBalanceItem, setPickBalanceItem] = useState<Item | null>(null);
-  const [myTradeOffer, updateMyTradeOffer] = useImmer<Item[]>([]);
-  const [offerAccepted, setOfferAccepted] = useState(false);
-
   useEffect(() => {
     setOfferAccepted(false);
   }, [myTradeOffer, tradingPartner?.tradeOffer]);
+
+  useEffect(() => {
+    if (!tradingPartner?.tradeOffer) {
+      return;
+    }
+    requestTokensFetch(tradingPartner.tradeOffer);
+  }, [requestTokensFetch, tradingPartner?.tradeOffer]);
 
   useEffect(() => {
     if (!p2p || !tradingPartner?.peer) {
@@ -73,7 +126,8 @@ export function TradeUI({
     p2p.send(tradingPartner.peer, {
       type: "offer",
       offer: myTradeOffer.map((item) => ({
-        address: item.address,
+        type: item.type,
+        contractAddress: item.contractAddress,
         balance: item.balance.toString(),
         originalBalance: item.originalBalance.toString(),
         tokenID: item.tokenID,
@@ -82,6 +136,109 @@ export function TradeUI({
     });
   }, [p2p, tradingPartner?.peer, myTradeOffer]);
 
+  // Get all contracts for user's balances
+  useEffect(() => {
+    const ctr = fetchContractsForBalances(
+      chainId,
+      metadata,
+      tokensToFetch.map((t) => t.contractAddress),
+      contracts
+    );
+    if (!ctr) {
+      return;
+    }
+
+    ctr.batchPromise
+      .then(({ contractInfoMap }) => {
+        updateContracts((contracts) => {
+          for (const contractAddress of ctr.batchContractAddresses) {
+            const key = getContractKey(chainId, contractAddress);
+            contracts.set(key, contractInfoMap[contractAddress.toLowerCase()]);
+          }
+        });
+      })
+      .catch((err) =>
+        err instanceof Error
+          ? setError(`${err.name}\n${err.message}\n${err.stack}`)
+          : setError(JSON.stringify(err, undefined, 2))
+      );
+
+    updateContracts((contracts) => {
+      for (const contractAddress of ctr.batchContractAddresses) {
+        const key = getContractKey(chainId, contractAddress);
+        if (!contracts.has(key)) {
+          contracts.set(key, "fetching");
+        }
+      }
+    });
+  }, [tokensToFetch, metadata, contracts, updateContracts]);
+
+  // Get all collectible balances for user's contracts.
+  useEffect(() => {
+    async function getMeta() {
+      const tokenContracts = [...contracts.values()]
+        .filter((c): c is ContractInfo => typeof c === "object")
+        .filter((c) => c.type === "ERC1155");
+      const myUnfetchedTokens = tokensToFetch.filter(
+        (token) =>
+          !collectibles.has(
+            getTokenKey(chainId, token.contractAddress, token.tokenID)
+          )
+      );
+
+      for (const contract of tokenContracts) {
+        const tokens = myUnfetchedTokens.filter(
+          (t) => t.contractAddress === contract.address
+        );
+        fetchCollectibles(
+          chainId,
+          metadata,
+          contract,
+          tokens.map((token) => token.tokenID)
+        )
+          .then((fetched) =>
+            updateCollectibles((collectibles) => {
+              for (const item of fetched) {
+                const key = getTokenKey(
+                  chainId,
+                  item.contractAddress,
+                  item.tokenID
+                );
+                collectibles.set(key, item);
+              }
+            })
+          )
+          .catch((err) => setError(`${err}`));
+      }
+
+      updateCollectibles((collectibles) => {
+        for (const balance of myUnfetchedTokens) {
+          if (
+            !tokenContracts.some((c) => c.address === balance.contractAddress)
+          ) {
+            continue;
+          }
+          const key = getTokenKey(
+            chainId,
+            balance.contractAddress,
+            balance.tokenID
+          );
+          if (!collectibles.has(key)) {
+            collectibles.set(key, "fetching");
+          }
+        }
+      });
+    }
+    getMeta();
+  }, [
+    indexer,
+    metadata,
+    tokensToFetch,
+    contracts,
+    collectibles,
+    updateCollectibles,
+  ]);
+
   useEffect(() => {
     if (!p2p || !tradingPartner?.peer || !nftSwap || !address) {
       return;
@@ -89,18 +246,20 @@ export function TradeUI({
     p2p.send(tradingPartner.peer, {
       type: "lockin",
       isLocked: offerAccepted,
-      order: buildOrder(nftSwap, [
-        {
-          address: address,
-          items: myTradeOffer,
-        },
-        {
-          address: tradingPartner.address,
-          items: [
-            /* TODO */
-          ],
-        },
-      ]),
+      hash: orderHashUtils.getOrderHash(
+        buildOrder(nftSwap, [
+          {
+            address: address,
+            items: myTradeOffer,
+          },
+          {
+            address: tradingPartner.address,
+            items: [
+              //todo
+            ],
+          },
+        ])
+      ),
     });
   }, [nftSwap, p2p, tradingPartner, offerAccepted, address, myTradeOffer]);
   const bothPlayersAccepted = offerAccepted && tradingPartner?.offerAccepted;
@@ -109,6 +268,7 @@ export function TradeUI({
     <>
       <DndProvider backend={HTML5Backend}>
         <div className="itemSections">
+          {error ? <div className="error">{error}</div> : null}
           <Tabs
             style={{ flex: "1", height: "100%" }}
             tabs={[
@@ -118,7 +278,9 @@ export function TradeUI({
                   <WalletContentsBox
                     accountAddress={address}
                     indexer={indexer}
-                    metadata={metadata}
+                    collectibles={collectibles}
+                    contracts={contracts}
+                    requestTokensFetch={requestTokensFetch}
                     onItemSelected={
                       tradingPartner ? setPickBalanceItem : () => {}
                     }
@@ -139,7 +301,9 @@ export function TradeUI({
                         <WalletContentsBox
                           accountAddress={tradingPartner.address}
                           indexer={indexer}
-                          metadata={metadata}
+                          collectibles={collectibles}
+                          contracts={contracts}
+                          requestTokensFetch={requestTokensFetch}
                           onItemSelected={() => {
                             //noop
                           }}
@@ -196,10 +360,15 @@ export function TradeUI({
                 />
               </div>
               <DetailsSection title="Partner's trade offer">
-                <PartnerTradeOffer
-                  indexer={indexer}
-                  metadata={metadata}
-                  items={tradingPartner.tradeOffer}
+                <TradeOffer
+                  items={getItems(
+                    tradingPartner.tradeOffer,
+                    contracts,
+                    collectibles
+                  ).filter(isItemWithKnownContractType)}
+                  onItemSelected={() => {
+                    // nothing happens when you double click your trading partner's items.
+                  }}
                 />
               </DetailsSection>
             </div>
@@ -211,12 +380,11 @@ export function TradeUI({
           item={pickBalanceItem}
           onClose={() => setPickBalanceItem(null)}
           onAdd={(amount) => {
-            console.log("adding amount", amount);
             setPickBalanceItem(null);
             updateMyTradeOffer((items) => {
               const matchingItem = items.find(
                 (i) =>
-                  i.address === pickBalanceItem.address &&
+                  i.contractAddress === pickBalanceItem.contractAddress &&
                   i.tokenID === pickBalanceItem.tokenID
               );
 

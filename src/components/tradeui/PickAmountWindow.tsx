@@ -3,13 +3,14 @@ import { ButtonForm, WindowAlert } from "packard-belle";
 import { useEffect, useRef, useState } from "react";
 import {
   balanceToFixedNumber,
+  ContractType,
   fixedNumberToBalance,
   Item,
   useOnKeyDown,
 } from "../../utils/utils";
 import "./PickAmount.css";
 interface PickAmountProps {
-  item: Item;
+  item: Item<ContractType>;
   onClose: () => void;
   onAdd: (amount: BigNumber) => void;
 }

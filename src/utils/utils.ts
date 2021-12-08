@@ -1,6 +1,6 @@
 import { ChainId } from "@0xsequence/network";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
-import { Order, SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
+import { Order } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
 import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { useEffect } from "react";
@@ -54,16 +54,21 @@ export const DragItemType = {
   THEIR_ITEM: "their_item",
 };
 
-export type ContractType = `ERC${20 | 721 | 1155}` | { other: string };
-export function isKnownContractType(
-  s: string
-): s is Exclude<ContractType, { other: string }> {
+export type KnownContractType = `ERC${20 | 721 | 1155}`;
+export type ContractType = KnownContractType | { other: string };
+export function isKnownContractType(s: string): s is KnownContractType {
   return s === "ERC20" || s === "ERC721" || s === "ERC1155";
 }
 
-export interface Item {
-  type: ContractType;
-  address: string;
+export function isItemWithKnownContractType(
+  item: Item<ContractType>
+): item is Item<KnownContractType> {
+  return typeof item.type === "string" && isKnownContractType(item.type);
+}
+
+export interface Item<CT extends ContractType> {
+  type: CT;
+  contractAddress: string;
   name: string;
   tokenID: string;
   iconUrl: string;
@@ -73,7 +78,8 @@ export interface Item {
 }
 
 export interface NetworkItem {
-  address: string;
+  type: KnownContractType;
+  contractAddress: string;
   tokenID: string;
   balance: string; // bignumber
   originalBalance: string; // bignumber
@@ -83,15 +89,24 @@ function isNetworkItem(item: any): item is NetworkItem {
   if (typeof item !== "object") {
     return false;
   }
-  if (typeof item.address !== "string") {
+  if (
+    !(
+      item.type === "ERC20" ||
+      item.type === "ERC721" ||
+      item.type === "ERC1155"
+    )
+  ) {
+    return false;
+  }
+  if (typeof item.contractAddress !== "string") {
     return false;
   }
   if (typeof item.tokenID !== "string") {
     return false;
   }
   try {
-    FixedNumber.from(item.balance);
-    FixedNumber.from(item.originalBalance);
+    BigNumber.from(item.balance);
+    BigNumber.from(item.originalBalance);
   } catch {
     return false;
   }
@@ -147,11 +162,11 @@ export type VaportradeMessage =
   | {
       type: "lockin";
       isLocked: boolean;
-      order: Order;
+      hash: string;
     }
   | {
       type: "accept";
-      order: SignedOrder;
+      hash: string;
     }
   | { type: "chat"; message: string };
 
@@ -168,15 +183,14 @@ export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
     return true;
   } else if (
     msg.type === "offer" &&
-    typeof msg.hash === "string" &&
     Array.isArray(msg.offer) &&
     msg.offer.every(isNetworkItem)
   ) {
     return true;
   } else if (
     msg.type === "lockin" &&
-    typeof msg.hash === "string" &&
-    typeof msg.isLocked === "boolean"
+    typeof msg.isLocked === "boolean" &&
+    typeof msg.hash === "string"
   ) {
     return true;
   } else if (msg.type === "accept" && typeof msg.hash === "string") {
@@ -192,12 +206,14 @@ export function doIGoFirst(myAddress: string, theirAddress: string) {
   return BigNumber.from(myAddress).lt(BigNumber.from(theirAddress));
 }
 
+export interface OrderParticipant {
+  address: string;
+  items: Item<KnownContractType>[];
+}
+
 export function buildOrder(
   swap: NftSwap,
-  participants: [
-    { address: string; items: Item[] },
-    { address: string; items: Item[] }
-  ]
+  participants: [OrderParticipant, OrderParticipant]
 ): Order {
   if (participants[0].address === participants[1].address) {
     throw new Error("Can't trade with yourself.");
@@ -213,20 +229,20 @@ export function buildOrder(
   return swap.buildOrder(
     maker.items.map(itemToSwapItem),
     taker.items.map(itemToSwapItem),
-    maker.address
+    maker.address,
+    {
+      takerAddress: taker.address,
+      // TODO remove hack
+      exchangeAddress: "0x1119E3e8919d68366f56B74445eA2d10670Ac9eF",
+    }
   );
 }
 
-function itemToSwapItem(item: Item) {
-  if (typeof item.type === "object") {
-    throw new Error(
-      `Unknown contract type ${item.type.other} for item ${item.address} ${item.tokenID}`
-    );
-  }
+function itemToSwapItem(item: Item<KnownContractType>) {
   return {
     type: item.type,
-    amount: item.balance.toString(), // TODO right number of decimals eek
-    tokenAddress: item.address,
+    amount: item.balance.toString(), // bignumber as string
+    tokenAddress: item.contractAddress,
     tokenId: item.tokenID,
   };
 }

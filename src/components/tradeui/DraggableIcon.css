@@ -1,0 +1,8 @@
+.disabledIcon {
+  pointer-events: none;
+  filter: grayscale(100%);
+}
+
+.disabledIcon .icon__text {
+  color: gray;
+}

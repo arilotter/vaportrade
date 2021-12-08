@@ -1,15 +1,26 @@
 import { BigNumber } from "ethers";
 import { ExplorerIcon } from "packard-belle";
 import { useDrag } from "react-dnd";
-import { balanceToFixedNumber, DragItemType, Item } from "../../utils/utils";
+import {
+  balanceToFixedNumber,
+  ContractType,
+  DragItemType,
+  Item,
+} from "../../utils/utils";
 import missingIcon from "./missing.png";
+import "./DraggableIcon.css";
 
 interface DraggableIconProps {
-  item: Item;
+  item: Item<ContractType>;
   onDoubleClick: () => void;
+  isDisabled?: boolean;
 }
 
-export function DraggableIcon({ item, onDoubleClick }: DraggableIconProps) {
+export function DraggableIcon({
+  item,
+  onDoubleClick,
+  isDisabled,
+}: DraggableIconProps) {
   // TODO Drag & Drop
   const [{ isDragging }, drag] = useDrag(() => ({
     type: DragItemType.MY_ITEM,
@@ -30,6 +41,7 @@ export function DraggableIcon({ item, onDoubleClick }: DraggableIconProps) {
 
   return (
     <div
+      className={isDisabled ? "disabledIcon" : ""}
       ref={drag}
       style={{
         opacity: isDragging ? 0.25 : 1,
@@ -38,8 +50,8 @@ export function DraggableIcon({ item, onDoubleClick }: DraggableIconProps) {
       }}
     >
       <ExplorerIcon
-        onDoubleClick={onDoubleClick}
-        alt={`${decimalBalance} ${item.name} (${item.address})`}
+        onDoubleClick={isDisabled ? () => {} : onDoubleClick}
+        alt={`${decimalBalance} ${item.name} (${item.contractAddress})`}
         icon={item.iconUrl || missingIcon}
         title={title}
       />
