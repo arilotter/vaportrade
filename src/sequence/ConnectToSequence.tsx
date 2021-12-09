@@ -6,10 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import "./ConnectToSequence.css";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
-import { sequenceWalletWebappURL } from "../settings";
+import { config } from "../settings";
+import { ControlPanel } from "../ControlPanel";
 
 export const wallet = new sequence.Wallet("polygon", {
-  walletAppURL: sequenceWalletWebappURL ?? undefined,
+  walletAppURL: config.sequenceWalletWebappUrl,
 });
 
 interface WalletProviderProps {
@@ -25,6 +26,7 @@ interface ConnectToSequenceProps {
   children(props: WalletProviderProps): JSX.Element;
 }
 export function ConnectToSequence(props: ConnectToSequenceProps) {
+  const [controlPanelOpen, setControlPanelOpen] = useState(false);
   const [walletConnectionState, setWalletConnected] = useState<
     | "no"
     | "connecting"
@@ -65,50 +67,60 @@ export function ConnectToSequence(props: ConnectToSequenceProps) {
   }
 
   return (
-    <Window
-      className="WindowAlert notConnected"
-      title={"No wallet connected!"}
-      resizable={false}
-    >
-      <div
-        className="WindowAlert__message has-icon"
-        style={{
-          backgroundImage: `url(${sequenceLogo})`,
-          textAlign: "center",
-          display: "inline-block",
-        }}
-      >
-        <ButtonForm
-          isDisabled={walletConnectionState === "connecting"}
-          onClick={async () => {
-            setWalletConnected("connecting");
-            try {
-              await connectWallet(wallet, true);
-              setWalletConnected("connected");
-            } catch (err) {
-              if (err instanceof Error) {
-                console.error("Failed to connect to wallet:", err);
-                setWalletConnected({ error: err.message });
-              }
-            }
-          }}
-          className="walletConnectButton"
+    <>
+      <div className="modal">
+        <Window
+          className="WindowAlert notConnected"
+          title={"No wallet connected!"}
+          resizable={false}
         >
-          {walletConnectionState === "connecting" ? (
-            <>
-              Connecting <EllipseAnimation />
-            </>
-          ) : (
-            "Connect your Sequence wallet"
-          )}
-        </ButtonForm>
-        {typeof walletConnectionState === "object" ? (
-          <DetailsSection title="Error">
-            <p>{walletConnectionState.error}</p>
-          </DetailsSection>
-        ) : null}
+          <div
+            className="WindowAlert__message has-icon"
+            style={{
+              backgroundImage: `url(${sequenceLogo})`,
+              textAlign: "center",
+              display: "inline-block",
+            }}
+          >
+            <ButtonForm
+              isDisabled={walletConnectionState === "connecting"}
+              onClick={async () => {
+                setWalletConnected("connecting");
+                try {
+                  await connectWallet(wallet, true);
+                  setWalletConnected("connected");
+                } catch (err) {
+                  if (err instanceof Error) {
+                    console.error("Failed to connect to wallet:", err);
+                    setWalletConnected({ error: err.message });
+                  }
+                }
+              }}
+              className="walletConnectButton"
+            >
+              {walletConnectionState === "connecting" ? (
+                <>
+                  Connecting <EllipseAnimation />
+                </>
+              ) : (
+                "Connect your Sequence wallet"
+              )}
+            </ButtonForm>
+            {typeof walletConnectionState === "object" ? (
+              <DetailsSection title="Error">
+                <p>{walletConnectionState.error}</p>
+              </DetailsSection>
+            ) : null}
+          </div>
+          <ButtonForm onClick={() => setControlPanelOpen(true)}>
+            Control Panel
+          </ButtonForm>
+        </Window>
       </div>
-    </Window>
+      {controlPanelOpen ? (
+        <ControlPanel onClose={() => setControlPanelOpen(false)} />
+      ) : null}
+    </>
   );
 }
 

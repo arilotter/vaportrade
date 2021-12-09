@@ -40,12 +40,16 @@ import {
   getItems,
 } from "./contracts";
 import { Web3Provider } from "@ethersproject/providers";
+import { config } from "../../settings";
 interface TradeUIProps {
   wallet: sequence.Wallet;
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
   p2p: P2PT<VaportradeMessage> | null;
   tradingPartner: TradingPeer | null;
+  updateMyTradeOffer: (
+    callback: (items: Array<Item<KnownContractType>>) => void
+  ) => void;
 }
 
 export function TradeUI({
@@ -54,6 +58,7 @@ export function TradeUI({
   metadata,
   tradingPartner,
   p2p,
+  updateMyTradeOffer,
 }: TradeUIProps) {
   const [address, setAddress] = useState<string | null>(null);
   const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
@@ -62,9 +67,6 @@ export function TradeUI({
     pickBalanceItem,
     setPickBalanceItem,
   ] = useState<Item<KnownContractType> | null>(null);
-  const [myTradeOffer, updateMyTradeOffer] = useImmer<
-    Array<Item<KnownContractType>>
-  >([]);
 
   // Metadata about assets
   const [tokensToFetch, updateTokensToFetch] = useImmer<FetchableToken[]>([]);
@@ -76,7 +78,7 @@ export function TradeUI({
   const [error, setError] = useState<string | null>(null);
 
   const requestTokensFetch = useCallback(
-    (tokens: FetchableToken[]) =>
+    (tokens: FetchableToken[]) => {
       updateTokensToFetch((balances) => {
         const newTokens = tokens.filter(
           (tok) =>
@@ -87,7 +89,8 @@ export function TradeUI({
             )
         );
         balances.push(...newTokens);
-      }),
+      });
+    },
     [updateTokensToFetch]
   );
 
@@ -108,7 +111,7 @@ export function TradeUI({
       ChainId.POLYGON as 1,
       {
         // also maybe a bug? this doesn't fill in the exchangeAddress in buildOrder
-        exchangeContractAddress: "0x1119E3e8919d68366f56B74445eA2d10670Ac9eF",
+        exchangeContractAddress: config.zeroExContractAddress,
       }
     );
     setNFTSwap(nftSwap);
@@ -116,7 +119,7 @@ export function TradeUI({
 
   useEffect(() => {
     setOfferAccepted(false);
-  }, [myTradeOffer, tradingPartner?.tradeOffer]);
+  }, [tradingPartner?.myTradeOffer, tradingPartner?.tradeOffer]);
 
   useEffect(() => {
     if (!tradingPartner?.tradeOffer) {
@@ -131,7 +134,7 @@ export function TradeUI({
     }
     p2p.send(tradingPartner.peer, {
       type: "offer",
-      offer: myTradeOffer.map((item) => ({
+      offer: tradingPartner.myTradeOffer.map((item) => ({
         type: item.type,
         contractAddress: item.contractAddress,
         balance: item.balance.toString(),
@@ -140,7 +143,7 @@ export function TradeUI({
         decimals: item.decimals,
       })),
     });
-  }, [p2p, tradingPartner?.peer, myTradeOffer]);
+  }, [p2p, tradingPartner?.peer, tradingPartner?.myTradeOffer]);
 
   // Get all contracts for user's balances
   useEffect(() => {
@@ -257,15 +260,15 @@ export function TradeUI({
             buildOrder(nftSwap, [
               {
                 address: address,
-                items: myTradeOffer,
+                items: tradingPartner.myTradeOffer,
               },
               {
                 address: tradingPartner.address,
-                items: getItems(
-                  tradingPartner.tradeOffer,
+                items: getItems({
+                  balances: tradingPartner.tradeOffer,
                   contracts,
-                  collectibles
-                ).filter(isItemWithKnownContractType),
+                  collectibles,
+                }).filter(isItemWithKnownContractType),
               },
             ])
           )
@@ -277,7 +280,6 @@ export function TradeUI({
     tradingPartner,
     offerAccepted,
     address,
-    myTradeOffer,
     collectibles,
     contracts,
   ]);
@@ -307,7 +309,7 @@ export function TradeUI({
                     onItemSelected={
                       tradingPartner ? setPickBalanceItem : () => {}
                     }
-                    subtractItems={myTradeOffer}
+                    subtractItems={tradingPartner?.myTradeOffer ?? []}
                   />
                 ) : (
                   <div>
@@ -342,7 +344,7 @@ export function TradeUI({
             <div className="offers">
               <DetailsSection title="My trade offer">
                 <TradeOffer
-                  items={myTradeOffer}
+                  items={tradingPartner.myTradeOffer}
                   onItemSelected={(item) => {
                     // swap current balance :)
                     const diff = item.originalBalance.minus(item.balance);
@@ -370,10 +372,13 @@ export function TradeUI({
 
                     // Check if we need to approve the NFT for swapping
                     const myApprovalStatus = await Promise.all(
-                      myTradeOffer.map((item) => {
+                      tradingPartner.myTradeOffer.map((item) => {
                         const swapItem = itemToSwapItem(item);
                         return nftSwap
-                          .loadApprovalStatus(swapItem, address)
+                          .loadApprovalStatus(swapItem, address, {
+                            exchangeProxyContractAddressForAsset:
+                              config.zeroExContractAddress,
+                          })
                           .then((status) => ({ swapItem, status }));
                       })
                     );
@@ -392,7 +397,7 @@ export function TradeUI({
                                 ) as unknown) as Web3Provider,
                                 chainId: ChainId.POLYGON,
                                 exchangeProxyContractAddressForAsset:
-                                  "0x1119E3e8919d68366f56B74445eA2d10670Ac9eF",
+                                  config.zeroExContractAddress,
                               }
                             )
                           )
@@ -415,15 +420,15 @@ export function TradeUI({
                       const order = buildOrder(nftSwap, [
                         {
                           address: address,
-                          items: myTradeOffer,
+                          items: tradingPartner.myTradeOffer,
                         },
                         {
                           address: tradingPartner.address,
-                          items: getItems(
-                            tradingPartner.tradeOffer,
+                          items: getItems({
+                            balances: tradingPartner.tradeOffer,
                             contracts,
-                            collectibles
-                          ).filter(isItemWithKnownContractType),
+                            collectibles,
+                          }).filter(isItemWithKnownContractType),
                         },
                       ]);
                       console.log("waiting for signed order");
@@ -431,6 +436,7 @@ export function TradeUI({
                         order,
                         address
                       );
+                      console.log("GOT SIGNED ORDER:", signedOrder);
                       p2p?.send(tradingPartner.peer, {
                         type: "accept",
                         order: networkifySignedOrder(signedOrder),
@@ -478,11 +484,11 @@ export function TradeUI({
               </div>
               <DetailsSection title="Partner's trade offer">
                 <TradeOffer
-                  items={getItems(
-                    tradingPartner.tradeOffer,
+                  items={getItems({
+                    balances: tradingPartner.tradeOffer,
                     contracts,
-                    collectibles
-                  ).filter(isItemWithKnownContractType)}
+                    collectibles,
+                  }).filter(isItemWithKnownContractType)}
                   onItemSelected={() => {
                     // nothing happens when you double click your trading partner's items.
                   }}

@@ -24,7 +24,6 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
     balanceToFixedNumber(amountInTrade, item.decimals).toString()
   );
   const [parsedAmount, setParsedAmount] = useState(amountInTrade);
-  useOnKeyDown("Enter", () => onAdd(parsedAmount));
 
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -35,6 +34,12 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
   }, []);
 
   const notEnoughMoney = parsedAmount.gt(item.originalBalance);
+  useOnKeyDown("Enter", () => {
+    if (notEnoughMoney) {
+      return;
+    }
+    onAdd(parsedAmount);
+  });
 
   return (
     <div

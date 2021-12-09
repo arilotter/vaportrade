@@ -15,6 +15,7 @@ import {
   TokenKey,
   NetworkItem,
   getTokenKey,
+  KnownContractType,
 } from "../../utils/utils";
 
 export const chainId = ChainId.POLYGON;
@@ -117,18 +118,28 @@ export async function fetchBalances(
   return [...balances, ...extraBalances.flat()];
 }
 
-export function getItems(
-  balances: TokenBalance[] | NetworkItem[],
-  contracts: Map<ContractKey, ContractInfo | "fetching">,
-  collectibles: Map<TokenKey, Collectible | "fetching"> | undefined,
-  subtractItems?: readonly Item<ContractType>[] | readonly NetworkItem[]
-): Item<ContractType>[] {
+export function getItems({
+  balances,
+  contracts,
+  collectibles,
+  typeFilter,
+  subtractItems,
+}: {
+  balances: TokenBalance[] | NetworkItem[];
+  contracts: Map<ContractKey, ContractInfo | "fetching">;
+  collectibles: Map<TokenKey, Collectible | "fetching"> | undefined;
+  typeFilter?: Array<KnownContractType | "other">;
+  subtractItems?: readonly Item<ContractType>[] | readonly NetworkItem[];
+}): Item<ContractType>[] {
   return balances
     .map<Item<ContractType> | null>((balance) => {
       const collectible = collectibles?.get(
         getTokenKey(chainId, balance.contractAddress, balance.tokenID)
       );
       if (typeof collectible === "object") {
+        if (typeFilter && !typeFilter.includes("ERC1155")) {
+          return null;
+        }
         const item: Item<ContractType> = {
           type: "ERC1155",
           contractAddress: collectible.contractAddress,
@@ -146,9 +157,16 @@ export function getItems(
       if (typeof contract === "object") {
         const t =
           contract.type ||
-          ("contractType" in balance ? balance.contractType : "UNKNOWN");
+          // TODO is it safe to accept an asset type from another user?
+          // Why doesn't sequence know the contract type?
+          ("contractType" in balance ? balance.contractType : balance.type);
         const type: ContractType = isKnownContractType(t) ? t : { other: t };
-
+        if (
+          typeFilter &&
+          !typeFilter.includes(typeof type === "object" ? "other" : type)
+        ) {
+          return null;
+        }
         const item: Item<ContractType> = {
           type,
           contractAddress: balance.contractAddress,

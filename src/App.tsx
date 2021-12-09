@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
-import { Window, Theme } from "packard-belle";
+import { Window, Theme, TaskBar } from "packard-belle";
 import P2PT, { Peer, Tracker } from "p2pt";
 
 import { TrackersList } from "./components/TrackersList";
@@ -16,18 +16,23 @@ import {
 
 import logo from "./vtlogo.png";
 import clouds from "./clouds.png";
+import logOut from "./logOut.png";
+import help from "./help.png";
+import findPeers from "./findPeers.png";
+import controlPanel from "./controlPanel.png";
+import noIcon from "./no.png";
+import yesIcon from "./yes.png";
+import reboot from "./reboot.png";
 import "./App.css";
 import { ConnectToSequence } from "./sequence/ConnectToSequence";
 import { sequence } from "0xsequence";
 import { EllipseAnimation } from "./utils/EllipseAnimation";
 import { SequenceSessionProvider } from "./sequence/SequenceSessionProvider";
-import { ProfileIcon } from "./components/ProfileIcon";
-import { FindProfileIcon } from "./components/FindProfileIcon";
 import { Clippy } from "./components/Clippy";
 import { Contacts } from "./components/Contacts";
 import { makeBlockyIcon } from "./makeBlockyIcon";
-import { TradeRequestPopup } from "./TradeRequest";
 import { Chat } from "./Chat";
+import { ControlPanel } from "./ControlPanel";
 
 enableMapSet();
 
@@ -73,7 +78,17 @@ function Vaportrade({
 }) {
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
   const [sources, updateSources] = useImmer<string[]>([]);
-  const [peers, updatePeers] = useImmer<Set<TradingPeer | Peer>>(new Set());
+  const [peers, _updatePeers] = useImmer<Set<TradingPeer | Peer>>(new Set());
+
+  // Hack because Immer types don't like things with Readonly in them, hehe
+  const updatePeers = (_updatePeers as unknown) as (
+    cb: (peers: Set<TradingPeer | Peer>) => void | Set<TradingPeer | Peer>
+  ) => void;
+
+  // When you close a trading window, don't let them show up again until you send *them* a request.
+  const [tempBannedAddresses, updateTempBannedAddresses] = useImmer<
+    Set<string>
+  >(new Set());
 
   useEffect(() => {
     updateSources(defaultSources);
@@ -93,11 +108,13 @@ function Vaportrade({
   }, [p2pClient, sources]);
 
   const [showContacts, setShowContacts] = useState(false);
+  const [showTrackers, setShowTrackers] = useState(false);
   const [showClippy, setShowClippy] = useState(false);
+  const [showControlPanel, setShowControlPanel] = useState(false);
 
-  const [tradingPartner, updateTradingPartner] = useImmer<TradingPeer | null>(
-    null
-  );
+  const [tradingPartnerAddress, updateTradingPartnerAddress] = useImmer<
+    string | null
+  >(null);
   // P2P peer connection :)
   useEffect(() => {
     if (!sources.length) {
@@ -151,8 +168,11 @@ function Vaportrade({
           const p = isTradingPeer(peer) ? peer.peer : peer;
           if (p.id === closedPeer.id) {
             peers.delete(peer);
-            if (tradingPartner?.peer.id === closedPeer.id) {
-              updateTradingPartner(null);
+            if (
+              isTradingPeer(closedPeer) &&
+              tradingPartnerAddress === closedPeer.address
+            ) {
+              updateTradingPartnerAddress(null);
             }
           }
         }
@@ -185,6 +205,7 @@ function Vaportrade({
               tradeOffer: [],
               tradeStatus: { type: "negotiating" },
               chat: [],
+              myTradeOffer: [],
             });
           });
         } else {
@@ -241,114 +262,99 @@ function Vaportrade({
     updateTrackers,
     address,
     updatePeers,
-    tradingPartner,
+    tradingPartnerAddress,
     p2pClient,
-    updateTradingPartner,
+    updateTradingPartnerAddress,
   ]);
-
-  // Update trading partner info when its associated peer updates
-  useEffect(() => {
-    const partner = [...peers]
-      .filter(isTradingPeer)
-      .find((p) => p.address === tradingPartner?.address);
-    if (partner) {
-      updateTradingPartner(partner);
-    }
-  }, [updateTradingPartner, peers, tradingPartner?.address]);
 
   const tradeRequests = [...peers]
     .filter(isTradingPeer)
-    .filter((p) => p.tradeRequest);
+    .filter((p) => p.tradeRequest && !tempBannedAddresses.has(p.address));
 
+  const tradingPartner = tradeRequests.find(
+    (p) => p.address === tradingPartnerAddress
+  );
   return (
     <>
-      <header>
-        <ProfileIcon seed={address} />
-        <img
-          src={logo}
-          alt="vaportrade logo: a letter V with a letter T superimposed on top of the right stroke of the V"
-          className="logo"
-        />
-        <FindProfileIcon onClick={() => setShowContacts(true)} />
-      </header>
-      <Window
-        title={`vaportrade: Wallet ${address}`}
-        icon={logo}
-        resizable={false}
-        className="window"
-        onClose={disconnect}
-        onHelp={() => setShowClippy(true)}
-      >
-        <TrackersList sources={sources} trackers={trackers} />
-        <SequenceSessionProvider wallet={wallet}>
-          {({ indexer, metadata }) =>
-            trackers.size ? (
-              <div className="appWindowContents">
-                <div>
-                  {tradeRequests.map((trader) => (
-                    <TradeRequestPopup
-                      flash={
-                        trader.address !== tradingPartner?.address &&
-                        trader.hasNewInfo
-                      }
-                      key={trader.address}
-                      address={trader.address!}
-                      isActive={trader.address === tradingPartner?.address}
-                      onClick={() => {
+      <SequenceSessionProvider wallet={wallet}>
+        {({ indexer, metadata }) => (
+          <div className="modal">
+            {trackers.size ? (
+              tradingPartner ? (
+                <Window
+                  title={`vaportrade: Trading with ${tradingPartnerAddress}`}
+                  icon={logo}
+                  className="window"
+                  onMinimize={() => updateTradingPartnerAddress(null)}
+                  onClose={() => {
+                    updateTradingPartnerAddress(null);
+                    updateTempBannedAddresses((addrs) => {
+                      addrs.add(tradingPartner.address);
+                    });
+                  }}
+                >
+                  <div className="appWindowContents">
+                    <TradeUI
+                      wallet={wallet}
+                      indexer={indexer}
+                      metadata={metadata}
+                      p2p={p2pClient}
+                      tradingPartner={tradingPartner}
+                      updateMyTradeOffer={(cb) => {
                         updatePeers((peers) => {
-                          for (const peer of peers) {
-                            if (
-                              isTradingPeer(peer) &&
-                              peer.address === trader.address
-                            ) {
-                              peer.hasNewInfo = false;
-                            }
+                          const tp = [...peers]
+                            .filter(isTradingPeer)
+                            .find((p) => p.address === tradingPartner.address);
+                          if (tp) {
+                            cb(tp.myTradeOffer);
                           }
                         });
-                        updateTradingPartner(trader);
                       }}
                     />
-                  ))}
-                </div>
-                <TradeUI
-                  wallet={wallet}
-                  indexer={indexer}
-                  metadata={metadata}
-                  p2p={p2pClient}
-                  tradingPartner={tradingPartner}
-                />
-                {tradingPartner ? (
-                  <Chat
-                    messages={tradingPartner.chat}
-                    onSendMessage={(message) => {
-                      p2pClient?.send(tradingPartner.peer, {
-                        type: "chat",
-                        message,
-                      });
-                      updatePeers((peers) => {
-                        const correctPeer = [...peers]
-                          .filter(isTradingPeer)
-                          .find((p) => p.address === tradingPartner.address);
-                        if (correctPeer) {
-                          correctPeer.chat.push({
-                            chatter: "me",
-                            message,
-                          });
-                        }
-                      });
-                    }}
-                  />
-                ) : null}
-              </div>
+                    <Chat
+                      messages={tradingPartner.chat}
+                      onSendMessage={(message) => {
+                        p2pClient?.send(tradingPartner.peer, {
+                          type: "chat",
+                          message,
+                        });
+                        updatePeers((peers) => {
+                          const correctPeer = [...peers]
+                            .filter(isTradingPeer)
+                            .find((p) => p.address === tradingPartner.address);
+                          if (correctPeer) {
+                            correctPeer.chat.push({
+                              chatter: "me",
+                              message,
+                            });
+                          }
+                        });
+                      }}
+                    />
+                  </div>
+                </Window>
+              ) : null
             ) : (
-              <div style={{ padding: "8px" }}>
-                Connecting to trackers
-                <EllipseAnimation />
-              </div>
-            )
-          }
-        </SequenceSessionProvider>
-      </Window>
+              <Window title="Connecting to trackers">
+                <div style={{ padding: "8px" }}>
+                  Connecting to trackers
+                  <EllipseAnimation />
+                </div>
+              </Window>
+            )}
+          </div>
+        )}
+      </SequenceSessionProvider>
+      {showTrackers ? (
+        <TrackersList
+          sources={sources}
+          trackers={trackers}
+          onClose={() => setShowTrackers(false)}
+        />
+      ) : null}
+      {showControlPanel ? (
+        <ControlPanel onClose={() => setShowControlPanel(false)} />
+      ) : null}
       {showContacts ? (
         <Contacts
           requestMorePeers={() => p2pClient?.requestMorePeers()}
@@ -364,6 +370,9 @@ function Vaportrade({
               icon: makeBlockyIcon(peerAddr),
             }))}
           onSubmit={(peerAddr) => {
+            updateTempBannedAddresses((addrs) => {
+              addrs.delete(peerAddr);
+            });
             const correctPeer = [...peers]
               .filter(isTradingPeer)
               .find((p) => p.address === peerAddr);
@@ -377,7 +386,7 @@ function Vaportrade({
                   correctPeer.tradeRequest = true;
                 }
               });
-              updateTradingPartner(correctPeer);
+              updateTradingPartnerAddress(correctPeer.address);
             }
             setShowContacts(false);
           }}
@@ -390,12 +399,77 @@ function Vaportrade({
             tradeRequests.length
               ? "Double-click items to add them to your trade offer!"
               : !showContacts
-              ? "Click the plus button in the top right to find a trading partner!"
+              ? "Click 'Find People to Trade With' to get started!"
               : "Pick someone online to trade with!"
           }
           onOutOfMessages={() => setShowClippy(false)}
         />
       )}
+
+      <TaskBar
+        openWindows={tradeRequests.map((trader) => ({
+          title: trader.address,
+          icon: makeBlockyIcon(trader.address),
+          isActive: trader.address === tradingPartnerAddress,
+          onClick: () => {
+            updatePeers((peers) => {
+              for (const peer of peers) {
+                if (isTradingPeer(peer) && peer.address === trader.address) {
+                  peer.hasNewInfo = false;
+                }
+              }
+            });
+            updateTradingPartnerAddress(
+              trader.address === tradingPartnerAddress ? null : trader.address
+            );
+          },
+        }))}
+        options={[
+          [
+            {
+              onClick: () => setShowContacts(true),
+              title: "Find People to Trade With",
+              icon: findPeers,
+            },
+          ],
+          [
+            {
+              title: "Help",
+              icon: help,
+              onClick: () => setShowClippy(true),
+            },
+            {
+              onClick: () => setShowControlPanel(true),
+              title: "Control Panel",
+              icon: controlPanel,
+            },
+          ],
+          {
+            onClick: () => window.location.reload(),
+            title: "Reboot",
+            icon: reboot,
+          },
+          {
+            onClick: disconnect,
+            title: "Disconnect Wallet",
+            icon: logOut,
+          },
+        ]}
+        notifiers={[
+          {
+            alt: sources.length
+              ? `Connected to ${trackers.size}/${sources.length} trackers`
+              : "Loading Trackers...",
+            onClick: () => setShowTrackers(true),
+            icon: sources.length && trackers.size ? yesIcon : noIcon,
+          },
+          {
+            alt: `Connected to wallet ${address}`,
+            onClick: () => {},
+            icon: makeBlockyIcon(address),
+          },
+        ]}
+      />
     </>
   );
 }

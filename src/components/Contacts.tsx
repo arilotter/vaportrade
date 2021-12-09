@@ -11,6 +11,7 @@ import { useState } from "react";
 import { useOnKeyDown } from "../utils/utils";
 import "./Contacts.css";
 import searchIcon from "./search.png";
+import findPeers from "../findPeers.png";
 interface ContactsProps<T> {
   onClose?: () => void;
   onHelp?: () => void;
@@ -34,13 +35,14 @@ export function Contacts<T>({
   );
 
   return (
-    <div className="modal">
+    <div className="modal darkenbg">
       <Window
         className="WindowAction contactsWindow"
         title="Pick a trading partner"
         onClose={onClose}
         onHelp={onHelp}
         resizable={false}
+        icon={findPeers}
       >
         <div className="contactsContents">
           <div className="contactsSearch">

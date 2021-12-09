@@ -80,56 +80,51 @@ export function WalletContentsBox({
   }, [balances, requestTokensFetch]);
 
   const erc20And721 = [
-    ...getItems(
-      balances.filter(
-        (b) => b.contractType === "ERC20" || b.contractType === "ERC721"
-      ),
+    ...getItems({
+      balances,
       contracts,
       collectibles,
-      subtractItems
-    ),
+      subtractItems,
+      typeFilter: ["ERC20", "ERC721"],
+    }),
   ] as Array<Item<KnownContractType>>; // ok to assert type because we filter above
 
   const otherTokens = [
-    ...getItems(
-      balances.filter(
-        (b) =>
-          b.contractType !== "ERC20" &&
-          b.contractType !== "ERC721" &&
-          b.contractType !== "ERC1155"
-      ),
+    ...getItems({
+      balances,
       contracts,
       collectibles,
-      subtractItems
-    ),
+      subtractItems,
+      typeFilter: ["other"],
+    }),
   ];
 
-  const erc1155Folders = getItems(
-    balances.reduce<TokenBalance[]>((acc, bal) => {
+  const erc1155Folders = getItems({
+    balances: balances.reduce<TokenBalance[]>((acc, bal) => {
       // Only load one tokenID of each 1155
-      if (
-        bal.contractType === "ERC1155" &&
-        !acc.some((item) => item.contractAddress === bal.contractAddress)
-      ) {
+      if (!acc.some((item) => item.contractAddress === bal.contractAddress)) {
         acc.push(bal);
       }
       return acc;
     }, []),
+    typeFilter: ["ERC1155"],
     contracts,
-    undefined,
-    subtractItems
-  );
+    collectibles: undefined,
+    subtractItems,
+  });
 
   const tokenFolderContract = tokenFolderAddress
     ? contracts.get(getContractKey(chainId, tokenFolderAddress))
     : undefined;
   const erc155sInOpenFolder = tokenFolderAddress
-    ? (getItems(
-        balances.filter((bal) => bal.contractAddress === tokenFolderAddress),
+    ? (getItems({
+        balances: balances.filter(
+          (bal) => bal.contractAddress === tokenFolderAddress
+        ),
         contracts,
         collectibles,
-        subtractItems
-      ) as Array<Item<KnownContractType>>) // ok to assert type because we filter above
+        subtractItems,
+      }) as Array<Item<KnownContractType>>) // ok to assert type because we filter above
     : null;
 
   return (

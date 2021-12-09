@@ -5,6 +5,7 @@ import { ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { useEffect } from "react";
 import { BigNumber } from "@0x/utils";
+import { config } from "../settings";
 
 export interface FailableTracker extends Tracker {
   failed: boolean;
@@ -124,6 +125,7 @@ export interface TradingPeer {
   tradeRequest: boolean;
   hasNewInfo: boolean;
   tradeOffer: NetworkItem[];
+  myTradeOffer: Item<KnownContractType>[];
   tradeStatus:
     | { type: "negotiating" }
     | { type: "locked_in" }
@@ -292,7 +294,7 @@ export function buildOrder(
     {
       takerAddress: taker.address,
       // TODO remove hack
-      exchangeAddress: "0x1119E3e8919d68366f56B74445eA2d10670Ac9eF",
+      exchangeAddress: config.zeroExContractAddress,
     }
   );
 }
@@ -332,3 +334,5 @@ export function fixedNumberToBalance(
 }
 
 const ten = new BigNumber(10);
+
+export type Writeable<T> = { -readonly [P in keyof T]: T[P] };

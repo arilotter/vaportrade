@@ -80,7 +80,17 @@ declare module "packard-belle" {
   }): JSX.Element;
   export function SelectBoxSimple(props: any): JSX.Element;
   export function StartMenu(props: any): JSX.Element;
-  export function TaskBar(props: any): JSX.Element;
+  export function TaskBar(props: {
+    options: NestedArray<{ title: string; icon: string; onClick: () => void }>;
+    quickLaunch?: Array<{ icon: string; title: string; onClick?: () => void }>;
+    openWindows?: Array<{
+      isActive: boolean;
+      onClick: () => void;
+      icon: string;
+      title: string;
+    }>;
+    notifiers: Array<{ alt: string; icon: string; onClick: () => void }>;
+  }): JSX.Element;
   export function MenuBar(props: any): JSX.Element;
   export function Window(props: {
     children: React.ReactNode;
@@ -117,3 +127,4 @@ declare module "packard-belle" {
     children: React.ReactNode;
   }): JSX.Element;
 }
+interface NestedArray<T> extends Array<T | NestedArray<T>> {}

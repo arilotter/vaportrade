@@ -2,8 +2,9 @@ import { sequence } from "0xsequence";
 import { Session } from "@0xsequence/auth";
 import { sequenceContext, ChainId } from "@0xsequence/network";
 import * as ethers from "ethers";
-import { DetailsSection } from "packard-belle";
+import { Window } from "packard-belle";
 import { useState, useEffect } from "react";
+import { config } from "../settings";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
 
 interface SequenceSessionProviderProps {
@@ -97,20 +98,26 @@ export function SequenceSessionProvider({
 
   if ("error" in state) {
     return (
-      <DetailsSection title="Error connecting to Sequence Indexer">
-        {state.error.map((e, i) => (
-          <p key={i}>{e}</p>
-        ))}
-      </DetailsSection>
+      <div className="modal">
+        <Window title="Error connecting to Sequence Indexer">
+          {state.error.map((e, i) => (
+            <p key={i} style={{ padding: "8px" }}>
+              {e}
+            </p>
+          ))}
+        </Window>
+      </div>
     );
   } else if ("waitingFor" in state) {
     return (
-      <DetailsSection title="Loading Sequence Indexer">
-        <p>
-          Waiting for {state.waitingFor}
-          <EllipseAnimation />
-        </p>
-      </DetailsSection>
+      <div className="modal">
+        <Window title="Loading Sequence Indexer">
+          <p style={{ padding: "8px" }}>
+            Waiting for {state.waitingFor}
+            <EllipseAnimation />
+          </p>
+        </Window>
+      </div>
     );
   } else {
     return children(state);
@@ -135,10 +142,7 @@ function isSequenceError(err: any): err is SequenceError {
   );
 }
 
-const corsProxy =
-  process.env.NODE_ENV === "production"
-    ? "https://cors.vaportrade.net/"
-    : "http://localhost:8080/";
+const corsProxy = config.corsAnywhereUrl;
 
 const services = {
   api: `${corsProxy}https://api.sequence.app`,
