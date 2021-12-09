@@ -183,7 +183,7 @@ function Vaportrade({
               hasNewInfo: false,
               tradeRequest: false,
               tradeOffer: [],
-              offerAccepted: false,
+              tradeStatus: { type: "negotiating" },
               chat: [],
             });
           });
@@ -203,10 +203,18 @@ function Vaportrade({
               tradingPeer.tradeRequest = true;
             } else if (msg.type === "offer") {
               tradingPeer.tradeOffer = msg.offer;
-              tradingPeer.offerAccepted = false;
+              tradingPeer.tradeStatus = { type: "negotiating" };
               tradingPeer.hasNewInfo = true;
             } else if (msg.type === "lockin") {
-              tradingPeer.offerAccepted = msg.isLocked;
+              tradingPeer.tradeStatus = msg.isLocked
+                ? { type: "locked_in" }
+                : { type: "negotiating" };
+            } else if (msg.type === "accept") {
+              // todo verify hashse are the same as the order we locked into
+              tradingPeer.tradeStatus = {
+                type: "signedOrder",
+                signedOrder: msg.order,
+              };
             } else if (msg.type === "chat") {
               tradingPeer.chat.push({
                 chatter: "them",

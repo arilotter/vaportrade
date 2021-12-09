@@ -10,11 +10,15 @@ import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import {
   buildOrder,
+  denetworkifySignedOrder,
+  doIGoFirst,
   getContractKey,
   getTokenKey,
   isItemWithKnownContractType,
   Item,
+  itemToSwapItem,
   KnownContractType,
+  networkifySignedOrder,
   TradingPeer,
   VaportradeMessage,
 } from "../../utils/utils";
@@ -35,6 +39,7 @@ import {
   fetchContractsForBalances,
   getItems,
 } from "./contracts";
+import { Web3Provider } from "@ethersproject/providers";
 interface TradeUIProps {
   wallet: sequence.Wallet;
   indexer: sequence.indexer.Indexer;
@@ -92,6 +97,7 @@ export function TradeUI({
 
   useEffect(() => {
     const provider = wallet.getProvider(ChainId.POLYGON);
+
     if (!provider) {
       throw new Error("Failed to get Provider from Sequence");
     }
@@ -246,23 +252,40 @@ export function TradeUI({
     p2p.send(tradingPartner.peer, {
       type: "lockin",
       isLocked: offerAccepted,
-      hash: orderHashUtils.getOrderHash(
-        buildOrder(nftSwap, [
-          {
-            address: address,
-            items: myTradeOffer,
-          },
-          {
-            address: tradingPartner.address,
-            items: [
-              //todo
-            ],
-          },
-        ])
-      ),
+      hash: offerAccepted
+        ? orderHashUtils.getOrderHash(
+            buildOrder(nftSwap, [
+              {
+                address: address,
+                items: myTradeOffer,
+              },
+              {
+                address: tradingPartner.address,
+                items: getItems(
+                  tradingPartner.tradeOffer,
+                  contracts,
+                  collectibles
+                ).filter(isItemWithKnownContractType),
+              },
+            ])
+          )
+        : "",
     });
-  }, [nftSwap, p2p, tradingPartner, offerAccepted, address, myTradeOffer]);
-  const bothPlayersAccepted = offerAccepted && tradingPartner?.offerAccepted;
+  }, [
+    nftSwap,
+    p2p,
+    tradingPartner,
+    offerAccepted,
+    address,
+    myTradeOffer,
+    collectibles,
+    contracts,
+  ]);
+  const bothPlayersAccepted =
+    offerAccepted && tradingPartner?.tradeStatus?.type === "locked_in";
+
+  const iGoFirst =
+    address && tradingPartner && doIGoFirst(address, tradingPartner.address);
 
   return (
     <>
@@ -315,14 +338,14 @@ export function TradeUI({
                 : []),
             ]}
           />
-          {tradingPartner ? (
+          {tradingPartner && nftSwap && address ? (
             <div className="offers">
               <DetailsSection title="My trade offer">
                 <TradeOffer
                   items={myTradeOffer}
                   onItemSelected={(item) => {
                     // swap current balance :)
-                    const diff = item.originalBalance.sub(item.balance);
+                    const diff = item.originalBalance.minus(item.balance);
                     setPickBalanceItem({ ...item, balance: diff });
                   }}
                 />
@@ -337,9 +360,103 @@ export function TradeUI({
                   label="Accept Offer"
                 />
                 <ButtonForm
-                  isDisabled={!bothPlayersAccepted}
-                  onClick={() => {
-                    window.alert("Coming soon!");
+                  isDisabled={
+                    !bothPlayersAccepted ||
+                    (!iGoFirst &&
+                      tradingPartner.tradeStatus.type !== "signedOrder")
+                  }
+                  onClick={async () => {
+                    // disable this button
+
+                    // Check if we need to approve the NFT for swapping
+                    const myApprovalStatus = await Promise.all(
+                      myTradeOffer.map((item) => {
+                        const swapItem = itemToSwapItem(item);
+                        return nftSwap
+                          .loadApprovalStatus(swapItem, address)
+                          .then((status) => ({ swapItem, status }));
+                      })
+                    );
+
+                    const receipts = [];
+                    for (const { swapItem, status } of myApprovalStatus) {
+                      if (!status.tokenIdApproved && !status.contractApproved) {
+                        receipts.push(
+                          (
+                            await nftSwap.approveTokenOrNftByAsset(
+                              swapItem,
+                              address,
+                              {
+                                provider: (wallet.getSigner(
+                                  ChainId.POLYGON
+                                ) as unknown) as Web3Provider,
+                                chainId: ChainId.POLYGON,
+                                exchangeProxyContractAddressForAsset:
+                                  "0x1119E3e8919d68366f56B74445eA2d10670Ac9eF",
+                              }
+                            )
+                          )
+                            .wait()
+                            .then(() =>
+                              console.log(
+                                "Approved ",
+                                swapItem.tokenAddress,
+                                swapItem.tokenId
+                              )
+                            )
+                        );
+                      }
+                    }
+                    await Promise.all(receipts);
+
+                    if (iGoFirst) {
+                      // sign and submit order
+
+                      const order = buildOrder(nftSwap, [
+                        {
+                          address: address,
+                          items: myTradeOffer,
+                        },
+                        {
+                          address: tradingPartner.address,
+                          items: getItems(
+                            tradingPartner.tradeOffer,
+                            contracts,
+                            collectibles
+                          ).filter(isItemWithKnownContractType),
+                        },
+                      ]);
+                      console.log("waiting for signed order");
+                      const signedOrder = await nftSwap.signOrder(
+                        order,
+                        address
+                      );
+                      p2p?.send(tradingPartner.peer, {
+                        type: "accept",
+                        order: networkifySignedOrder(signedOrder),
+                      });
+                      console.log("waiting for peer to accept");
+                    } else {
+                      if (tradingPartner.tradeStatus.type !== "signedOrder") {
+                        throw new Error(
+                          "expected signed order to exist for p2 when clicking button"
+                        );
+                      }
+                      // we're good. submit it on-chain.
+                      console.log("Submitting order on-chain");
+                      const fillTx = await nftSwap.fillSignedOrder(
+                        denetworkifySignedOrder(
+                          tradingPartner.tradeStatus.signedOrder
+                        )
+                      );
+                      console.log("waiting for order completion.");
+                      const fillTxReceipt = await nftSwap.awaitTransactionHash(
+                        fillTx
+                      );
+                      console.log(
+                        `🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
+                      );
+                    }
                   }}
                 >
                   <img
@@ -353,7 +470,7 @@ export function TradeUI({
                 </ButtonForm>
                 <Checkbox
                   readOnly
-                  checked={tradingPartner.offerAccepted}
+                  checked={tradingPartner.tradeStatus.type !== "negotiating"}
                   id="partnerAccept"
                   label="Partner Accepts"
                   isDisabled

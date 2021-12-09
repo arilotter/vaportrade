@@ -6,8 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import "./ConnectToSequence.css";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
+import { sequenceWalletWebappURL } from "../settings";
 
-export const wallet = new sequence.Wallet("polygon");
+export const wallet = new sequence.Wallet("polygon", {
+  walletAppURL: sequenceWalletWebappURL ?? undefined,
+});
 
 interface WalletProviderProps {
   wallet: sequence.Wallet;

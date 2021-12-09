@@ -33,3 +33,5 @@ Builds the app for production to the `build` folder.
 - [] add drag & drop (partially implemented, but doesn't work hehe)
 - [] buggy buggy css, please flexbox wizards, save me
 - [] rip out 0x, it's huge.. once trader.xyz adds order hashing & polygon we good
+- [] figure out why we re-render at like 60fps.... eeeeeek... ugly ugly smelly react code
+- [] correctly close trade req when we lose the peer. eek.

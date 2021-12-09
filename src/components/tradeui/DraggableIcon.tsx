@@ -1,4 +1,3 @@
-import { BigNumber } from "ethers";
 import { ExplorerIcon } from "packard-belle";
 import { useDrag } from "react-dnd";
 import {
@@ -9,6 +8,7 @@ import {
 } from "../../utils/utils";
 import missingIcon from "./missing.png";
 import "./DraggableIcon.css";
+import { BigNumber } from "@0x/utils";
 
 interface DraggableIconProps {
   item: Item<ContractType>;
@@ -34,7 +34,7 @@ export function DraggableIcon({
   ).toString();
 
   const title = `${
-    BigNumber.from(decimalBalance.split(".")[0]).gt(1_000_000_000)
+    new BigNumber(decimalBalance.split(".")[0]).gt(1_000_000_000)
       ? "a lot of"
       : addNumberCommas(decimalBalance)
   }\n${item.name}`;
