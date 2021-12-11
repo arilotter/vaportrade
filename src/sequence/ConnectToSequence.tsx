@@ -8,9 +8,12 @@ import "./ConnectToSequence.css";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
 import { config } from "../settings";
 import { ControlPanel } from "../ControlPanel";
+import { networks, services } from "./SequenceSessionProvider";
 
 export const wallet = new sequence.Wallet("polygon", {
   walletAppURL: config.sequenceWalletWebappUrl,
+  networkRpcUrl: services.nodes,
+  networks,
 });
 
 interface WalletProviderProps {

@@ -164,21 +164,15 @@ export function networkifySignedOrder(
     salt: signedOrder.salt.toString(),
     takerAssetAmount: signedOrder.takerAssetAmount.toString(),
     takerFee: signedOrder.takerFee.toString(),
+    chainId: ChainId.POLYGON,
+    exchangeAddress: config.zeroExContractAddress,
   };
 }
 
 export function denetworkifySignedOrder(
   signedOrder: NetworkSignedOrder
 ): SignedOrder {
-  return {
-    ...signedOrder,
-    expirationTimeSeconds: new BigNumber(signedOrder.expirationTimeSeconds),
-    makerAssetAmount: new BigNumber(signedOrder.makerAssetAmount),
-    makerFee: new BigNumber(signedOrder.makerFee),
-    salt: new BigNumber(signedOrder.salt),
-    takerAssetAmount: new BigNumber(signedOrder.takerAssetAmount),
-    takerFee: new BigNumber(signedOrder.takerFee),
-  };
+  return signedOrder;
 }
 
 export interface ChatMessage {
@@ -293,7 +287,6 @@ export function buildOrder(
     maker.address,
     {
       takerAddress: taker.address,
-      // TODO remove hack
       exchangeAddress: config.zeroExContractAddress,
     }
   );

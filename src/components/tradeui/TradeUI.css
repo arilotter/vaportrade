@@ -37,7 +37,3 @@
   justify-content: space-evenly;
   align-items: center;
 }
-
-.tradeIconDisabled {
-  filter: grayscale(100%);
-}

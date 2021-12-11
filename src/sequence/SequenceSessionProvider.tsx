@@ -144,7 +144,7 @@ function isSequenceError(err: any): err is SequenceError {
 
 const corsProxy = config.corsAnywhereUrl;
 
-const services = {
+export const services = {
   api: `${corsProxy}https://api.sequence.app`,
   guard: `${corsProxy}https://guard.sequence.app`,
   metadata: `${corsProxy}https://metadata.sequence.app`,
@@ -153,7 +153,7 @@ const services = {
   nodes: `${corsProxy}https://nodes.sequence.app/polygon`,
 } as const;
 
-const networks = [
+export const networks = [
   {
     chainId: ChainId.POLYGON,
     name: "polygon",

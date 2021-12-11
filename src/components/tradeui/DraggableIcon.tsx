@@ -81,7 +81,7 @@ function addNumberCommas(number: string) {
   const [whole, fractional] = number.split(".");
   const fractionalStripped =
     fractional && fractional.length && fractional !== "0"
-      ? `.${fractional.slice(0, 5)}`
+      ? `.${fractional.slice(0, fractional.lastIndexOf("0") + 5)}`
       : "";
   return (
     whole

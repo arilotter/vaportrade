@@ -9,6 +9,8 @@ import {
   Item,
   useOnKeyDown,
 } from "../../utils/utils";
+import missingIcon from "./missing.png";
+
 import "./PickAmount.css";
 interface PickAmountProps {
   item: Item<ContractType>;
@@ -62,7 +64,7 @@ export function PickAmountWindow({
         <div>
           <div className="pickAmountContentsContainer">
             <img
-              src={item.iconUrl}
+              src={item.iconUrl || missingIcon}
               alt={item.name}
               width="128"
               style={{
