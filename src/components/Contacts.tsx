@@ -10,8 +10,8 @@ import {
 import { useState } from "react";
 import { useOnKeyDown } from "../utils/utils";
 import "./Contacts.css";
-import searchIcon from "./search.png";
-import findPeers from "../findPeers.png";
+import searchIcon from "../icons/search.png";
+import findPeers from "../icons/findPeers.png";
 interface ContactsProps<T> {
   onClose?: () => void;
   onHelp?: () => void;

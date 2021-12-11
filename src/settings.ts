@@ -12,7 +12,7 @@ const settings = {
 for (const key of Object.keys(settings)) {
   const storedVal = window.localStorage.getItem(storageKey(key));
   if (storedVal) {
-    settings[key as keyof typeof settings] = storedVal;
+    settings[key as keyof typeof settings] = storedVal as any;
   }
 }
 

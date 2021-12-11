@@ -14,15 +14,15 @@ import {
   VaportradeMessage,
 } from "./utils/utils";
 
-import logo from "./vtlogo.png";
-import clouds from "./clouds.png";
-import logOut from "./logOut.png";
-import help from "./help.png";
-import findPeers from "./findPeers.png";
-import controlPanel from "./controlPanel.png";
-import noIcon from "./no.png";
-import yesIcon from "./yes.png";
-import reboot from "./reboot.png";
+import logOutIcon from "./icons/logOut.png";
+import helpIcon from "./icons/help.png";
+import findPeersIcon from "./icons/findPeers.png";
+import controlPanelIcon from "./icons/controlPanel.png";
+import noIcon from "./icons/no.png";
+import yesIcon from "./icons/yes.png";
+import rebootIcon from "./icons/reboot.png";
+import vtLogoIcon from "./icons/vticon.png";
+import backgroundImg from "./background.png";
 import "./App.css";
 import { ConnectToSequence } from "./sequence/ConnectToSequence";
 import { sequence } from "0xsequence";
@@ -40,9 +40,10 @@ function App() {
   return (
     <div
       style={{
-        background: `url(${clouds})`,
+        background: `url(${backgroundImg})`,
         backgroundSize: "cover",
         imageRendering: "pixelated",
+        backgroundPosition: "center",
         height: "100%",
       }}
     >
@@ -282,8 +283,8 @@ function Vaportrade({
             {p2pClient && trackers.size ? (
               tradingPartner ? (
                 <Window
-                  title={`vaportrade: Trading with ${tradingPartnerAddress}`}
-                  icon={logo}
+                  title={`Trading with ${tradingPartnerAddress}`}
+                  icon={vtLogoIcon}
                   className="window"
                   onMinimize={() => updateTradingPartnerAddress(null)}
                   onClose={() => {
@@ -430,30 +431,30 @@ function Vaportrade({
             {
               onClick: () => setShowContacts(true),
               title: "Find People to Trade With",
-              icon: findPeers,
+              icon: findPeersIcon,
             },
           ],
           [
             {
               title: "Help",
-              icon: help,
+              icon: helpIcon,
               onClick: () => setShowClippy(true),
             },
             {
               onClick: () => setShowControlPanel(true),
               title: "Control Panel",
-              icon: controlPanel,
+              icon: controlPanelIcon,
             },
           ],
           {
             onClick: () => window.location.reload(),
             title: "Reboot",
-            icon: reboot,
+            icon: rebootIcon,
           },
           {
             onClick: disconnect,
             title: "Disconnect Wallet",
-            icon: logOut,
+            icon: logOutIcon,
           },
         ]}
         notifiers={[
