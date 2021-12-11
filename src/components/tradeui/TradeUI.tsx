@@ -5,7 +5,6 @@ import P2PT from "p2pt";
 import { ButtonForm, Checkbox, DetailsSection } from "packard-belle";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { EllipseAnimation } from "../../utils/EllipseAnimation";
 import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import {
@@ -43,10 +42,11 @@ import { Web3Provider } from "@ethersproject/providers";
 import { config } from "../../settings";
 interface TradeUIProps {
   wallet: sequence.Wallet;
+  address: string;
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
-  p2p: P2PT<VaportradeMessage> | null;
-  tradingPartner: TradingPeer | null;
+  p2p: P2PT<VaportradeMessage>;
+  tradingPartner: TradingPeer;
   updateMyTradeOffer: (
     callback: (items: Array<Item<KnownContractType>>) => void
   ) => void;
@@ -59,8 +59,8 @@ export function TradeUI({
   tradingPartner,
   p2p,
   updateMyTradeOffer,
+  address,
 }: TradeUIProps) {
-  const [address, setAddress] = useState<string | null>(null);
   const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
   const [offerAccepted, setOfferAccepted] = useState(false);
   const [
@@ -95,10 +95,6 @@ export function TradeUI({
   );
 
   useEffect(() => {
-    wallet.getAddress().then(setAddress);
-  }, [wallet]);
-
-  useEffect(() => {
     const provider = wallet.getProvider(ChainId.POLYGON);
 
     if (!provider) {
@@ -119,19 +115,13 @@ export function TradeUI({
 
   useEffect(() => {
     setOfferAccepted(false);
-  }, [tradingPartner?.myTradeOffer, tradingPartner?.tradeOffer]);
+  }, [tradingPartner.myTradeOffer, tradingPartner.tradeOffer]);
 
   useEffect(() => {
-    if (!tradingPartner?.tradeOffer) {
-      return;
-    }
     requestTokensFetch(tradingPartner.tradeOffer);
-  }, [requestTokensFetch, tradingPartner?.tradeOffer]);
+  }, [requestTokensFetch, tradingPartner.tradeOffer]);
 
   useEffect(() => {
-    if (!p2p || !tradingPartner?.peer) {
-      return;
-    }
     p2p.send(tradingPartner.peer, {
       type: "offer",
       offer: tradingPartner.myTradeOffer.map((item) => ({
@@ -143,7 +133,7 @@ export function TradeUI({
         decimals: item.decimals,
       })),
     });
-  }, [p2p, tradingPartner?.peer, tradingPartner?.myTradeOffer]);
+  }, [p2p, tradingPartner.peer, tradingPartner.myTradeOffer]);
 
   // Get all contracts for user's balances
   useEffect(() => {
@@ -249,7 +239,7 @@ export function TradeUI({
   ]);
 
   useEffect(() => {
-    if (!p2p || !tradingPartner?.peer || !nftSwap || !address) {
+    if (!nftSwap) {
       return;
     }
     p2p.send(tradingPartner.peer, {
@@ -284,10 +274,9 @@ export function TradeUI({
     contracts,
   ]);
   const bothPlayersAccepted =
-    offerAccepted && tradingPartner?.tradeStatus?.type === "locked_in";
+    offerAccepted && tradingPartner.tradeStatus.type === "locked_in";
 
-  const iGoFirst =
-    address && tradingPartner && doIGoFirst(address, tradingPartner.address);
+  const iGoFirst = doIGoFirst(address, tradingPartner.address);
 
   return (
     <>
@@ -299,23 +288,16 @@ export function TradeUI({
             tabs={[
               {
                 title: "My Wallet",
-                contents: address ? (
+                contents: (
                   <WalletContentsBox
                     accountAddress={address}
                     indexer={indexer}
                     collectibles={collectibles}
                     contracts={contracts}
                     requestTokensFetch={requestTokensFetch}
-                    onItemSelected={
-                      tradingPartner ? setPickBalanceItem : () => {}
-                    }
-                    subtractItems={tradingPartner?.myTradeOffer ?? []}
+                    onItemSelected={setPickBalanceItem}
+                    subtractItems={tradingPartner.myTradeOffer}
                   />
-                ) : (
-                  <div>
-                    Loading your wallet
-                    <EllipseAnimation />
-                  </div>
                 ),
               },
               ...(tradingPartner
@@ -330,7 +312,7 @@ export function TradeUI({
                           contracts={contracts}
                           requestTokensFetch={requestTokensFetch}
                           onItemSelected={() => {
-                            //noop
+                            // noop
                           }}
                           subtractItems={tradingPartner.tradeOffer}
                         />
@@ -340,7 +322,7 @@ export function TradeUI({
                 : []),
             ]}
           />
-          {tradingPartner && nftSwap && address ? (
+          {nftSwap ? (
             <div className="offers">
               <DetailsSection title="My trade offer">
                 <TradeOffer
@@ -500,6 +482,7 @@ export function TradeUI({
       </DndProvider>
       {pickBalanceItem ? (
         <PickAmountWindow
+          type="offer"
           item={pickBalanceItem}
           onClose={() => setPickBalanceItem(null)}
           onAdd={(amount) => {

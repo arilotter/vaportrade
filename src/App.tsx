@@ -279,7 +279,7 @@ function Vaportrade({
       <SequenceSessionProvider wallet={wallet}>
         {({ indexer, metadata }) => (
           <div className="modal">
-            {trackers.size ? (
+            {p2pClient && trackers.size ? (
               tradingPartner ? (
                 <Window
                   title={`vaportrade: Trading with ${tradingPartnerAddress}`}
@@ -295,6 +295,7 @@ function Vaportrade({
                 >
                   <div className="appWindowContents">
                     <TradeUI
+                      address={address}
                       wallet={wallet}
                       indexer={indexer}
                       metadata={metadata}

@@ -14,8 +14,14 @@ interface PickAmountProps {
   item: Item<ContractType>;
   onClose: () => void;
   onAdd: (amount: BigNumber) => void;
+  type: "offer" | "request";
 }
-export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
+export function PickAmountWindow({
+  item,
+  onClose,
+  onAdd,
+  type,
+}: PickAmountProps) {
   useOnKeyDown("Escape", onClose);
 
   const amountInTrade = item.originalBalance.minus(item.balance);
@@ -49,7 +55,7 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
       }}
     >
       <WindowAlert
-        title={`Offer some ${item.name}?`}
+        title={`${type === "offer" ? "Offer" : "Request"} some ${item.name}?`}
         className="pickAmount"
         onClose={onClose}
       >
@@ -144,7 +150,11 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
           </div>
           <div className="error">
             {notEnoughMoney
-              ? `not enough ${item.name}, you offered ${parsedAmount} but you only have ${item.originalBalance}.`
+              ? `not enough ${item.name}, you ${
+                  type === "offer" ? "offered" : "requested"
+                } ${parsedAmount} but ${
+                  type === "offer" ? "you" : "they"
+                } only have ${item.originalBalance}.`
               : ""}
           </div>
           <div className="pickAmountButtons">
@@ -152,7 +162,7 @@ export function PickAmountWindow({ item, onClose, onAdd }: PickAmountProps) {
               isDisabled={notEnoughMoney}
               onClick={() => onAdd(parsedAmount)}
             >
-              Offer
+              {type === "offer" ? "Offer" : "Request"}
             </ButtonForm>
             <ButtonForm onClick={onClose}>Cancel</ButtonForm>
           </div>
