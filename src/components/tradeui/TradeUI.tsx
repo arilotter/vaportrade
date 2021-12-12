@@ -9,7 +9,6 @@ import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import {
   buildOrder,
-  denetworkifySignedOrder,
   doIGoFirst,
   getContractKey,
   getTokenKey,
@@ -17,7 +16,6 @@ import {
   Item,
   itemToSwapItem,
   KnownContractType,
-  networkifySignedOrder,
   TokenKey,
   TradingPeer,
   VaportradeMessage,
@@ -388,7 +386,7 @@ export function TradeUI({
                   items={tradingPartner.myTradeOffer}
                   onItemSelected={(item) => {
                     // swap current balance :)
-                    const diff = item.originalBalance.minus(item.balance);
+                    const diff = item.originalBalance.sub(item.balance);
                     setPickBalanceItem({ ...item, balance: diff });
                   }}
                 />
@@ -477,7 +475,7 @@ export function TradeUI({
 
                         p2p?.send(tradingPartner.peer, {
                           type: "accept",
-                          order: networkifySignedOrder(signedOrder),
+                          order: signedOrder,
                         });
                         console.log("[trade] waiting for peer to accept");
                         setMyOrderSent(true);
@@ -492,9 +490,7 @@ export function TradeUI({
                           "[trade] got signed order from peer, button clicked. submitting order on-chain"
                         );
                         const fillTx = await nftSwap.fillSignedOrder(
-                          denetworkifySignedOrder(
-                            tradingPartner.tradeStatus.signedOrder
-                          ),
+                          tradingPartner.tradeStatus.signedOrder,
                           {
                             //TODO wtf??? this is an ugly hack
                             signer: (wallet.getSigner(

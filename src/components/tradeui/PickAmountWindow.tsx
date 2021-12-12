@@ -1,5 +1,5 @@
-import { BigNumber } from "@0x/utils";
 import { FixedNumber } from "@ethersproject/bignumber";
+import { BigNumber } from "ethers";
 import { ButtonForm, WindowAlert } from "packard-belle";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -7,7 +7,9 @@ import {
   ContractType,
   fixedNumberToBalance,
   Item,
+  two,
   useOnKeyDown,
+  zero,
 } from "../../utils/utils";
 import missingIcon from "./missing.png";
 
@@ -26,7 +28,7 @@ export function PickAmountWindow({
 }: PickAmountProps) {
   useOnKeyDown("Escape", onClose);
 
-  const amountInTrade = item.originalBalance.minus(item.balance);
+  const amountInTrade = item.originalBalance.sub(item.balance);
 
   const [amount, setAmount] = useState(
     balanceToFixedNumber(amountInTrade, item.decimals).toString()
@@ -117,14 +119,14 @@ export function PickAmountWindow({
                 <ButtonForm
                   onClick={() => {
                     setAmount("0");
-                    setParsedAmount(new BigNumber(0));
+                    setParsedAmount(zero);
                   }}
                 >
                   Zero
                 </ButtonForm>
                 <ButtonForm
                   onClick={() => {
-                    const half = item.originalBalance.div(new BigNumber(2));
+                    const half = item.originalBalance.div(two);
                     setAmount(
                       balanceToFixedNumber(half, item.decimals).toString()
                     );

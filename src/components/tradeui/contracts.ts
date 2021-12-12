@@ -1,8 +1,8 @@
 import { sequence } from "0xsequence";
-import { TokenBalance } from "0xsequence/dist/declarations/src/indexer";
-import { BigNumber } from "@0x/utils";
+import { TokenBalance } from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
+import { BigNumber } from "ethers";
 import {
   ContractKey,
   unique,
@@ -145,9 +145,9 @@ export function getItems({
           contractAddress: collectible.contractAddress,
           iconUrl: collectible.image,
           name: collectible.name,
-          balance: new BigNumber(balance.balance),
+          balance: BigNumber.from(balance.balance),
           tokenID: collectible.tokenID,
-          originalBalance: new BigNumber(balance.balance),
+          originalBalance: BigNumber.from(balance.balance),
           decimals: collectible.decimals,
         };
         return item;
@@ -170,11 +170,11 @@ export function getItems({
         const item: Item<ContractType> = {
           type,
           contractAddress: balance.contractAddress,
-          balance: new BigNumber(balance.balance),
+          balance: BigNumber.from(balance.balance),
           iconUrl: contract.logoURI,
           name: contract.name,
           tokenID: balance.tokenID,
-          originalBalance: new BigNumber(balance.balance),
+          originalBalance: BigNumber.from(balance.balance),
           decimals: contract.decimals || 1,
         };
         return item;
@@ -195,9 +195,9 @@ export function getItems({
       if (associatedSubtractItem) {
         return {
           ...item,
-          balance: item.balance.minus(
+          balance: item.balance.sub(
             typeof associatedSubtractItem.balance === "string"
-              ? new BigNumber(associatedSubtractItem.balance)
+              ? BigNumber.from(associatedSubtractItem.balance)
               : associatedSubtractItem.balance
           ),
         };

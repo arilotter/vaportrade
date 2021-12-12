@@ -1,10 +1,9 @@
 import { ChainId } from "@0xsequence/network";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
 import { Order, SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
-import { ethers, FixedNumber } from "ethers";
+import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { useEffect } from "react";
-import { BigNumber } from "@0x/utils";
 import { config } from "../settings";
 
 export interface FailableTracker extends Tracker {
@@ -107,12 +106,8 @@ function isNetworkItem(item: any): item is NetworkItem {
     return false;
   }
   try {
-    if (
-      new BigNumber(item.balance).isNaN() ||
-      new BigNumber(item.originalBalance).isNaN()
-    ) {
-      return false;
-    }
+    BigNumber.from(item.balance);
+    BigNumber.from(item.originalBalance);
   } catch {
     return false;
   }
@@ -129,50 +124,8 @@ export interface TradingPeer {
   tradeStatus:
     | { type: "negotiating" }
     | { type: "locked_in" }
-    | { type: "signedOrder"; signedOrder: NetworkSignedOrder };
+    | { type: "signedOrder"; signedOrder: SignedOrder };
   chat: ChatMessage[];
-}
-
-export interface NetworkSignedOrder {
-  chainId: number;
-  exchangeAddress: string;
-  expirationTimeSeconds: string; // BigNumber
-  feeRecipientAddress: string;
-  makerAddress: string;
-  makerAssetAmount: string; // BigNumber,
-  makerAssetData: string;
-  makerFee: string; // BigNumber
-  makerFeeAssetData: string;
-  salt: string; // BigNumber,
-  senderAddress: string;
-  signature: string;
-  takerAddress: string;
-  takerAssetAmount: string; // BigNumber
-  takerAssetData: string;
-  takerFee: string; // BigNumber
-  takerFeeAssetData: string;
-}
-
-export function networkifySignedOrder(
-  signedOrder: SignedOrder
-): NetworkSignedOrder {
-  return {
-    ...signedOrder,
-    expirationTimeSeconds: signedOrder.expirationTimeSeconds.toString(),
-    makerAssetAmount: signedOrder.makerAssetAmount.toString(),
-    makerFee: signedOrder.makerFee.toString(),
-    salt: signedOrder.salt.toString(),
-    takerAssetAmount: signedOrder.takerAssetAmount.toString(),
-    takerFee: signedOrder.takerFee.toString(),
-    chainId: ChainId.POLYGON,
-    exchangeAddress: config.zeroExContractAddress,
-  };
-}
-
-export function denetworkifySignedOrder(
-  signedOrder: NetworkSignedOrder
-): SignedOrder {
-  return signedOrder;
 }
 
 export interface ChatMessage {
@@ -218,7 +171,7 @@ export type VaportradeMessage =
     }
   | {
       type: "accept";
-      order: NetworkSignedOrder;
+      order: SignedOrder;
     }
   | { type: "chat"; message: string };
 
@@ -256,8 +209,8 @@ export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
 }
 
 export function doIGoFirst(myAddress: string, theirAddress: string) {
-  return new BigNumber(myAddress.toLowerCase()).lt(
-    new BigNumber(theirAddress.toLowerCase())
+  return BigNumber.from(myAddress.toLowerCase()).lt(
+    BigNumber.from(theirAddress.toLowerCase())
   );
 }
 
@@ -323,9 +276,11 @@ export function fixedNumberToBalance(
       `Rounding error when converting FixedNumber to BigNumber! Expected ${flooredRounded}, but got ${noDecimals}`
     );
   }
-  return new BigNumber(noDecimals.toString().split(".")[0]);
+  return BigNumber.from(noDecimals.toString().split(".")[0]);
 }
 
-const ten = new BigNumber(10);
+export const ten = BigNumber.from(10);
+export const two = BigNumber.from(2);
+export const zero = BigNumber.from(0);
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
