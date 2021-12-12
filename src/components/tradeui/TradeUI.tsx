@@ -130,8 +130,16 @@ export function TradeUI({
 
   useEffect(() => {
     setOfferAccepted(false);
-    setMyOrderSent(false);
   }, [tradingPartner.myTradeOffer, tradingPartner.tradeOffer]);
+
+  useEffect(() => {
+    if (
+      (!offerAccepted || tradingPartner.tradeStatus.type === "negotiating") &&
+      myOrderSent
+    ) {
+      setMyOrderSent(false);
+    }
+  }, [offerAccepted, myOrderSent, tradingPartner]);
 
   useEffect(() => {
     requestTokensFetch(tradingPartner.tradeOffer);
@@ -393,10 +401,10 @@ export function TradeUI({
               </DetailsSection>
               <div className="acceptOffer">
                 <Checkbox
-                  // TODO should we prevent you from un-locking-in once you send the order to your trading partner?
                   isDisabled={
-                    tradingPartner.myTradeOffer.length === 0 &&
-                    tradingPartner.tradeOffer.length === 0
+                    myOrderSent ||
+                    (tradingPartner.myTradeOffer.length === 0 &&
+                      tradingPartner.tradeOffer.length === 0)
                   }
                   checked={offerAccepted}
                   onChange={() => {

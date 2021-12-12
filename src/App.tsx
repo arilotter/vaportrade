@@ -22,7 +22,9 @@ import noIcon from "./icons/no.png";
 import yesIcon from "./icons/yes.png";
 import rebootIcon from "./icons/reboot.png";
 import vtLogoIcon from "./icons/vticon.png";
+import creditsIcon from "./icons/credits.png";
 import backgroundImg from "./background.png";
+import sequenceLogo from "./sequence/sequence.png";
 import "./App.css";
 import { ConnectToSequence } from "./sequence/ConnectToSequence";
 import { sequence } from "0xsequence";
@@ -33,6 +35,8 @@ import { Contacts } from "./components/Contacts";
 import { makeBlockyIcon } from "./makeBlockyIcon";
 import { Chat } from "./Chat";
 import { ControlPanel } from "./ControlPanel";
+import { Credits } from "./Credits";
+import { chainId } from "./components/tradeui/contracts";
 
 enableMapSet();
 
@@ -112,6 +116,7 @@ function Vaportrade({
   const [showTrackers, setShowTrackers] = useState(false);
   const [showClippy, setShowClippy] = useState(false);
   const [showControlPanel, setShowControlPanel] = useState(false);
+  const [showCredits, setShowCredits] = useState(false);
 
   const [tradingPartnerAddress, updateTradingPartnerAddress] = useImmer<
     string | null
@@ -357,6 +362,8 @@ function Vaportrade({
       {showControlPanel ? (
         <ControlPanel onClose={() => setShowControlPanel(false)} />
       ) : null}
+      {showCredits ? <Credits onClose={() => setShowCredits(false)} /> : null}
+
       {showContacts ? (
         <Contacts
           requestMorePeers={() => p2pClient?.requestMorePeers()}
@@ -436,6 +443,11 @@ function Vaportrade({
           ],
           [
             {
+              title: "Credits",
+              icon: creditsIcon,
+              onClick: () => setShowCredits(true),
+            },
+            {
               title: "Help",
               icon: helpIcon,
               onClick: () => setShowClippy(true),
@@ -446,6 +458,11 @@ function Vaportrade({
               icon: controlPanelIcon,
             },
           ],
+          {
+            onClick: () => wallet.openWallet(undefined, undefined, chainId),
+            title: "Open Wallet",
+            icon: sequenceLogo,
+          },
           {
             onClick: () => window.location.reload(),
             title: "Reboot",

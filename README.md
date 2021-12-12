@@ -25,7 +25,9 @@ Builds the app for production to the `build` folder.
 
 
 # TODO:
-- [] make trading work, lol (0 gas??? why???)
+- [] make trading work, lol (signature error??)
+- [] make taskbar flash when new things happen ( just need css )
+- [] make trade button flash when new things happen
 - [] use hashing of orders to verify integrity of trades
 - [] add better in-progress states when the wallet is open (fullscreen modal?)
 - [] add error handling (tons are completely unhandled)
