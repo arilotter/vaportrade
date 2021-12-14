@@ -6,6 +6,7 @@ import { Window } from "packard-belle";
 import { useState, useEffect } from "react";
 import { config } from "../settings";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
+import sequenceLogo from "./sequence.png";
 
 interface SequenceSessionProviderProps {
   wallet: sequence.Wallet;
@@ -111,7 +112,7 @@ export function SequenceSessionProvider({
   } else if ("waitingFor" in state) {
     return (
       <div className="modal">
-        <Window title="Loading Sequence Indexer">
+        <Window title="Loading Sequence Indexer" icon={sequenceLogo}>
           <p style={{ padding: "8px" }}>
             Waiting for {state.waitingFor}
             <EllipseAnimation />
