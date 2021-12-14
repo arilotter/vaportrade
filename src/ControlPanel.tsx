@@ -3,6 +3,7 @@ import { useImmer } from "use-immer";
 import { config, setSetting } from "./settings";
 import { Writeable } from "./utils/utils";
 
+import controlPanelIcon from "./icons/controlPanel.png";
 interface ControlPanelProps {
   onClose: () => void;
 }
@@ -20,7 +21,7 @@ export function ControlPanel({ onClose }: ControlPanelProps) {
   );
   return (
     <div className="modal">
-      <Window title="Control Panel">
+      <Window title="Control Panel" icon={controlPanelIcon}>
         {realKeys.map((configKey) => (
           <div key={configKey} style={{ padding: "4px" }}>
             <label htmlFor={configKey}>{sentanceCaseify(configKey)}</label>
