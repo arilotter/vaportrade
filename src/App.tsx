@@ -39,15 +39,15 @@ import { Credits } from "./Credits";
 import { chainId } from "./components/tradeui/contracts";
 
 enableMapSet();
-
 function App() {
   return (
     <div
       style={{
         background: `url(${backgroundImg})`,
-        backgroundSize: "cover",
+        backgroundSize: "50% auto",
         imageRendering: "pixelated",
-        backgroundPosition: "center",
+        backgroundPosition: "50%",
+        backgroundRepeat: "no-repeat",
         height: "100%",
       }}
     >
