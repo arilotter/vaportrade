@@ -1,6 +1,5 @@
 // Default settings!
 const settings = {
-  zeroExContractAddress: "0x1119E3e8919d68366f56B74445eA2d10670Ac9eF",
   corsAnywhereUrl:
     process.env.NODE_ENV === "production"
       ? "https://cors.vaportrade.net/"

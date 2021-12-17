@@ -4,7 +4,6 @@ import { Order, SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
 import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { useEffect } from "react";
-import { config } from "../settings";
 
 export interface FailableTracker extends Tracker {
   failed: boolean;
@@ -240,7 +239,6 @@ export function buildOrder(
     maker.address,
     {
       takerAddress: taker.address,
-      exchangeAddress: config.zeroExContractAddress,
     }
   );
 }

@@ -39,7 +39,6 @@ import {
   getItems,
 } from "./contracts";
 import { Web3Provider } from "@ethersproject/providers";
-import { config } from "../../settings";
 import { useWeb3React } from "@web3-react/core";
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
@@ -110,10 +109,7 @@ export function TradeUI({
   );
 
   useEffect(() => {
-    const nftSwap = new NftSwap(library, library.getSigner(), 137, {
-      // also maybe a bug? this doesn't fill in the exchangeAddress in buildOrder
-      exchangeContractAddress: config.zeroExContractAddress,
-    });
+    const nftSwap = new NftSwap(library, library.getSigner(), 137);
     setNFTSwap(nftSwap);
   }, [library]);
 
