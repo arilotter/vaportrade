@@ -39,11 +39,10 @@ import {
   fetchContractsForBalances,
   getItems,
 } from "./contracts";
-import { BaseProvider, Web3Provider } from "@ethersproject/providers";
+import { Web3Provider } from "@ethersproject/providers";
 import { config } from "../../settings";
+import { useWeb3React } from "@web3-react/core";
 interface TradeUIProps {
-  wallet: sequence.Wallet;
-  address: string;
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
   p2p: P2PT<VaportradeMessage>;
@@ -62,14 +61,17 @@ type TradeButtonStatus =
   | "submitting_order";
 
 export function TradeUI({
-  wallet,
   indexer,
   metadata,
   tradingPartner,
   p2p,
   updateMyTradeOffer,
-  address,
 }: TradeUIProps) {
+  const { account: address, library } = useWeb3React<Web3Provider>();
+  if (!address || !library) {
+    throw new Error("No address when TradeUI open!");
+  }
+
   const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
   const [offerAccepted, setOfferAccepted] = useState(false);
   const [myOrderSent, setMyOrderSent] = useState(false);
@@ -109,15 +111,8 @@ export function TradeUI({
   );
 
   useEffect(() => {
-    const provider = wallet.getProvider(ChainId.POLYGON);
-
-    if (!provider) {
-      throw new Error("Failed to get Provider from Sequence");
-    }
-
     const nftSwap = new NftSwap(
-      // HACK omg todo
-      (wallet.getSigner() as unknown) as BaseProvider,
+      library,
       // HACK :D omg i hope this doesn't explode
       ChainId.POLYGON as 1,
       {
@@ -126,7 +121,7 @@ export function TradeUI({
       }
     );
     setNFTSwap(nftSwap);
-  }, [wallet]);
+  }, [library]);
 
   useEffect(() => {
     setOfferAccepted(false);
@@ -282,7 +277,7 @@ export function TradeUI({
           .loadApprovalStatus(item, address, {
             exchangeProxyContractAddressForAsset: config.zeroExContractAddress,
             chainId,
-            provider: wallet.getProvider(chainId),
+            provider: library,
           })
           .then((status) => status.tokenIdApproved || status.contractApproved);
         items.set(tokenKey, approvalStatusPromise);
@@ -436,9 +431,7 @@ export function TradeUI({
                             itemToSwapItem(item),
                             address,
                             {
-                              provider: (wallet.getSigner(
-                                ChainId.POLYGON
-                              ) as unknown) as Web3Provider,
+                              provider: library,
                               chainId: ChainId.POLYGON,
                               exchangeProxyContractAddressForAsset:
                                 config.zeroExContractAddress,
@@ -475,7 +468,7 @@ export function TradeUI({
                         const signedOrder = await nftSwap.signOrder(
                           order,
                           address,
-                          wallet.getSigner(chainId)
+                          library.getSigner()
                         );
                         console.log(
                           "[trade] got signed order, sending to peer"
@@ -500,10 +493,7 @@ export function TradeUI({
                         const fillTx = await nftSwap.fillSignedOrder(
                           tradingPartner.tradeStatus.signedOrder,
                           {
-                            //TODO wtf??? this is an ugly hack
-                            signer: (wallet.getSigner(
-                              chainId
-                            ) as unknown) as BaseProvider,
+                            signer: library,
                           }
                         );
                         console.log("[trade] waiting for order completion.");

@@ -24,10 +24,7 @@ import rebootIcon from "./icons/reboot.png";
 import vtLogoIcon from "./icons/vticon.png";
 import creditsIcon from "./icons/credits.png";
 import backgroundImg from "./background.png";
-import sequenceLogo from "./sequence/sequence.png";
 import "./App.css";
-import { ConnectToSequence } from "./sequence/ConnectToSequence";
-import { sequence } from "0xsequence";
 import { EllipseAnimation } from "./utils/EllipseAnimation";
 import { SequenceSessionProvider } from "./sequence/SequenceSessionProvider";
 import { Clippy } from "./components/Clippy";
@@ -36,7 +33,9 @@ import { makeBlockyIcon } from "./makeBlockyIcon";
 import { Chat } from "./Chat";
 import { ControlPanel } from "./ControlPanel";
 import { Credits } from "./Credits";
-import { chainId } from "./components/tradeui/contracts";
+import { useWeb3React, Web3ReactProvider } from "@web3-react/core";
+import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
+import { WalletSignin } from "./web3/WalletSignin";
 
 enableMapSet();
 function App() {
@@ -52,18 +51,18 @@ function App() {
       }}
     >
       <Theme className="container">
-        <ConnectToSequence>
-          {({ wallet, address, disconnect }) => (
-            <Vaportrade
-              wallet={wallet}
-              address={address}
-              disconnect={disconnect}
-            />
-          )}
-        </ConnectToSequence>
+        <Web3ReactProvider getLibrary={getLibrary}>
+          <WalletSignin>
+            <Vaportrade />
+          </WalletSignin>
+        </Web3ReactProvider>
       </Theme>
     </div>
   );
+}
+
+function getLibrary(provider: ExternalProvider) {
+  return new Web3Provider(provider); // this will vary according to whether you use e.g. ethers or web3.js}
 }
 
 const defaultSources = [
@@ -72,15 +71,15 @@ const defaultSources = [
   "wss://tracker.btorrent.xyz",
 ];
 
-function Vaportrade({
-  wallet,
-  address,
-  disconnect,
-}: {
-  wallet: sequence.Wallet;
-  address: string;
-  disconnect: () => void;
-}) {
+function Vaportrade() {
+  const {
+    account: address,
+    library,
+    deactivate,
+  } = useWeb3React<Web3Provider>();
+  if (!address || !library) {
+    throw new Error("Vaportrade created with no account!");
+  }
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
   const [sources, updateSources] = useImmer<string[]>([]);
   const [peers, _updatePeers] = useImmer<Set<TradingPeer | Peer>>(new Set());
@@ -282,7 +281,7 @@ function Vaportrade({
   );
   return (
     <>
-      <SequenceSessionProvider wallet={wallet}>
+      <SequenceSessionProvider>
         {({ indexer, metadata }) => (
           <div className="modal">
             {p2pClient && trackers.size ? (
@@ -301,8 +300,6 @@ function Vaportrade({
                 >
                   <div className="appWindowContents">
                     <TradeUI
-                      address={address}
-                      wallet={wallet}
                       indexer={indexer}
                       metadata={metadata}
                       p2p={p2pClient}
@@ -352,6 +349,7 @@ function Vaportrade({
           </div>
         )}
       </SequenceSessionProvider>
+
       {showTrackers ? (
         <TrackersList
           sources={sources}
@@ -359,9 +357,11 @@ function Vaportrade({
           onClose={() => setShowTrackers(false)}
         />
       ) : null}
+
       {showControlPanel ? (
         <ControlPanel onClose={() => setShowControlPanel(false)} />
       ) : null}
+
       {showCredits ? <Credits onClose={() => setShowCredits(false)} /> : null}
 
       {showContacts ? (
@@ -458,18 +458,18 @@ function Vaportrade({
               icon: controlPanelIcon,
             },
           ],
-          {
-            onClick: () => wallet.openWallet(undefined, undefined, chainId),
-            title: "Open Wallet",
-            icon: sequenceLogo,
-          },
+          // {
+          //   onClick: () => library.openWallet(undefined, undefined, chainId),
+          //   title: "Open Wallet",
+          //   icon: sequenceLogo,
+          // },
           {
             onClick: () => window.location.reload(),
             title: "Reboot",
             icon: rebootIcon,
           },
           {
-            onClick: disconnect,
+            onClick: deactivate,
             title: "Disconnect Wallet",
             icon: logOutIcon,
           },

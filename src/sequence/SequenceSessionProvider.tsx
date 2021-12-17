@@ -9,7 +9,6 @@ import { EllipseAnimation } from "../utils/EllipseAnimation";
 import sequenceLogo from "./sequence.png";
 
 interface SequenceSessionProviderProps {
-  wallet: sequence.Wallet;
   children: (props: SequenceIndexerProps) => JSX.Element;
 }
 
@@ -42,7 +41,6 @@ const DefaultThreshold = SignerLevel.Gold;
 
 export function SequenceSessionProvider({
   children,
-  wallet,
 }: SequenceSessionProviderProps) {
   const [state, setState] = useState<State>({ waitingFor: "signer" });
   useEffect(() => {
@@ -95,7 +93,7 @@ export function SequenceSessionProvider({
         setState({ error: err.toString().split("\n") });
       }
     });
-  }, [wallet]);
+  }, []);
 
   if ("error" in state) {
     return (
