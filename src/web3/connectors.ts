@@ -18,6 +18,9 @@ import metamaskIcon from "./metamask.png";
 
 export const sequence = new SequenceConnector({
   chainId: 137,
+  connectOptions: {
+    app: "vaportrade.net",
+  },
 });
 
 export const injected = new InjectedConnector({
@@ -69,7 +72,11 @@ export function getConnectorErrorMessage(error: Error) {
 }
 
 export function resetWalletConnector(connector: AbstractConnector) {
-  if (connector && connector instanceof WalletConnectConnector) {
-    connector.walletConnectProvider = undefined;
+  if (connector) {
+    if (connector instanceof WalletConnectConnector) {
+      connector.walletConnectProvider = undefined;
+    } else if (connector instanceof SequenceConnector) {
+      connector.wallet = undefined;
+    }
   }
 }
