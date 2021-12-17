@@ -1,4 +1,5 @@
 import { services } from "../sequence/SequenceSessionProvider";
+import { SequenceConnector } from "@arilotter/web3-react-sequence-connector";
 import {
   InjectedConnector,
   NoEthereumProviderError,
@@ -11,8 +12,13 @@ import {
 import { UnsupportedChainIdError } from "@web3-react/core";
 import { AbstractConnector } from "@web3-react/abstract-connector";
 
+import sequenceIcon from "./sequence.png";
 import walletConnectIcon from "./walletconnect.png";
 import metamaskIcon from "./metamask.png";
+
+export const sequence = new SequenceConnector({
+  chainId: 137,
+});
 
 export const injected = new InjectedConnector({
   supportedChainIds: [137],
@@ -25,6 +31,7 @@ const walletconnect = new WalletConnectConnector({
 });
 
 export enum ConnectorNames {
+  Sequence = "Sequence",
   Injected = "Browser Extension (usually MetaMask)",
   WalletConnect = "WalletConnect",
 }
@@ -32,6 +39,7 @@ export enum ConnectorNames {
 export const connectorsByName: {
   [connectorName in ConnectorNames]: AbstractConnector;
 } = {
+  [ConnectorNames.Sequence]: sequence,
   [ConnectorNames.Injected]: injected,
   [ConnectorNames.WalletConnect]: walletconnect,
 };
@@ -39,6 +47,7 @@ export const connectorsByName: {
 export const connectorsIconsByName: {
   [connectorName in ConnectorNames]: string;
 } = {
+  [ConnectorNames.Sequence]: sequenceIcon,
   [ConnectorNames.Injected]: metamaskIcon,
   [ConnectorNames.WalletConnect]: walletConnectIcon,
 };
