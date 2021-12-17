@@ -1,0 +1,19 @@
+.web3Modal {
+  width: 256px;
+}
+
+.walletConnectButton {
+  width: calc(100% - 16px);
+  margin: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.walletConnectButtonLogo {
+  margin: 0 4px;
+}
+
+.walletConnectError .DetailsSection__title {
+  color: darkred;
+}

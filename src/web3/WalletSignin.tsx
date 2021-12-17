@@ -4,20 +4,27 @@ import {
   connectorsByName,
   connectorsIconsByName,
   getConnectorErrorMessage,
+  resetWalletConnector,
 } from "./connectors";
 import { useEagerConnect, useInactiveListener } from "./hooks";
 import loadingIcon from "../icons/loadingIcon.gif";
 import { Web3Provider } from "@ethersproject/providers";
 import { AbstractConnector } from "@web3-react/abstract-connector";
-import { ButtonForm, Window } from "packard-belle";
+import { ButtonForm, DetailsSection, Window } from "packard-belle";
+import "./WalletSignin.css";
 
 interface WalletSigninProps {
   children: JSX.Element;
 }
 
 export function WalletSignin({ children }: WalletSigninProps) {
-  const context = useWeb3React<Web3Provider>();
-  const { connector, activate, active, deactivate, error } = context;
+  const {
+    connector,
+    activate,
+    active,
+    deactivate,
+    error,
+  } = useWeb3React<Web3Provider>();
 
   const [cachedError, setCachedError] = useState<Error | null>(null);
 
@@ -34,11 +41,12 @@ export function WalletSignin({ children }: WalletSigninProps) {
 
   // if we hit an error, disconnect.
   useEffect(() => {
-    if (error) {
+    if (activatingConnector && error) {
       setCachedError(error);
+      resetWalletConnector(activatingConnector);
       deactivate();
     }
-  }, [error, active, deactivate]);
+  }, [error, active, deactivate, activatingConnector]);
 
   // handle logic to eagerly connect to the injected ethereum provider, if it exists and has granted access already
   const triedEager = useEagerConnect();
@@ -51,7 +59,7 @@ export function WalletSignin({ children }: WalletSigninProps) {
   }
   return (
     <div className="modal">
-      <Window title="Connect your web3 wallet">
+      <Window title="Connect your web3 wallet" className="web3Modal">
         {(Object.keys(connectorsByName) as Array<
           keyof typeof connectorsByName
         >).map((name) => {
@@ -62,11 +70,10 @@ export function WalletSignin({ children }: WalletSigninProps) {
             !triedEager || !!activatingConnector || connected || !!error;
 
           return (
-            <div>
+            <div key={name}>
               <ButtonForm
                 isDisabled={disabled}
                 className="walletConnectButton"
-                key={name}
                 onClick={() => {
                   setCachedError(null);
                   setActivatingConnector(currentConnector);
@@ -75,6 +82,7 @@ export function WalletSignin({ children }: WalletSigninProps) {
               >
                 {activating && <img src={loadingIcon} alt="Loading..." />}
                 <img
+                  className="walletConnectButtonLogo"
                   width={16}
                   height={16}
                   src={connectorsIconsByName[name]}
@@ -86,13 +94,13 @@ export function WalletSignin({ children }: WalletSigninProps) {
             </div>
           );
         })}
-        <div>
-          {!!cachedError && (
-            <h4 style={{ marginTop: "1rem", marginBottom: "0" }}>
+        {cachedError ? (
+          <div className="walletConnectError">
+            <DetailsSection title="Error">
               {getConnectorErrorMessage(cachedError)}
-            </h4>
-          )}
-        </div>
+            </DetailsSection>
+          </div>
+        ) : null}
       </Window>
     </div>
   );

@@ -25,7 +25,7 @@ const walletconnect = new WalletConnectConnector({
 });
 
 export enum ConnectorNames {
-  Injected = "Injected",
+  Injected = "Browser Extension (usually MetaMask)",
   WalletConnect = "WalletConnect",
 }
 
@@ -52,9 +52,15 @@ export function getConnectorErrorMessage(error: Error) {
     error instanceof UserRejectedRequestErrorInjected ||
     error instanceof UserRejectedRequestErrorWalletConnect
   ) {
-    return "Please authorize vaportrade.net to connect to your Wallet.";
+    return "To use vaportrade.net, allow it to connect to your wallet.";
   } else {
     console.error(error);
     return "An unknown error occurred while connecting to your wallet. Check the console for more details.";
+  }
+}
+
+export function resetWalletConnector(connector: AbstractConnector) {
+  if (connector && connector instanceof WalletConnectConnector) {
+    connector.walletConnectProvider = undefined;
   }
 }
