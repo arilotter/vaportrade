@@ -27,7 +27,6 @@ import tradeIcon from "./send.png";
 import tradeIconDisabled from "./sendDisabled.png";
 import loadingIcon from "../../icons/loadingIcon.gif";
 import approveIcon from "../../icons/approve.png";
-import { ChainId } from "@0xsequence/network";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
 import { ContractInfo } from "0xsequence/dist/declarations/src/metadata";
 import {
@@ -111,15 +110,10 @@ export function TradeUI({
   );
 
   useEffect(() => {
-    const nftSwap = new NftSwap(
-      library,
-      // HACK :D omg i hope this doesn't explode
-      ChainId.POLYGON as 1,
-      {
-        // also maybe a bug? this doesn't fill in the exchangeAddress in buildOrder
-        exchangeContractAddress: config.zeroExContractAddress,
-      }
-    );
+    const nftSwap = new NftSwap(library, library.getSigner(), 137, {
+      // also maybe a bug? this doesn't fill in the exchangeAddress in buildOrder
+      exchangeContractAddress: config.zeroExContractAddress,
+    });
     setNFTSwap(nftSwap);
   }, [library]);
 
@@ -274,11 +268,7 @@ export function TradeUI({
     updateRequiredApprovals((items) => {
       for (const { item, tokenKey } of needToFetchApprovalStatus) {
         const approvalStatusPromise = nftSwap
-          .loadApprovalStatus(item, address, {
-            exchangeProxyContractAddressForAsset: config.zeroExContractAddress,
-            chainId,
-            provider: library,
-          })
+          .loadApprovalStatus(item, address)
           .then((status) => status.tokenIdApproved || status.contractApproved);
         items.set(tokenKey, approvalStatusPromise);
 
@@ -429,13 +419,7 @@ export function TradeUI({
                         ({ item }) =>
                           nftSwap.approveTokenOrNftByAsset(
                             itemToSwapItem(item),
-                            address,
-                            {
-                              provider: library,
-                              chainId: ChainId.POLYGON,
-                              exchangeProxyContractAddressForAsset:
-                                config.zeroExContractAddress,
-                            }
+                            address
                           )
                       );
                       await Promise.all(approvalTxs).then(() => {
@@ -491,14 +475,11 @@ export function TradeUI({
                           "[trade] got signed order from peer, button clicked. submitting order on-chain"
                         );
                         const fillTx = await nftSwap.fillSignedOrder(
-                          tradingPartner.tradeStatus.signedOrder,
-                          {
-                            signer: library,
-                          }
+                          tradingPartner.tradeStatus.signedOrder
                         );
                         console.log("[trade] waiting for order completion.");
                         const fillTxReceipt = await nftSwap.awaitTransactionHash(
-                          fillTx
+                          fillTx.hash
                         );
                         console.log(
                           `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
