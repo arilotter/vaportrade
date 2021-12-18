@@ -54,6 +54,7 @@ type TradeButtonStatus =
   | "waiting_for_lockin"
   | "loading_approvals"
   | "ready_for_approvals"
+  | "waiting_for_approvals"
   | "ready_to_sign"
   | "waiting_for_partner"
   | "submitting_order";
@@ -88,7 +89,7 @@ export function TradeUI({
   const [error, setError] = useState<string | null>(null);
 
   const [requiredApprovals, updateRequiredApprovals] = useImmer<
-    Map<TokenKey, boolean | Promise<boolean>>
+    Map<TokenKey, boolean | Promise<boolean> | "approving">
   >(new Map());
 
   const requestTokensFetch = useCallback(
@@ -380,128 +381,142 @@ export function TradeUI({
                   }}
                 />
               </DetailsSection>
-              <div className="acceptOffer">
-                <Checkbox
-                  isDisabled={
-                    myOrderSent ||
-                    (tradingPartner.myTradeOffer.length === 0 &&
-                      tradingPartner.tradeOffer.length === 0)
-                  }
-                  checked={offerAccepted}
-                  onChange={() => {
-                    const newAcceptedState = !offerAccepted;
-                    setOfferAccepted(newAcceptedState);
-                    p2p.send(tradingPartner.peer, {
-                      type: "lockin",
-                      isLocked: newAcceptedState,
-                      hash: "", // TODO
-                    });
-                  }}
-                  id="myAccept"
-                  label="Accept Offer"
-                />
-                <ButtonForm
-                  isDisabled={!tradeButtonStates[tradeButtonStatus].enabled}
-                  onClick={async () => {
-                    // disable this button ? TODO
+              <section className="DetailsSection window__section acceptOffer">
+                <div className="DetailsSection__title">
+                  {tradeButtonStates[tradeButtonStatus].altText}
+                </div>
 
-                    // Do approvals on-click!
-                    if (
-                      tradeButtonStatus === "ready_for_approvals" &&
-                      tokensThatNeedApproval
-                    ) {
-                      // TODO status for approval in progress
-                      const approvalTxs = tokensThatNeedApproval.map(
-                        ({ item }) =>
-                          nftSwap.approveTokenOrNftByAsset(
-                            itemToSwapItem(item),
-                            address
-                          )
-                      );
-                      await Promise.all(approvalTxs).then(() => {
+                <div className="acceptOfferContents">
+                  <Checkbox
+                    isDisabled={
+                      myOrderSent ||
+                      (tradingPartner.myTradeOffer.length === 0 &&
+                        tradingPartner.tradeOffer.length === 0)
+                    }
+                    checked={offerAccepted}
+                    onChange={() => {
+                      const newAcceptedState = !offerAccepted;
+                      setOfferAccepted(newAcceptedState);
+                      p2p.send(tradingPartner.peer, {
+                        type: "lockin",
+                        isLocked: newAcceptedState,
+                        hash: "", // TODO
+                      });
+                    }}
+                    id="myAccept"
+                    label="Accept Offer"
+                  />
+                  <ButtonForm
+                    isDisabled={!tradeButtonStates[tradeButtonStatus].enabled}
+                    onClick={async () => {
+                      // disable this button ? TODO
+
+                      // Do approvals on-click!
+                      if (
+                        tradeButtonStatus === "ready_for_approvals" &&
+                        tokensThatNeedApproval
+                      ) {
+                        updateRequiredApprovals((approvals) => {
+                          for (const { key } of tokensThatNeedApproval) {
+                            approvals.set(key, "approving");
+                          }
+                        });
+                        const approvalTxs = tokensThatNeedApproval.map(
+                          ({ item }) =>
+                            nftSwap
+                              .approveTokenOrNftByAsset(
+                                itemToSwapItem(item),
+                                address
+                              )
+                              .then((tx) =>
+                                nftSwap.awaitTransactionHash(tx.hash)
+                              )
+                        );
+                        await Promise.allSettled(approvalTxs);
                         // after we go thru all approval TXs, re-check approval status of each.
                         updateRequiredApprovals((approvals) => {
                           for (const { key } of tokensThatNeedApproval) {
                             approvals.delete(key);
                           }
                         });
-                      });
-                    } else if (tradeButtonStatus === "ready_to_sign") {
-                      // TODO status for signing in progress
-                      if (iGoFirst) {
-                        // sign and submit order to other player
-                        const order = buildOrder(nftSwap, [
-                          {
-                            address: address,
-                            items: tradingPartner.myTradeOffer,
-                          },
-                          {
-                            address: tradingPartner.address,
-                            items: getItems({
-                              balances: tradingPartner.tradeOffer,
-                              contracts,
-                              collectibles,
-                            }).filter(isItemWithKnownContractType),
-                          },
-                        ]);
-                        console.log("[trade] waiting for signed order...");
-                        const signedOrder = await nftSwap.signOrder(
-                          order,
-                          address,
-                          library.getSigner()
-                        );
-                        console.log(
-                          "[trade] got signed order, sending to peer"
-                        );
+                      } else if (tradeButtonStatus === "ready_to_sign") {
+                        // TODO status for signing in progress
+                        if (iGoFirst) {
+                          // sign and submit order to other player
+                          const order = buildOrder(nftSwap, [
+                            {
+                              address: address,
+                              items: tradingPartner.myTradeOffer,
+                            },
+                            {
+                              address: tradingPartner.address,
+                              items: getItems({
+                                balances: tradingPartner.tradeOffer,
+                                contracts,
+                                collectibles,
+                              }).filter(isItemWithKnownContractType),
+                            },
+                          ]);
+                          console.log("[trade] waiting for signed order...");
+                          const signedOrder = await nftSwap.signOrder(
+                            order,
+                            address,
+                            library.getSigner()
+                          );
+                          console.log(
+                            "[trade] got signed order, sending to peer"
+                          );
 
-                        p2p?.send(tradingPartner.peer, {
-                          type: "accept",
-                          order: signedOrder,
-                        });
-                        console.log("[trade] waiting for peer to accept");
-                        setMyOrderSent(true);
-                      } else {
-                        if (tradingPartner.tradeStatus.type !== "signedOrder") {
-                          throw new Error(
-                            "expected signed order to exist for p2 when clicking button"
+                          p2p?.send(tradingPartner.peer, {
+                            type: "accept",
+                            order: signedOrder,
+                          });
+                          console.log("[trade] waiting for peer to accept");
+                          setMyOrderSent(true);
+                        } else {
+                          if (
+                            tradingPartner.tradeStatus.type !== "signedOrder"
+                          ) {
+                            throw new Error(
+                              "expected signed order to exist for p2 when clicking button"
+                            );
+                          }
+                          // we're good. submit it on-chain.
+                          console.log(
+                            "[trade] got signed order from peer, button clicked. submitting order on-chain"
+                          );
+                          const fillTx = await nftSwap.fillSignedOrder(
+                            tradingPartner.tradeStatus.signedOrder
+                          );
+                          console.log("[trade] waiting for order completion.");
+                          const fillTxReceipt = await nftSwap.awaitTransactionHash(
+                            fillTx.hash
+                          );
+                          console.log(
+                            `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
                           );
                         }
-                        // we're good. submit it on-chain.
-                        console.log(
-                          "[trade] got signed order from peer, button clicked. submitting order on-chain"
-                        );
-                        const fillTx = await nftSwap.fillSignedOrder(
-                          tradingPartner.tradeStatus.signedOrder
-                        );
-                        console.log("[trade] waiting for order completion.");
-                        const fillTxReceipt = await nftSwap.awaitTransactionHash(
-                          fillTx.hash
-                        );
-                        console.log(
-                          `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
-                        );
                       }
-                    }
-                  }}
-                >
-                  <img
-                    src={tradeButtonStates[tradeButtonStatus].icon}
-                    alt={tradeButtonStates[tradeButtonStatus].altText}
-                    title={tradeButtonStates[tradeButtonStatus].altText}
-                    style={{
-                      width: "32px",
-                      height: "32px",
                     }}
+                  >
+                    <img
+                      src={tradeButtonStates[tradeButtonStatus].icon}
+                      alt={tradeButtonStates[tradeButtonStatus].altText}
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                      }}
+                    />
+                  </ButtonForm>
+                  <Checkbox
+                    readOnly
+                    checked={tradingPartner.tradeStatus.type !== "negotiating"}
+                    id="partnerAccept"
+                    label="Partner Accepts"
+                    isDisabled
                   />
-                </ButtonForm>
-                <Checkbox
-                  readOnly
-                  checked={tradingPartner.tradeStatus.type !== "negotiating"}
-                  id="partnerAccept"
-                  label="Partner Accepts"
-                  isDisabled
-                />
-              </div>
+                </div>
+              </section>
               <DetailsSection title="Partner's trade offer">
                 <TradeOffer
                   items={getItems({
@@ -561,6 +576,11 @@ export const tradeButtonStates: {
     icon: approveIcon,
     altText: "Approve token transfers",
     enabled: true,
+  },
+  waiting_for_approvals: {
+    icon: loadingIcon,
+    altText: "Waiting for token approvals...",
+    enabled: false,
   },
   ready_to_sign: {
     icon: tradeIcon,

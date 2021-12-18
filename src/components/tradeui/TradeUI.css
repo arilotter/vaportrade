@@ -32,8 +32,17 @@
   flex-direction: column;
 }
 
-.acceptOffer {
+.itemSections .DetailsSection.acceptOffer {
+  flex: 0;
+}
+
+.acceptOfferContents {
   display: flex;
   justify-content: space-evenly;
   align-items: center;
+}
+
+.Checkbox input[type="checkbox"] + label {
+  width: 100%;
+  display: inline-block;
 }
