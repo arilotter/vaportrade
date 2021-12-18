@@ -33,26 +33,26 @@ const walletconnect = new WalletConnectConnector({
   chainId: 137,
 });
 
-export enum ConnectorNames {
+export enum ConnectorName {
   Sequence = "Sequence",
   Injected = "Browser Extension (usually MetaMask)",
   WalletConnect = "WalletConnect",
 }
 
 export const connectorsByName: {
-  [connectorName in ConnectorNames]: AbstractConnector;
+  [connectorName in ConnectorName]: AbstractConnector;
 } = {
-  [ConnectorNames.Sequence]: sequence,
-  [ConnectorNames.Injected]: injected,
-  [ConnectorNames.WalletConnect]: walletconnect,
+  [ConnectorName.Sequence]: sequence,
+  [ConnectorName.Injected]: injected,
+  [ConnectorName.WalletConnect]: walletconnect,
 };
 
 export const connectorsIconsByName: {
-  [connectorName in ConnectorNames]: string;
+  [connectorName in ConnectorName]: string;
 } = {
-  [ConnectorNames.Sequence]: sequenceIcon,
-  [ConnectorNames.Injected]: metamaskIcon,
-  [ConnectorNames.WalletConnect]: walletConnectIcon,
+  [ConnectorName.Sequence]: sequenceIcon,
+  [ConnectorName.Injected]: metamaskIcon,
+  [ConnectorName.WalletConnect]: walletConnectIcon,
 };
 
 export function getConnectorErrorMessage(error: Error) {

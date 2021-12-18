@@ -12,7 +12,7 @@ import { Web3Provider } from "@ethersproject/providers";
 import { AbstractConnector } from "@web3-react/abstract-connector";
 import { ButtonForm, DetailsSection, Window } from "packard-belle";
 import "./WalletSignin.css";
-
+import rebootIcon from "../icons/reboot.png";
 interface WalletSigninProps {
   children: JSX.Element;
 }
@@ -101,6 +101,20 @@ export function WalletSignin({ children }: WalletSigninProps) {
             </DetailsSection>
           </div>
         ) : null}
+        <hr />
+        <ButtonForm
+          className="walletConnectButton"
+          onClick={() => window.location.reload()}
+        >
+          <img
+            className="walletConnectButtonLogo"
+            width={16}
+            height={16}
+            src={rebootIcon}
+            alt="Reboot"
+          />
+          Reload vaportrade.net
+        </ButtonForm>
       </Window>
     </div>
   );

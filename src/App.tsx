@@ -36,6 +36,8 @@ import { Credits } from "./Credits";
 import { useWeb3React, Web3ReactProvider } from "@web3-react/core";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
 import { WalletSignin } from "./web3/WalletSignin";
+import { NftSwap } from "@traderxyz/nft-swap-sdk";
+import { connectorsByName, connectorsIconsByName } from "./web3/connectors";
 
 enableMapSet();
 function App() {
@@ -76,10 +78,12 @@ function Vaportrade() {
     account: address,
     library,
     deactivate,
+    connector,
   } = useWeb3React<Web3Provider>();
   if (!address || !library) {
     throw new Error("Vaportrade created with no account!");
   }
+  const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
   const [sources, updateSources] = useImmer<string[]>([]);
   const [peers, _updatePeers] = useImmer<Set<TradingPeer | Peer>>(new Set());
@@ -110,6 +114,11 @@ function Vaportrade() {
     p2p.start();
     setP2pClient(p2p);
   }, [p2pClient, sources]);
+
+  useEffect(() => {
+    const nftSwap = new NftSwap(library, library.getSigner(), 137);
+    setNFTSwap(nftSwap);
+  }, [library]);
 
   const [showContacts, setShowContacts] = useState(false);
   const [showTrackers, setShowTrackers] = useState(false);
@@ -232,9 +241,14 @@ function Vaportrade() {
               tradingPeer.tradeStatus = { type: "negotiating" };
               tradingPeer.hasNewInfo = true;
             } else if (msg.type === "lockin") {
-              tradingPeer.tradeStatus = msg.isLocked
-                ? { type: "locked_in" }
-                : { type: "negotiating" };
+              if (msg.lockedOrder) {
+                tradingPeer.tradeStatus = {
+                  type: "locked_in",
+                  orderHash: msg.lockedOrder.hash,
+                };
+              } else {
+                tradingPeer.tradeStatus = { type: "negotiating" };
+              }
             } else if (msg.type === "accept") {
               // todo verify hashse are the same as the order we locked into
               tradingPeer.tradeStatus = {
@@ -284,7 +298,7 @@ function Vaportrade() {
       <SequenceSessionProvider>
         {({ indexer, metadata }) => (
           <div className="modal">
-            {p2pClient && trackers.size ? (
+            {p2pClient && trackers.size && nftSwap ? (
               tradingPartner ? (
                 <Window
                   title={`Trading with ${tradingPartnerAddress}`}
@@ -300,6 +314,7 @@ function Vaportrade() {
                 >
                   <div className="appWindowContents">
                     <TradeUI
+                      nftSwap={nftSwap}
                       indexer={indexer}
                       metadata={metadata}
                       p2p={p2pClient}
@@ -487,6 +502,22 @@ function Vaportrade() {
             onClick: () => {},
             icon: makeBlockyIcon(address),
           },
+          ...(connector
+            ? [
+                (() => {
+                  const name = (Object.keys(connectorsByName) as Array<
+                    keyof typeof connectorsByName
+                  >).find((c) => connectorsByName[c] === connector)!;
+
+                  const icon = connectorsIconsByName[name];
+                  return {
+                    alt: `Wallet type: ${name}`,
+                    onClick: () => {},
+                    icon: icon,
+                  };
+                })(),
+              ]
+            : []),
         ]}
       />
     </>

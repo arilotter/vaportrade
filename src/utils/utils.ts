@@ -122,7 +122,7 @@ export interface TradingPeer {
   myTradeOffer: Item<KnownContractType>[];
   tradeStatus:
     | { type: "negotiating" }
-    | { type: "locked_in" }
+    | { type: "locked_in"; orderHash: string }
     | { type: "signedOrder"; signedOrder: SignedOrder };
   chat: ChatMessage[];
 }
@@ -165,8 +165,7 @@ export type VaportradeMessage =
     }
   | {
       type: "lockin";
-      isLocked: boolean;
-      hash: string;
+      lockedOrder: false | { hash: string };
     }
   | {
       type: "accept";
@@ -193,12 +192,12 @@ export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
     return true;
   } else if (
     msg.type === "lockin" &&
-    typeof msg.isLocked === "boolean" &&
-    typeof msg.hash === "string"
+    (msg.lockedOrder === false ||
+      (typeof msg.lockedOrder === "object" &&
+        typeof msg.lockedOrder.hash === "string"))
   ) {
     return true;
   } else if (msg.type === "accept" && typeof msg.order === "object") {
-    // TODO VERIFY NETWORKSIGNEDORDER
     return true;
   } else if (msg.type === "chat" && typeof msg.message === "string") {
     return true;
@@ -220,7 +219,8 @@ export interface OrderParticipant {
 
 export function buildOrder(
   swap: NftSwap,
-  participants: [OrderParticipant, OrderParticipant]
+  participants: [OrderParticipant, OrderParticipant],
+  fakeSalt: string
 ): Order {
   if (participants[0].address === participants[1].address) {
     throw new Error("Can't trade with yourself.");
@@ -239,6 +239,7 @@ export function buildOrder(
     maker.address,
     {
       takerAddress: taker.address,
+      salt: fakeSalt,
     }
   );
 }

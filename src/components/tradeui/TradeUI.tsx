@@ -40,9 +40,12 @@ import {
 } from "./contracts";
 import { Web3Provider } from "@ethersproject/providers";
 import { useWeb3React } from "@web3-react/core";
+import { formatBytes32String, randomBytes } from "ethers/lib/utils";
+import { BigNumber } from "@ethersproject/bignumber";
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
+  nftSwap: NftSwap;
   p2p: P2PT<VaportradeMessage>;
   tradingPartner: TradingPeer;
   updateMyTradeOffer: (
@@ -64,6 +67,7 @@ export function TradeUI({
   metadata,
   tradingPartner,
   p2p,
+  nftSwap,
   updateMyTradeOffer,
 }: TradeUIProps) {
   const { account: address, library } = useWeb3React<Web3Provider>();
@@ -71,8 +75,9 @@ export function TradeUI({
     throw new Error("No address when TradeUI open!");
   }
 
-  const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
-  const [offerAccepted, setOfferAccepted] = useState(false);
+  const [lockedIn, setLockedIn] = useState<
+    false | "sending" | { hash: string }
+  >(false);
   const [myOrderSent, setMyOrderSent] = useState(false);
   const [
     pickBalanceItem,
@@ -110,22 +115,17 @@ export function TradeUI({
   );
 
   useEffect(() => {
-    const nftSwap = new NftSwap(library, library.getSigner(), 137);
-    setNFTSwap(nftSwap);
-  }, [library]);
-
-  useEffect(() => {
-    setOfferAccepted(false);
+    setLockedIn(false);
   }, [tradingPartner.myTradeOffer, tradingPartner.tradeOffer]);
 
   useEffect(() => {
     if (
-      (!offerAccepted || tradingPartner.tradeStatus.type === "negotiating") &&
+      (!lockedIn || tradingPartner.tradeStatus.type === "negotiating") &&
       myOrderSent
     ) {
       setMyOrderSent(false);
     }
-  }, [offerAccepted, myOrderSent, tradingPartner]);
+  }, [lockedIn, myOrderSent, tradingPartner]);
 
   useEffect(() => {
     requestTokensFetch(tradingPartner.tradeOffer);
@@ -280,7 +280,7 @@ export function TradeUI({
   });
 
   const bothPlayersAccepted =
-    offerAccepted && tradingPartner.tradeStatus.type !== "negotiating";
+    lockedIn && tradingPartner.tradeStatus.type !== "negotiating";
 
   const iGoFirst = doIGoFirst(address, tradingPartner.address);
 
@@ -325,11 +325,69 @@ export function TradeUI({
       }
     }
   }
+  const myHalfOfOrder = {
+    address: address,
+    items: tradingPartner.myTradeOffer,
+  };
+  const theirHalfOfOrder = {
+    address: tradingPartner.address,
+    items: getItems({
+      balances: tradingPartner.tradeOffer,
+      contracts,
+      collectibles,
+    }).filter(isItemWithKnownContractType),
+  };
+  const order = nftSwap
+    ? buildOrder(
+        nftSwap,
+        iGoFirst
+          ? [myHalfOfOrder, theirHalfOfOrder]
+          : [theirHalfOfOrder, myHalfOfOrder],
+        formatBytes32String("vaportrade_fake_salt")
+      )
+    : null;
+
+  useEffect(() => {
+    if (lockedIn && order && tradingPartner.tradeStatus.type === "locked_in") {
+      const partnerHash = tradingPartner.tradeStatus.orderHash;
+      const hash = nftSwap.getOrderHash(order);
+      if (partnerHash !== hash) {
+        const err = `Got invalid hash from partner lockin\n: Expected ${hash}, got ${partnerHash}`;
+        console.error(err);
+        setError(err);
+        setLockedIn(false);
+      }
+    }
+  }, [
+    lockedIn,
+    nftSwap,
+    order,
+    tradingPartner.myTradeOffer,
+    tradingPartner.tradeOffer,
+    tradingPartner.tradeStatus,
+  ]);
+
+  useEffect(() => {
+    if (order && lockedIn === "sending") {
+      const hash = nftSwap.getOrderHash(order);
+      p2p.send(tradingPartner.peer, {
+        type: "lockin",
+        lockedOrder: { hash },
+      });
+      setLockedIn({ hash });
+    } else if (!lockedIn) {
+      p2p.send(tradingPartner.peer, {
+        type: "lockin",
+        lockedOrder: false,
+      });
+    }
+  }, [nftSwap, order, p2p, tradingPartner.peer, lockedIn]);
+
   return (
     <>
+      {error ? <div className="error">{error}</div> : null}
       <DndProvider backend={HTML5Backend}>
         <div className="itemSections">
-          {error ? <div className="error">{error}</div> : null}
           <Tabs
             style={{ flex: "1" }}
             tabs={[
@@ -369,7 +427,7 @@ export function TradeUI({
                 : []),
             ]}
           />
-          {nftSwap ? (
+          {nftSwap && order ? (
             <div className="offers">
               <DetailsSection title="My trade offer">
                 <TradeOffer
@@ -393,15 +451,10 @@ export function TradeUI({
                       (tradingPartner.myTradeOffer.length === 0 &&
                         tradingPartner.tradeOffer.length === 0)
                     }
-                    checked={offerAccepted}
+                    checked={Boolean(lockedIn)}
                     onChange={() => {
-                      const newAcceptedState = !offerAccepted;
-                      setOfferAccepted(newAcceptedState);
-                      p2p.send(tradingPartner.peer, {
-                        type: "lockin",
-                        isLocked: newAcceptedState,
-                        hash: "", // TODO
-                      });
+                      const newAcceptedState = !lockedIn;
+                      setLockedIn(newAcceptedState ? "sending" : false);
                     }}
                     id="myAccept"
                     label="Accept Offer"
@@ -443,23 +496,13 @@ export function TradeUI({
                         // TODO status for signing in progress
                         if (iGoFirst) {
                           // sign and submit order to other player
-                          const order = buildOrder(nftSwap, [
-                            {
-                              address: address,
-                              items: tradingPartner.myTradeOffer,
-                            },
-                            {
-                              address: tradingPartner.address,
-                              items: getItems({
-                                balances: tradingPartner.tradeOffer,
-                                contracts,
-                                collectibles,
-                              }).filter(isItemWithKnownContractType),
-                            },
-                          ]);
+
                           console.log("[trade] waiting for signed order...");
                           const signedOrder = await nftSwap.signOrder(
-                            order,
+                            {
+                              ...order,
+                              salt: BigNumber.from(randomBytes(32)).toString(), // get a real salt to sign this order
+                            },
                             address,
                             library.getSigner()
                           );
