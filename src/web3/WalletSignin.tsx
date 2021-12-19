@@ -84,6 +84,20 @@ export function WalletSignin({ children }: WalletSigninProps) {
             />
             <h3>WARNING</h3>
             <p>
+              <strong>VAPORTRADE.NET IS ALPHA SOFTWARE.</strong>
+            </p>
+            <p>
+              <strong>
+                IT MIGHT DESTROY ALL YOUR CRYPTO, PUT YOUR WALLET IN AN
+                UNRECOVERABLE STATE, OR DO OTHER UNEXPECTED THINGS.
+              </strong>
+            </p>
+            <p>
+              <strong>
+                VAPORTRADE.NET IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.
+              </strong>
+            </p>
+            <p>
               vaportrade.net uses peer-to-peer (p2p) communication via WebRTC.
             </p>
             <p>

@@ -3,7 +3,6 @@ import ReactDOM from "react-dom";
 import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
-import { config } from "./settings";
 
 ReactDOM.render(
   <React.StrictMode>
@@ -16,9 +15,3 @@ ReactDOM.render(
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
-
-if (config.debugModeSetMeToTheStringTrue !== "true") {
-  alert(
-    "VAPORTRADE IS ALPHA SOFTWARE. IT MIGHT EXPLODE ALL YOUR CRYPTO OR PUT YOUR WALLET IN AN UNRECOVERABLE STATE. DO NOT USE."
-  );
-}
