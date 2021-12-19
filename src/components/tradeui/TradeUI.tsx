@@ -406,12 +406,39 @@ export function TradeUI({
 
   if (orderSuccess) {
     return (
-      <div>
-        <div>Trade successful!</div>
-        <a href={`https://polygonscan.com/tx/${orderSuccess.txHash}`}>
-          View transaction on Polygonscan
-        </a>
-      </div>
+      <DndProvider backend={HTML5Backend}>
+        <div className="successfulTradeBox">
+          <div className="oneSide">
+            <TradeOffer items={tradingPartner.myTradeOffer} />
+            <div className="successLabel">You sent</div>
+          </div>
+          <div className="successfulTrade">
+            <div className="successfulTitle">Trade successful!</div>
+            <a
+              href={`https://polygonscan.com/tx/${orderSuccess.txHash}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View on Polygonscan
+            </a>
+            <img
+              src={tradeButtonStates.ready_to_sign.icon}
+              alt={"traded for"}
+              className="successfulTradeIcon"
+            />
+          </div>
+          <div className="oneSide">
+            <TradeOffer
+              items={getItems({
+                balances: tradingPartner.tradeOffer,
+                contracts,
+                collectibles,
+              }).filter(isItemWithKnownContractType)}
+            />
+            <div className="successLabel">You received</div>
+          </div>
+        </div>
+      </DndProvider>
     );
   }
   if (error) {
@@ -614,9 +641,6 @@ export function TradeUI({
                     contracts,
                     collectibles,
                   }).filter(isItemWithKnownContractType)}
-                  onItemSelected={() => {
-                    // nothing happens when you double click your trading partner's items.
-                  }}
                 />
               </DetailsSection>
             </div>
@@ -650,6 +674,13 @@ export function TradeUI({
             });
           }}
         />
+      ) : null}
+      {process.env.NODE_ENV === "development" ? (
+        <div>
+          <ButtonForm onClick={() => setOrderSuccess({ txHash: "dummytx" })}>
+            DEBUG set success true
+          </ButtonForm>
+        </div>
       ) : null}
     </>
   );

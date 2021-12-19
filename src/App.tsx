@@ -237,10 +237,16 @@ function Vaportrade() {
               }
               tradingPeer.tradeRequest = true;
             } else if (msg.type === "offer") {
+              if (tradingPeer.tradeStatus.type === "signedOrder") {
+                return; // ignore messages once we have a signed order
+              }
               tradingPeer.tradeOffer = msg.offer;
               tradingPeer.tradeStatus = { type: "negotiating" };
               tradingPeer.hasNewInfo = true;
             } else if (msg.type === "lockin") {
+              if (tradingPeer.tradeStatus.type === "signedOrder") {
+                return; // ignore messages once we have a signed order
+              }
               if (msg.lockedOrder) {
                 tradingPeer.tradeStatus = {
                   type: "locked_in",
@@ -250,6 +256,9 @@ function Vaportrade() {
                 tradingPeer.tradeStatus = { type: "negotiating" };
               }
             } else if (msg.type === "accept") {
+              if (tradingPeer.tradeStatus.type === "signedOrder") {
+                return; // ignore messages once we have a signed order
+              }
               // todo verify hashse are the same as the order we locked into
               tradingPeer.tradeStatus = {
                 type: "signedOrder",

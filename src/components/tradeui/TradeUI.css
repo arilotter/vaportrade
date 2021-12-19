@@ -46,3 +46,38 @@
   width: 100%;
   display: inline-block;
 }
+
+.successfulTradeBox {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.successfulTradeBox .tradeOffer {
+  flex-grow: 1;
+}
+.successfulTrade {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.successfulTradeIcon {
+  padding: 16px;
+  width: 32px;
+  height: 32px;
+}
+
+.oneSide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.successLabel {
+  padding: 4px;
+}
+
+.successfulTitle {
+  padding: 16px 0;
+  font-size: 200%;
+}

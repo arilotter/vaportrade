@@ -5,7 +5,7 @@ import "./TradeOffer.css";
 
 interface TradeOfferProps {
   items: Array<Item<KnownContractType>>;
-  onItemSelected: (item: Item<KnownContractType>) => void;
+  onItemSelected?: (item: Item<KnownContractType>) => void;
 }
 export function TradeOffer({ items, onItemSelected }: TradeOfferProps) {
   return (
@@ -24,7 +24,9 @@ export function TradeOffer({ items, onItemSelected }: TradeOfferProps) {
                   item.contractAddress,
                   item.tokenID
                 )}
-                onDoubleClick={() => onItemSelected(item)}
+                onDoubleClick={
+                  onItemSelected ? () => onItemSelected(item) : () => {}
+                }
               />
             ))}
         </div>
