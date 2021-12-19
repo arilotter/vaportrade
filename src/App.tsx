@@ -293,6 +293,12 @@ function Vaportrade() {
   const tradingPartner = tradeRequests.find(
     (p) => p.address === tradingPartnerAddress
   );
+  // Throw warning if you try to leave with a trade open
+  window.onbeforeunload = () => {
+    if (tradingPartner) {
+      return " ";
+    }
+  };
   return (
     <>
       <SequenceSessionProvider>

@@ -60,7 +60,7 @@ type TradeButtonStatus =
   | "waiting_for_approvals"
   | "ready_to_sign"
   | "waiting_for_partner"
-  | "submitting_order";
+  | "waiting_for_order_completion";
 
 export function TradeUI({
   indexer,
@@ -79,6 +79,10 @@ export function TradeUI({
     false | "sending" | { hash: string }
   >(false);
   const [myOrderSent, setMyOrderSent] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState<false | { txHash: string }>(
+    false
+  );
+
   const [
     pickBalanceItem,
     setPickBalanceItem,
@@ -113,6 +117,17 @@ export function TradeUI({
     },
     [updateTokensToFetch]
   );
+
+  useEffect(() => {
+    if (error) {
+      if (typeof lockedIn === "object") {
+        setLockedIn(false);
+      }
+      if (myOrderSent) {
+        setMyOrderSent(false);
+      }
+    }
+  }, [error, lockedIn, myOrderSent]);
 
   useEffect(() => {
     setLockedIn(false);
@@ -291,6 +306,9 @@ export function TradeUI({
   const stillLoadingApprovalStatus = myOfferTokenKeys.some(
     ({ key }) => typeof requiredApprovals.get(key) !== "boolean"
   );
+  const waitingForApproval = myOfferTokenKeys.some(
+    ({ key }) => requiredApprovals.get(key) === "approving"
+  );
   const tokensThatNeedApproval =
     !stillLoadingApprovalStatus &&
     myOfferTokenKeys.filter(({ key }) => requiredApprovals.get(key) !== true);
@@ -299,6 +317,8 @@ export function TradeUI({
   if (!bothPlayersAccepted) {
     // haven't checked boxes, wait for those.
     tradeButtonStatus = "waiting_for_lockin";
+  } else if (waitingForApproval) {
+    tradeButtonStatus = "waiting_for_approvals";
   } else if (stillLoadingApprovalStatus) {
     // haven't loaded token approval statuses, wait for those
     tradeButtonStatus = "loading_approvals";
@@ -316,7 +336,9 @@ export function TradeUI({
         tradeButtonStatus = "waiting_for_partner";
       }
     } else {
-      if (tradingPartner.tradeStatus.type === "signedOrder") {
+      if (myOrderSent) {
+        tradeButtonStatus = "waiting_for_order_completion";
+      } else if (tradingPartner.tradeStatus.type === "signedOrder") {
         // 2nd player needs to accept order
         tradeButtonStatus = "ready_to_sign";
       } else {
@@ -355,7 +377,6 @@ export function TradeUI({
         const err = `Got invalid hash from partner lockin\n: Expected ${hash}, got ${partnerHash}`;
         console.error(err);
         setError(err);
-        setLockedIn(false);
       }
     }
   }, [
@@ -383,9 +404,26 @@ export function TradeUI({
     }
   }, [nftSwap, order, p2p, tradingPartner.peer, lockedIn]);
 
+  if (orderSuccess) {
+    return (
+      <div>
+        <div>Trade successful!</div>
+        <a href={`https://polygonscan.com/tx/${orderSuccess.txHash}`}>
+          View transaction on Polygonscan
+        </a>
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div>
+        <div className="error">{error}</div>
+        <ButtonForm onClick={() => setError(null)}>Clear Error</ButtonForm>
+      </div>
+    );
+  }
   return (
     <>
-      {error ? <div className="error">{error}</div> : null}
       <DndProvider backend={HTML5Backend}>
         <div className="itemSections">
           <Tabs
@@ -538,6 +576,15 @@ export function TradeUI({
                           console.log(
                             `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
                           );
+                          if (fillTxReceipt.status === 1) {
+                            setOrderSuccess({
+                              txHash: fillTxReceipt.transactionHash,
+                            });
+                          } else {
+                            setError(
+                              `Error making trade: Transaction ${fillTxReceipt.transactionHash} failed.`
+                            );
+                          }
                         }
                       }
                     }}
@@ -576,6 +623,7 @@ export function TradeUI({
           ) : null}
         </div>
       </DndProvider>
+
       {pickBalanceItem ? (
         <PickAmountWindow
           type="offer"
@@ -630,7 +678,7 @@ export const tradeButtonStates: {
     altText: "Sign trade offer",
     enabled: true,
   },
-  submitting_order: {
+  waiting_for_order_completion: {
     icon: loadingIcon,
     altText: "Waiting for trade to complete...",
     enabled: false,
