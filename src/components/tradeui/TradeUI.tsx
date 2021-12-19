@@ -596,6 +596,7 @@ export function TradeUI({
                           const fillTx = await nftSwap.fillSignedOrder(
                             tradingPartner.tradeStatus.signedOrder
                           );
+                          setMyOrderSent(true);
                           console.log("[trade] waiting for order completion.");
                           const fillTxReceipt = await nftSwap.awaitTransactionHash(
                             fillTx.hash
