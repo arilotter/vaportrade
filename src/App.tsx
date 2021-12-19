@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
-import { Window, Theme, TaskBar } from "packard-belle";
+import { Window, Theme } from "packard-belle";
 import P2PT, { Peer, Tracker } from "p2pt";
 
 import { TrackersList } from "./components/TrackersList";
@@ -38,6 +38,7 @@ import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
 import { WalletSignin } from "./web3/WalletSignin";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
 import { connectorsByName, connectorsIconsByName } from "./web3/connectors";
+import { TaskBar } from "./TaskBar";
 
 enableMapSet();
 function App() {
@@ -446,7 +447,9 @@ function Vaportrade() {
       )}
 
       <TaskBar
-        openWindows={tradeRequests.map((trader) => ({
+        openWindows={tradeRequests.map((trader, id) => ({
+          isAlerting:
+            trader.hasNewInfo && trader.address !== tradingPartnerAddress,
           title: trader.address,
           icon: makeBlockyIcon(trader.address),
           isActive: trader.address === tradingPartnerAddress,
@@ -462,6 +465,7 @@ function Vaportrade() {
               trader.address === tradingPartnerAddress ? null : trader.address
             );
           },
+          id,
         }))}
         options={[
           [

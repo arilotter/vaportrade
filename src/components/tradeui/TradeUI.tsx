@@ -42,6 +42,7 @@ import { Web3Provider } from "@ethersproject/providers";
 import { useWeb3React } from "@web3-react/core";
 import { formatBytes32String, randomBytes } from "ethers/lib/utils";
 import { BigNumber } from "@ethersproject/bignumber";
+import { config } from "../../settings";
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
@@ -676,7 +677,7 @@ export function TradeUI({
           }}
         />
       ) : null}
-      {process.env.NODE_ENV === "development" ? (
+      {config.debugModeSetMeToTheStringTrue === "true" ? (
         <div>
           <ButtonForm onClick={() => setOrderSuccess({ txHash: "dummytx" })}>
             DEBUG set success true

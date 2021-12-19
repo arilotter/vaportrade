@@ -5,6 +5,8 @@ const settings = {
       ? "https://cors.vaportrade.net/"
       : "http://localhost:8080/",
   sequenceWalletWebappUrl: "https://sequence.app",
+  debugModeSetMeToTheStringTrue:
+    process.env.NODE_ENV === "development" ? "true" : "false",
 };
 
 // Load settings
