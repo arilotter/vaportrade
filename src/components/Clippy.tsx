@@ -10,6 +10,7 @@ interface ClippyProps {
 
 const angryDialog = [
   "don't touch me.",
+  "hey. don't touch me.",
   "i mean it.",
   "stop.",
   "STOP.",
