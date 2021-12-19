@@ -31,8 +31,11 @@ export function Credits({ onClose }: CreditsProps) {
               </a>
             </li>
             <li>
-              Development: Ari Lotter, with help from @hazucf, William Hua,
-              Michael Yu, Philippe Castonguay, &amp; Agustin Aguilar
+              Development: Ari Lotter with heaps of nft-swap-sdk help from
+              @hazucf of trader.xyz
+              <br />
+              and unending Sequence guidance from William Hua, Michael Yu,
+              Philippe Castonguay, &amp; Agustin Aguilar
             </li>
             <li>
               Dependencies: <a href="https://trader.xyz">trader.xyz</a>,{" "}
@@ -42,8 +45,7 @@ export function Credits({ onClose }: CreditsProps) {
               <a href="https://packard-belle.netlify.app/">packard-belle</a>
             </li>
             <li>
-              Special thanks: Daniel Rea, @hazucf from trader.xyz, and everyone
-              on the Sequence team :)
+              Special thanks: Daniel Rea and everyone on the Sequence team :)
             </li>
           </ul>
         </div>

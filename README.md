@@ -24,20 +24,21 @@ Make sure you're running a cors-anywhere proxy at localhost:8080.
 Builds the app for production to the `build` folder.
 
 
-# TODO:
-- [] make trading work, lol (signature error??)
+# PRE-LAUNCH TODO:
+- [] fix weird gas estimation (tx failed cause of it, does Sequence offer this?)
 - [] make taskbar flash when new things happen ( just need css )
 - [] make trade button flash when new things happen
 - [] use hashing of orders to verify integrity of trades
 - [] add better in-progress states when the wallet is open (fullscreen modal?)
 - [] add error handling (tons are completely unhandled)
+- [x] make trading work, lol (signature error??)
 
 # NICE TO HAVE TODO:
 - [] add drag & drop (partially implemented, but doesn't work hehe)
 - [] buggy buggy css, please flexbox wizards, save me
-- [] rip out 0x, it's huge.. once trader.xyz adds order hashing & polygon we good
 - [] figure out why we re-render at like 60fps.... eeeeeek... ugly ugly smelly react code with effects
 - [] correctly close trade req when we lose the peer. eek. sometimes doesn't work
+- [x] rip out 0x, it's huge.. once trader.xyz adds order hashing & polygon we good
 - [x] ~~deploy 0x v3 to polygon yeesh~~ done, polygon did it!
 - [x] ~~clicking folders in your wallet can show contents of your trading partner's wallet~~ can't repro
 - [x] ~~trading partner's offer doesn't load tokenID metadata, just shows parent contract~~
