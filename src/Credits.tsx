@@ -31,8 +31,8 @@ export function Credits({ onClose }: CreditsProps) {
               </a>
             </li>
             <li>
-              Development: Ari Lotter, with help from William Hua, Michael Yu,
-              Philippe Castonguay, &amp; Agustin Aguilar
+              Development: Ari Lotter, with help from @hazucf, William Hua,
+              Michael Yu, Philippe Castonguay, &amp; Agustin Aguilar
             </li>
             <li>
               Dependencies: <a href="https://trader.xyz">trader.xyz</a>,{" "}
