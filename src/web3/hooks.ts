@@ -4,7 +4,7 @@ import { useWeb3React } from "@web3-react/core";
 import { injected } from "./connectors";
 
 export function useEagerConnect() {
-  const { activate, active } = useWeb3React();
+  const { activate, active, deactivate } = useWeb3React();
 
   const [tried, setTried] = useState(false);
 
@@ -13,12 +13,13 @@ export function useEagerConnect() {
       if (isAuthorized) {
         activate(injected, undefined, true).catch(() => {
           setTried(true);
+          deactivate();
         });
       } else {
         setTried(true);
       }
     });
-  }, [activate]); // intentionally only running on mount (make sure it's only mounted once :))
+  }, [activate, deactivate]); // intentionally only running on mount (make sure it's only mounted once :))
 
   // if the connection worked, wait until we get confirmation of that to flip the flag
   useEffect(() => {

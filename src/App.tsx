@@ -245,10 +245,10 @@ function Vaportrade() {
               tradingPeer.tradeStatus = { type: "negotiating" };
               tradingPeer.hasNewInfo = true;
             } else if (msg.type === "lockin") {
-              if (tradingPeer.tradeStatus.type === "signedOrder") {
-                return; // ignore messages once we have a signed order
-              }
               if (msg.lockedOrder) {
+                if (tradingPeer.tradeStatus.type === "signedOrder") {
+                  return; // ignore messages once we have a signed order
+                }
                 tradingPeer.tradeStatus = {
                   type: "locked_in",
                   orderHash: msg.lockedOrder.hash,

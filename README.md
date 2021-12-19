@@ -26,10 +26,10 @@ Builds the app for production to the `build` folder.
 
 # PRE-LAUNCH TODO:
 - [] make trade button flash when new things happen
-- [] use hashing of orders to verify integrity of trades
 - [] add better in-progress states when the wallet is open (fullscreen modal?)
 - [] add error handling (tons are completely unhandled)
 - [] fix weird gas estimation (tx failed cause of it, does Sequence offer this?)
+- [x] use hashing of orders to verify integrity of trades
 - [x] make taskbar flash when new things happen ( just need css )
 - [x] make trading work, lol (signature error??)
 

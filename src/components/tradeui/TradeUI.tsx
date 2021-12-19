@@ -366,18 +366,31 @@ export function TradeUI({
         iGoFirst
           ? [myHalfOfOrder, theirHalfOfOrder]
           : [theirHalfOfOrder, myHalfOfOrder],
-        formatBytes32String("vaportrade_fake_salt")
+        fakeSalt
       )
     : null;
 
   useEffect(() => {
-    if (lockedIn && order && tradingPartner.tradeStatus.type === "locked_in") {
-      const partnerHash = tradingPartner.tradeStatus.orderHash;
-      const hash = nftSwap.getOrderHash(order);
-      if (partnerHash !== hash) {
-        const err = `Got invalid hash from partner lockin\n: Expected ${hash}, got ${partnerHash}`;
-        console.error(err);
-        setError(err);
+    if (lockedIn && order) {
+      if (tradingPartner.tradeStatus.type === "locked_in") {
+        const partnerHash = tradingPartner.tradeStatus.orderHash;
+        const hash = nftSwap.getOrderHash(order);
+        if (partnerHash !== hash) {
+          const err = `Got invalid hash from partner lockin\n: Expected ${hash}, got ${partnerHash}`;
+          console.error(err);
+          setError(err);
+        }
+      } else if (tradingPartner.tradeStatus.type === "signedOrder") {
+        const partnerHash = nftSwap.getOrderHash({
+          ...tradingPartner.tradeStatus.signedOrder,
+          salt: fakeSalt,
+        });
+        const hash = nftSwap.getOrderHash(order);
+        if (partnerHash !== hash) {
+          const err = `Got invalid hash from partner submitting signed order\n: Expected ${hash}, got ${partnerHash}`;
+          console.error(err);
+          setError(err);
+        }
       }
     }
   }, [
@@ -727,3 +740,5 @@ export const tradeButtonStates: {
     enabled: false,
   },
 };
+
+const fakeSalt = formatBytes32String("vaportrade_fake_salt");
