@@ -16,6 +16,7 @@ import "./WalletSignin.css";
 import rebootIcon from "../icons/reboot.png";
 import controlPanelIcon from "../icons/controlPanel.png";
 import warningIcon from "../icons/warning.png";
+import vaportradeLogo from "../icons/vticon.png";
 import { config } from "../settings";
 import { ControlPanel } from "../ControlPanel";
 interface WalletSigninProps {
@@ -68,7 +69,11 @@ export function WalletSignin({ children }: WalletSigninProps) {
       {controlPanelOpen ? (
         <ControlPanel onClose={() => setControlPanelOpen(false)} />
       ) : (
-        <Window title="Connect your web3 wallet" className="web3Modal">
+        <Window
+          title="Connect your web3 wallet"
+          className="web3Modal"
+          icon={vaportradeLogo}
+        >
           <div style={{ textAlign: "center", padding: "8px 8px 0 8px" }}>
             <img
               className="walletConnectButtonLogo"
