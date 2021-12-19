@@ -439,7 +439,7 @@ function Vaportrade() {
             tradeRequests.length
               ? "Double-click items to add them to your trade offer!"
               : !showContacts
-              ? "Click 'Start → Find People to Trade With' to get started!"
+              ? "Click Start → Find People to Trade With to get started!"
               : "Pick someone online to trade with!"
           }
           onOutOfMessages={() => setShowClippy(false)}
