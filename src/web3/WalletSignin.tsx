@@ -15,6 +15,7 @@ import { ButtonForm, DetailsSection, Window } from "packard-belle";
 import "./WalletSignin.css";
 import rebootIcon from "../icons/reboot.png";
 import controlPanelIcon from "../icons/controlPanel.png";
+import warningIcon from "../icons/warning.png";
 import { config } from "../settings";
 import { ControlPanel } from "../ControlPanel";
 interface WalletSigninProps {
@@ -68,6 +69,31 @@ export function WalletSignin({ children }: WalletSigninProps) {
         <ControlPanel onClose={() => setControlPanelOpen(false)} />
       ) : (
         <Window title="Connect your web3 wallet" className="web3Modal">
+          <div style={{ textAlign: "center", padding: "8px 8px 0 8px" }}>
+            <img
+              className="walletConnectButtonLogo"
+              width={32}
+              height={32}
+              src={warningIcon}
+              alt={"Warning!"}
+            />
+            <h3>WARNING</h3>
+            <p>
+              vaportrade.net uses peer-to-peer (p2p) communication via WebRTC.
+            </p>
+            <p>
+              Your IP address and wallet address will be published to other
+              vaportrade.net users so you can trade.
+            </p>
+            <p>
+              If you aren't okay with this,
+              <br />
+              <strong>DO NOT CONNECT YOUR WALLET.</strong>
+            </p>
+            <p>
+              Otherwise, continue by picking a wallet connection method below.
+            </p>
+          </div>
           {(Object.keys(connectorsByName) as Array<
             keyof typeof connectorsByName
           >)
@@ -116,32 +142,34 @@ export function WalletSignin({ children }: WalletSigninProps) {
             </div>
           ) : null}
           <hr />
-          <ButtonForm
-            className="walletConnectButton"
-            onClick={() => setControlPanelOpen(true)}
-          >
-            <img
-              className="walletConnectButtonLogo"
-              width={16}
-              height={16}
-              src={controlPanelIcon}
-              alt="Control Panel"
-            />
-            Control Panel
-          </ButtonForm>
-          <ButtonForm
-            className="walletConnectButton"
-            onClick={() => window.location.reload()}
-          >
-            <img
-              className="walletConnectButtonLogo"
-              width={16}
-              height={16}
-              src={rebootIcon}
-              alt="Reboot"
-            />
-            Reload vaportrade.net
-          </ButtonForm>
+          <div className="walletConnectButton">
+            <ButtonForm
+              className="walletConnectButton"
+              onClick={() => setControlPanelOpen(true)}
+            >
+              <img
+                className="walletConnectButtonLogo"
+                width={16}
+                height={16}
+                src={controlPanelIcon}
+                alt="Control Panel"
+              />
+              Control Panel
+            </ButtonForm>
+            <ButtonForm
+              className="walletConnectButton"
+              onClick={() => window.location.reload()}
+            >
+              <img
+                className="walletConnectButtonLogo"
+                width={16}
+                height={16}
+                src={rebootIcon}
+                alt="Reboot"
+              />
+              Reload
+            </ButtonForm>
+          </div>
         </Window>
       )}
     </div>
