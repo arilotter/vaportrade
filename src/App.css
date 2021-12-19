@@ -84,3 +84,8 @@ body {
     color: white;
   }
 }
+
+::-webkit-scrollbar-button:vertical:start:increment,
+::-webkit-scrollbar-button:vertical:end:decrement {
+  display: none;
+}
