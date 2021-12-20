@@ -19,6 +19,7 @@ import {
   TokenKey,
   TradingPeer,
   VaportradeMessage,
+  zero,
 } from "../../utils/utils";
 import { PickAmountWindow } from "./PickAmountWindow";
 import { Tabs } from "../Tabs";
@@ -79,7 +80,9 @@ export function TradeUI({
   const [lockedIn, setLockedIn] = useState<
     false | "sending" | { hash: string }
   >(false);
-  const [myOrderSent, setMyOrderSent] = useState(false);
+  const [myOrderSent, setMyOrderSent] = useState<
+    false | { expiryTime: number }
+  >(false);
   const [orderSuccess, setOrderSuccess] = useState<false | { txHash: string }>(
     false
   );
@@ -366,6 +369,7 @@ export function TradeUI({
         iGoFirst
           ? [myHalfOfOrder, theirHalfOfOrder]
           : [theirHalfOfOrder, myHalfOfOrder],
+        new Date(0),
         fakeSalt
       )
     : null;
@@ -381,9 +385,21 @@ export function TradeUI({
           setError(err);
         }
       } else if (tradingPartner.tradeStatus.type === "signedOrder") {
+        const expiryTime = Number.parseInt(
+          tradingPartner.tradeStatus.signedOrder.expirationTimeSeconds,
+          10
+        );
+        const now = Date.now() / 1000;
+        if (Number.isNaN(expiryTime) || expiryTime - now > 10 * 60) {
+          const err = `Trading partner's order expires at ${expiryTime}, which is more than 10 minutes from now.`;
+          console.error(err);
+          setError(err);
+        }
+
         const partnerHash = nftSwap.getOrderHash({
           ...tradingPartner.tradeStatus.signedOrder,
           salt: fakeSalt,
+          expirationTimeSeconds: zero.toString(),
         });
         const hash = nftSwap.getOrderHash(order);
         if (partnerHash !== hash) {
@@ -417,6 +433,38 @@ export function TradeUI({
       });
     }
   }, [nftSwap, order, p2p, tradingPartner.peer, lockedIn]);
+
+  const [timeLeftUntilTradeExpires, setTimeLeftUntilTradeExpires] = useState(
+    "5:00"
+  );
+  useEffect(() => {
+    const expiryTimeString =
+      tradingPartner.tradeStatus.type === "signedOrder"
+        ? tradingPartner.tradeStatus.signedOrder.expirationTimeSeconds
+        : typeof myOrderSent === "object"
+        ? `${myOrderSent.expiryTime}`
+        : "";
+    if (expiryTimeString === "") {
+      return;
+    }
+    const expiryTime = Number.parseInt(expiryTimeString, 10);
+    if (Number.isNaN(expiryTime)) {
+      return;
+    }
+    const timer = setInterval(
+      () =>
+        setTimeLeftUntilTradeExpires(() => {
+          // 30s buffer for network & desync.
+          const timeLeft = (expiryTime - 30) * 1000 - Date.now();
+
+          const minutes = `${Math.floor((timeLeft % 3.6e6) / 6e4)}`;
+          const seconds = `${Math.floor((timeLeft % 6e4) / 1000)}`;
+          return `${minutes}:${(seconds.length < 2 ? "0" : "") + seconds}`;
+        }),
+      1000
+    );
+    return () => clearInterval(timer);
+  }, [tradingPartner.tradeStatus, myOrderSent]);
 
   if (orderSuccess) {
     return (
@@ -520,13 +568,19 @@ export function TradeUI({
               </DetailsSection>
               <section className="DetailsSection window__section acceptOffer">
                 <div className="DetailsSection__title">
-                  {tradeButtonStates[tradeButtonStatus].altText}
+                  {tradeButtonStatus === "ready_to_sign" &&
+                  tradingPartner.tradeStatus.type === "signedOrder"
+                    ? `Submit trade (${timeLeftUntilTradeExpires})`
+                    : tradeButtonStatus === "waiting_for_partner" &&
+                      typeof myOrderSent === "object"
+                    ? `Waiting for order on-chain (${timeLeftUntilTradeExpires})`
+                    : tradeButtonStates[tradeButtonStatus].altText}
                 </div>
 
                 <div className="acceptOfferContents">
                   <Checkbox
                     isDisabled={
-                      myOrderSent ||
+                      myOrderSent !== false ||
                       (tradingPartner.myTradeOffer.length === 0 &&
                         tradingPartner.tradeOffer.length === 0)
                     }
@@ -576,11 +630,18 @@ export function TradeUI({
                         if (iGoFirst) {
                           // sign and submit order to other player
 
-                          console.log("[trade] waiting for signed order...");
+                          console.log(
+                            "[trade] waiting for user to sign order..."
+                          );
+                          const expiryTime =
+                            Math.floor(new Date().getTime() / 1000) + 5 * 60;
                           const signedOrder = await nftSwap.signOrder(
                             {
                               ...order,
                               salt: BigNumber.from(randomBytes(32)).toString(), // get a real salt to sign this order
+                              expirationTimeSeconds: BigNumber.from(
+                                expiryTime
+                              ).toString(), // and get a real timestamp of now + 5 minutes
                             },
                             address,
                             library.getSigner()
@@ -594,7 +655,7 @@ export function TradeUI({
                             order: signedOrder,
                           });
                           console.log("[trade] waiting for peer to accept");
-                          setMyOrderSent(true);
+                          setMyOrderSent({ expiryTime });
                         } else {
                           if (
                             tradingPartner.tradeStatus.type !== "signedOrder"
@@ -610,7 +671,7 @@ export function TradeUI({
                           const fillTx = await nftSwap.fillSignedOrder(
                             tradingPartner.tradeStatus.signedOrder
                           );
-                          setMyOrderSent(true);
+                          setMyOrderSent({ expiryTime: 0 }); // n/a
                           console.log("[trade] waiting for order completion.");
                           const fillTxReceipt = await nftSwap.awaitTransactionHash(
                             fillTx.hash

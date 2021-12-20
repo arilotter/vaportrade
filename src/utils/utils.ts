@@ -220,6 +220,7 @@ export interface OrderParticipant {
 export function buildOrder(
   swap: NftSwap,
   participants: [OrderParticipant, OrderParticipant],
+  expiryTime: Date,
   fakeSalt: string
 ): Order {
   if (participants[0].address === participants[1].address) {
@@ -240,6 +241,7 @@ export function buildOrder(
     {
       takerAddress: taker.address,
       salt: fakeSalt,
+      expiration: expiryTime,
     }
   );
 }
