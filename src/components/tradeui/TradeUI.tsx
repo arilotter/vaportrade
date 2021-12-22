@@ -92,6 +92,10 @@ export function TradeUI({
     setPickBalanceItem,
   ] = useState<Item<KnownContractType> | null>(null);
 
+  const [timeLeftUntilTradeExpires, setTimeLeftUntilTradeExpires] = useState(
+    "5:00"
+  );
+
   // Metadata about assets
   const [tokensToFetch, updateTokensToFetch] = useImmer<FetchableToken[]>([]);
   const [collectibles, updateCollectibles] = useImmer<CollectiblesDB>(
@@ -342,7 +346,10 @@ export function TradeUI({
     } else {
       if (myOrderSent) {
         tradeButtonStatus = "waiting_for_order_completion";
-      } else if (tradingPartner.tradeStatus.type === "signedOrder") {
+      } else if (
+        tradingPartner.tradeStatus.type === "signedOrder" &&
+        timeLeftUntilTradeExpires !== "0:00"
+      ) {
         // 2nd player needs to accept order
         tradeButtonStatus = "ready_to_sign";
       } else {
@@ -431,12 +438,10 @@ export function TradeUI({
         type: "lockin",
         lockedOrder: false,
       });
+      setTimeLeftUntilTradeExpires("");
     }
   }, [nftSwap, order, p2p, tradingPartner.peer, lockedIn]);
 
-  const [timeLeftUntilTradeExpires, setTimeLeftUntilTradeExpires] = useState(
-    "5:00"
-  );
   useEffect(() => {
     const expiryTimeString =
       tradingPartner.tradeStatus.type === "signedOrder"
@@ -457,14 +462,27 @@ export function TradeUI({
           // 30s buffer for network & desync.
           const timeLeft = (expiryTime - 30) * 1000 - Date.now();
 
-          const minutes = `${Math.floor((timeLeft % 3.6e6) / 6e4)}`;
-          const seconds = `${Math.floor((timeLeft % 6e4) / 1000)}`;
+          const minutes = `${Math.max(
+            0,
+            Math.floor((timeLeft % 3.6e6) / 6e4)
+          )}`;
+          const seconds = `${Math.max(0, Math.floor((timeLeft % 6e4) / 1000))}`;
           return `${minutes}:${(seconds.length < 2 ? "0" : "") + seconds}`;
         }),
       1000
     );
     return () => clearInterval(timer);
   }, [tradingPartner.tradeStatus, myOrderSent]);
+
+  useEffect(() => {
+    if (myOrderSent && timeLeftUntilTradeExpires === "0:00") {
+      setMyOrderSent(false);
+      p2p.send(tradingPartner.peer, {
+        type: "offer",
+        offer: [],
+      });
+    }
+  }, [myOrderSent, timeLeftUntilTradeExpires, p2p, tradingPartner.peer]);
 
   if (orderSuccess) {
     return (
