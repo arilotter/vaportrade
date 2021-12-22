@@ -32,8 +32,8 @@ export function Chat({ messages, onSendMessage }: ChatProps) {
   return (
     <div className="chat">
       <div className="chatMessages" ref={messagesRef}>
-        {messages.map(({ chatter, message }) => (
-          <div>
+        {messages.map(({ chatter, message }, i) => (
+          <div key={i}>
             <span className="chatSender">{chatter}: </span>
             {message}
           </div>
