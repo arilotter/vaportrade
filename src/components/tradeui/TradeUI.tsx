@@ -1,16 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { sequence } from "0xsequence";
 import "./TradeUI.css";
 import P2PT from "p2pt";
 import { ButtonForm, Checkbox, DetailsSection } from "packard-belle";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import {
   buildOrder,
   doIGoFirst,
-  getContractKey,
   getTokenKey,
   isItemWithKnownContractType,
   Item,
@@ -29,24 +26,24 @@ import tradeIconDisabled from "./sendDisabled.png";
 import loadingIcon from "../../icons/loadingIcon.gif";
 import approveIcon from "../../icons/approve.png";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
-import { ContractInfo } from "0xsequence/dist/declarations/src/metadata";
 import {
-  chainId,
   CollectiblesDB,
   ContractsDB,
   FetchableToken,
-  fetchCollectibles,
-  fetchContractsForBalances,
   getItems,
 } from "./contracts";
 import { Web3Provider } from "@ethersproject/providers";
 import { useWeb3React } from "@web3-react/core";
 import { formatBytes32String, randomBytes } from "ethers/lib/utils";
 import { BigNumber } from "@ethersproject/bignumber";
-import { config } from "../../settings";
+import { chainId, config } from "../../settings";
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
+  collectibles: CollectiblesDB;
+  contracts: ContractsDB;
+  requestTokensFetch: (tokens: FetchableToken[]) => void;
+
   nftSwap: NftSwap;
   p2p: P2PT<VaportradeMessage>;
   tradingPartner: TradingPeer;
@@ -67,11 +64,13 @@ type TradeButtonStatus =
 const DEFAULT_TIME = "...";
 export function TradeUI({
   indexer,
-  metadata,
   tradingPartner,
   p2p,
   nftSwap,
   updateMyTradeOffer,
+  collectibles,
+  contracts,
+  requestTokensFetch,
 }: TradeUIProps) {
   const { account: address, library } = useWeb3React<Web3Provider>();
   if (!address || !library) {
@@ -97,36 +96,12 @@ export function TradeUI({
     DEFAULT_TIME
   );
 
-  // Metadata about assets
-  const [tokensToFetch, updateTokensToFetch] = useImmer<FetchableToken[]>([]);
-  const [collectibles, updateCollectibles] = useImmer<CollectiblesDB>(
-    new Map()
-  );
-  const [contracts, updateContracts] = useImmer<ContractsDB>(new Map());
-
   const [hardError, setHardError] = useState<string | null>(null);
   const [softWarning, setSoftWarning] = useState<string | null>(null);
 
   const [requiredApprovals, updateRequiredApprovals] = useImmer<
     Map<TokenKey, boolean | Promise<boolean> | "approving">
   >(new Map());
-
-  const requestTokensFetch = useCallback(
-    (tokens: FetchableToken[]) => {
-      updateTokensToFetch((balances) => {
-        const newTokens = tokens.filter(
-          (tok) =>
-            !balances.some(
-              (b) =>
-                b.contractAddress === tok.contractAddress &&
-                b.tokenID === tok.tokenID
-            )
-        );
-        balances.push(...newTokens);
-      });
-    },
-    [updateTokensToFetch]
-  );
 
   useEffect(() => {
     if (hardError) {
@@ -169,109 +144,6 @@ export function TradeUI({
       })),
     });
   }, [p2p, tradingPartner.peer, tradingPartner.myTradeOffer]);
-
-  // Get all contracts for user's balances
-  useEffect(() => {
-    const ctr = fetchContractsForBalances(
-      chainId,
-      metadata,
-      tokensToFetch.map((t) => t.contractAddress),
-      contracts
-    );
-    if (!ctr) {
-      return;
-    }
-
-    ctr.batchPromise
-      .then(({ contractInfoMap }) => {
-        updateContracts((contracts) => {
-          for (const contractAddress of ctr.batchContractAddresses) {
-            const key = getContractKey(chainId, contractAddress);
-            contracts.set(key, contractInfoMap[contractAddress.toLowerCase()]);
-          }
-        });
-      })
-      .catch((err) =>
-        err instanceof Error
-          ? setHardError(`${err.name}\n${err.message}\n${err.stack}`)
-          : setHardError(JSON.stringify(err, undefined, 2))
-      );
-
-    updateContracts((contracts) => {
-      for (const contractAddress of ctr.batchContractAddresses) {
-        const key = getContractKey(chainId, contractAddress);
-        if (!contracts.has(key)) {
-          contracts.set(key, "fetching");
-        }
-      }
-    });
-  }, [tokensToFetch, metadata, contracts, updateContracts]);
-
-  // Get all collectible balances for user's contracts.
-  useEffect(() => {
-    async function getMeta() {
-      const tokenContracts = [...contracts.values()]
-        .filter((c): c is ContractInfo => typeof c === "object")
-        .filter((c) => c.type === "ERC1155");
-      const myUnfetchedTokens = tokensToFetch.filter(
-        (token) =>
-          !collectibles.has(
-            getTokenKey(chainId, token.contractAddress, token.tokenID)
-          )
-      );
-
-      for (const contract of tokenContracts) {
-        const tokens = myUnfetchedTokens.filter(
-          (t) => t.contractAddress === contract.address
-        );
-        fetchCollectibles(
-          chainId,
-          metadata,
-          contract,
-          tokens.map((token) => token.tokenID)
-        )
-          .then((fetched) =>
-            updateCollectibles((collectibles) => {
-              for (const item of fetched) {
-                const key = getTokenKey(
-                  chainId,
-                  item.contractAddress,
-                  item.tokenID
-                );
-                collectibles.set(key, item);
-              }
-            })
-          )
-          .catch((err) => setHardError(`${err}`));
-      }
-
-      updateCollectibles((collectibles) => {
-        for (const balance of myUnfetchedTokens) {
-          if (
-            !tokenContracts.some((c) => c.address === balance.contractAddress)
-          ) {
-            continue;
-          }
-          const key = getTokenKey(
-            chainId,
-            balance.contractAddress,
-            balance.tokenID
-          );
-          if (!collectibles.has(key)) {
-            collectibles.set(key, "fetching");
-          }
-        }
-      });
-    }
-    getMeta();
-  }, [
-    indexer,
-    metadata,
-    tokensToFetch,
-    contracts,
-    collectibles,
-    updateCollectibles,
-  ]);
 
   // Check if we need to approve any tokens for swapping
   useEffect(() => {
@@ -488,39 +360,37 @@ export function TradeUI({
 
   if (orderSuccess) {
     return (
-      <DndProvider backend={HTML5Backend}>
-        <div className="successfulTradeBox">
-          <div className="oneSide">
-            <TradeOffer items={tradingPartner.myTradeOffer} />
-            <div className="successLabel">You sent</div>
-          </div>
-          <div className="successfulTrade">
-            <div className="successfulTitle">Trade successful!</div>
-            <a
-              href={`https://polygonscan.com/tx/${orderSuccess.txHash}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              View on Polygonscan
-            </a>
-            <img
-              src={tradeButtonStates.ready_to_sign.icon}
-              alt={"traded for"}
-              className="successfulTradeIcon"
-            />
-          </div>
-          <div className="oneSide">
-            <TradeOffer
-              items={getItems({
-                balances: tradingPartner.tradeOffer,
-                contracts,
-                collectibles,
-              }).filter(isItemWithKnownContractType)}
-            />
-            <div className="successLabel">You received</div>
-          </div>
+      <div className="successfulTradeBox">
+        <div className="oneSide">
+          <TradeOffer items={tradingPartner.myTradeOffer} />
+          <div className="successLabel">You sent</div>
         </div>
-      </DndProvider>
+        <div className="successfulTrade">
+          <div className="successfulTitle">Trade successful!</div>
+          <a
+            href={`https://polygonscan.com/tx/${orderSuccess.txHash}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            View on Polygonscan
+          </a>
+          <img
+            src={tradeButtonStates.ready_to_sign.icon}
+            alt={"traded for"}
+            className="successfulTradeIcon"
+          />
+        </div>
+        <div className="oneSide">
+          <TradeOffer
+            items={getItems({
+              balances: tradingPartner.tradeOffer,
+              contracts,
+              collectibles,
+            }).filter(isItemWithKnownContractType)}
+          />
+          <div className="successLabel">You received</div>
+        </div>
+      </div>
     );
   }
   if (hardError) {
@@ -534,267 +404,257 @@ export function TradeUI({
   }
   return (
     <>
-      <DndProvider backend={HTML5Backend}>
-        <div className="itemSections">
-          <Tabs
-            style={{ flex: "1" }}
-            tabs={[
-              {
-                title: "My Wallet",
-                contents: (
-                  <WalletContentsBox
-                    accountAddress={address}
-                    indexer={indexer}
-                    collectibles={collectibles}
-                    contracts={contracts}
-                    requestTokensFetch={requestTokensFetch}
-                    onItemSelected={setPickBalanceItem}
-                    subtractItems={tradingPartner.myTradeOffer}
-                  />
-                ),
-              },
-              ...(tradingPartner
-                ? [
-                    {
-                      title: "Trading Partner's Wallet",
-                      contents: (
-                        <WalletContentsBox
-                          accountAddress={tradingPartner.address}
-                          indexer={indexer}
-                          collectibles={collectibles}
-                          contracts={contracts}
-                          requestTokensFetch={requestTokensFetch}
-                          onItemSelected={() => {
-                            // noop
-                          }}
-                          subtractItems={tradingPartner.tradeOffer}
-                        />
-                      ),
-                    },
-                  ]
-                : []),
-            ]}
-          />
-          {nftSwap && order ? (
-            <div className="offers">
-              <DetailsSection title="My trade offer">
-                <TradeOffer
-                  items={tradingPartner.myTradeOffer}
-                  onItemSelected={(item) => {
-                    // swap current balance :)
-                    const diff = item.originalBalance.sub(item.balance);
-                    setPickBalanceItem({ ...item, balance: diff });
-                  }}
+      <div className="itemSections">
+        <Tabs
+          style={{ flex: "1" }}
+          tabs={[
+            {
+              title: "My Wallet",
+              contents: (
+                <WalletContentsBox
+                  accountAddress={address}
+                  indexer={indexer}
+                  collectibles={collectibles}
+                  contracts={contracts}
+                  requestTokensFetch={requestTokensFetch}
+                  onItemSelected={setPickBalanceItem}
+                  subtractItems={tradingPartner.myTradeOffer}
                 />
-              </DetailsSection>
-              <section className="DetailsSection window__section acceptOffer">
-                <div className="DetailsSection__title">
-                  {tradeButtonStatus === "ready_to_sign" &&
-                  tradingPartner.tradeStatus.type === "signedOrder"
-                    ? `Submit trade (${timeLeftUntilTradeExpires})`
-                    : tradeButtonStatus === "waiting_for_partner" &&
-                      typeof myOrderSent === "object"
-                    ? `Waiting for order on-chain (${timeLeftUntilTradeExpires})`
-                    : tradeButtonStates[tradeButtonStatus].altText}
-                </div>
+              ),
+            },
+            ...(tradingPartner
+              ? [
+                  {
+                    title: "Trading Partner's Wallet",
+                    contents: (
+                      <WalletContentsBox
+                        accountAddress={tradingPartner.address}
+                        indexer={indexer}
+                        collectibles={collectibles}
+                        contracts={contracts}
+                        requestTokensFetch={requestTokensFetch}
+                        onItemSelected={() => {
+                          // noop
+                        }}
+                        subtractItems={tradingPartner.tradeOffer}
+                      />
+                    ),
+                  },
+                ]
+              : []),
+          ]}
+        />
+        {nftSwap && order ? (
+          <div className="offers">
+            <DetailsSection title="My trade offer">
+              <TradeOffer
+                items={tradingPartner.myTradeOffer}
+                onItemSelected={(item) => {
+                  // swap current balance :)
+                  const diff = item.originalBalance.sub(item.balance);
+                  setPickBalanceItem({ ...item, balance: diff });
+                }}
+              />
+            </DetailsSection>
+            <section className="DetailsSection window__section acceptOffer">
+              <div className="DetailsSection__title">
+                {tradeButtonStatus === "ready_to_sign" &&
+                tradingPartner.tradeStatus.type === "signedOrder"
+                  ? `Submit trade (${timeLeftUntilTradeExpires})`
+                  : tradeButtonStatus === "waiting_for_partner" &&
+                    typeof myOrderSent === "object"
+                  ? `Waiting for order on-chain (${timeLeftUntilTradeExpires})`
+                  : tradeButtonStates[tradeButtonStatus].altText}
+              </div>
 
-                <div className="acceptOfferContents">
-                  <Checkbox
-                    isDisabled={
-                      myOrderSent !== false ||
-                      (tradingPartner.myTradeOffer.length === 0 &&
-                        tradingPartner.tradeOffer.length === 0)
-                    }
-                    checked={Boolean(lockedIn)}
-                    onChange={() => {
-                      const newAcceptedState = !lockedIn;
-                      setLockedIn(newAcceptedState ? "sending" : false);
-                    }}
-                    id="myAccept"
-                    label="Accept Offer"
-                  />
-                  <ButtonForm
-                    isDisabled={!tradeButtonStates[tradeButtonStatus].enabled}
-                    onClick={async () => {
-                      // disable this button ? TODO
-                      setSoftWarning(null);
-                      // Do approvals on-click!
-                      if (
-                        tradeButtonStatus === "ready_for_approvals" &&
-                        tokensThatNeedApproval
-                      ) {
-                        updateRequiredApprovals((approvals) => {
-                          for (const { key } of tokensThatNeedApproval) {
-                            approvals.set(key, "approving");
-                          }
-                        });
-                        const approvalTxs = tokensThatNeedApproval.map(
-                          ({ item }) =>
-                            nftSwap
-                              .approveTokenOrNftByAsset(
-                                itemToSwapItem(item),
-                                address
-                              )
-                              .then((tx) =>
-                                nftSwap.awaitTransactionHash(tx.hash)
-                              )
+              <div className="acceptOfferContents">
+                <Checkbox
+                  isDisabled={
+                    myOrderSent !== false ||
+                    (tradingPartner.myTradeOffer.length === 0 &&
+                      tradingPartner.tradeOffer.length === 0)
+                  }
+                  checked={Boolean(lockedIn)}
+                  onChange={() => {
+                    const newAcceptedState = !lockedIn;
+                    setLockedIn(newAcceptedState ? "sending" : false);
+                  }}
+                  id="myAccept"
+                  label="Accept Offer"
+                />
+                <ButtonForm
+                  isDisabled={!tradeButtonStates[tradeButtonStatus].enabled}
+                  onClick={async () => {
+                    // disable this button ? TODO
+                    setSoftWarning(null);
+                    // Do approvals on-click!
+                    if (
+                      tradeButtonStatus === "ready_for_approvals" &&
+                      tokensThatNeedApproval
+                    ) {
+                      updateRequiredApprovals((approvals) => {
+                        for (const { key } of tokensThatNeedApproval) {
+                          approvals.set(key, "approving");
+                        }
+                      });
+                      const approvalTxs = tokensThatNeedApproval.map(
+                        ({ item }) =>
+                          nftSwap
+                            .approveTokenOrNftByAsset(
+                              itemToSwapItem(item),
+                              address
+                            )
+                            .then((tx) => nftSwap.awaitTransactionHash(tx.hash))
+                      );
+                      await Promise.allSettled(approvalTxs);
+                      // after we go thru all approval TXs, re-check approval status of each.
+                      updateRequiredApprovals((approvals) => {
+                        for (const { key } of tokensThatNeedApproval) {
+                          approvals.delete(key);
+                        }
+                      });
+                    } else if (tradeButtonStatus === "ready_to_sign") {
+                      // TODO status for signing in progress
+                      if (iGoFirst) {
+                        // sign and submit order to other player
+
+                        console.log(
+                          "[trade] waiting for user to sign order..."
                         );
-                        await Promise.allSettled(approvalTxs);
-                        // after we go thru all approval TXs, re-check approval status of each.
-                        updateRequiredApprovals((approvals) => {
-                          for (const { key } of tokensThatNeedApproval) {
-                            approvals.delete(key);
-                          }
-                        });
-                      } else if (tradeButtonStatus === "ready_to_sign") {
-                        // TODO status for signing in progress
-                        if (iGoFirst) {
-                          // sign and submit order to other player
-
-                          console.log(
-                            "[trade] waiting for user to sign order..."
+                        const expiryTime =
+                          Math.floor(new Date().getTime() / 1000) + 5 * 60;
+                        try {
+                          const signedOrder = await nftSwap.signOrder(
+                            {
+                              ...order,
+                              salt: BigNumber.from(randomBytes(32)).toString(), // get a real salt to sign this order
+                              expirationTimeSeconds: BigNumber.from(
+                                expiryTime
+                              ).toString(), // and get a real timestamp of now + 5 minutes
+                            },
+                            address,
+                            library.getSigner()
                           );
-                          const expiryTime =
-                            Math.floor(new Date().getTime() / 1000) + 5 * 60;
-                          try {
-                            const signedOrder = await nftSwap.signOrder(
-                              {
-                                ...order,
-                                salt: BigNumber.from(
-                                  randomBytes(32)
-                                ).toString(), // get a real salt to sign this order
-                                expirationTimeSeconds: BigNumber.from(
-                                  expiryTime
-                                ).toString(), // and get a real timestamp of now + 5 minutes
-                              },
-                              address,
-                              library.getSigner()
-                            );
-                            console.log(
-                              "[trade] got signed order, sending to peer"
-                            );
+                          console.log(
+                            "[trade] got signed order, sending to peer"
+                          );
 
-                            p2p?.send(tradingPartner.peer, {
-                              type: "accept",
-                              order: signedOrder,
-                            });
-                            console.log("[trade] waiting for peer to accept");
-                            setMyOrderSent({ expiryTime });
-                          } catch (err) {
-                            if (
-                              err &&
-                              typeof err === "object" &&
-                              (err as any).code === 4001
-                            ) {
-                              setSoftWarning(
-                                "You rejected the order signature.\nTry again and accept the signature request to continue."
-                              );
-                            } else {
-                              setHardError(
-                                typeof err === "string"
-                                  ? err
-                                  : err instanceof Error
-                                  ? `${err.name}\n${err.message}\n${err.stack}`
-                                  : JSON.stringify(err)
-                              );
-                            }
-                          }
-                        } else {
+                          p2p?.send(tradingPartner.peer, {
+                            type: "accept",
+                            order: signedOrder,
+                          });
+                          console.log("[trade] waiting for peer to accept");
+                          setMyOrderSent({ expiryTime });
+                        } catch (err) {
                           if (
-                            tradingPartner.tradeStatus.type !== "signedOrder"
+                            err &&
+                            typeof err === "object" &&
+                            (err as any).code === 4001
                           ) {
-                            throw new Error(
-                              "expected signed order to exist for p2 when clicking button"
+                            setSoftWarning(
+                              "You rejected the order signature.\nTry again and accept the signature request to continue."
+                            );
+                          } else {
+                            setHardError(
+                              typeof err === "string"
+                                ? err
+                                : err instanceof Error
+                                ? `${err.name}\n${err.message}\n${err.stack}`
+                                : JSON.stringify(err)
                             );
                           }
-                          // we're good. submit it on-chain.
-                          console.log(
-                            "[trade] got signed order from peer, button clicked. submitting order on-chain"
+                        }
+                      } else {
+                        if (tradingPartner.tradeStatus.type !== "signedOrder") {
+                          throw new Error(
+                            "expected signed order to exist for p2 when clicking button"
                           );
-                          try {
-                            const fillTx = await nftSwap.fillSignedOrder(
-                              tradingPartner.tradeStatus.signedOrder
+                        }
+                        // we're good. submit it on-chain.
+                        console.log(
+                          "[trade] got signed order from peer, button clicked. submitting order on-chain"
+                        );
+                        try {
+                          const fillTx = await nftSwap.fillSignedOrder(
+                            tradingPartner.tradeStatus.signedOrder
+                          );
+                          setMyOrderSent({ expiryTime: 0 }); // n/a
+                          console.log("[trade] waiting for order completion.");
+                          const fillTxReceipt = await nftSwap.awaitTransactionHash(
+                            fillTx.hash
+                          );
+                          console.log(
+                            `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
+                          );
+                          if (fillTxReceipt.status === 1) {
+                            setOrderSuccess({
+                              txHash: fillTxReceipt.transactionHash,
+                            });
+                          } else {
+                            setHardError(
+                              `Error making trade: Transaction ${fillTxReceipt.transactionHash} failed.`
                             );
-                            setMyOrderSent({ expiryTime: 0 }); // n/a
-                            console.log(
-                              "[trade] waiting for order completion."
+                          }
+                        } catch (err) {
+                          if (
+                            err &&
+                            typeof err === "object" &&
+                            (err as any).code === 4001
+                          ) {
+                            setSoftWarning(
+                              "You rejected submitting the trade on-chain.\nTry again and submit the order to complete the trade."
                             );
-                            const fillTxReceipt = await nftSwap.awaitTransactionHash(
-                              fillTx.hash
+                          } else {
+                            setHardError(
+                              typeof err === "string"
+                                ? err
+                                : err instanceof Error
+                                ? `${err.name}\n${err.message}\n${err.stack}`
+                                : JSON.stringify(err)
                             );
-                            console.log(
-                              `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
-                            );
-                            if (fillTxReceipt.status === 1) {
-                              setOrderSuccess({
-                                txHash: fillTxReceipt.transactionHash,
-                              });
-                            } else {
-                              setHardError(
-                                `Error making trade: Transaction ${fillTxReceipt.transactionHash} failed.`
-                              );
-                            }
-                          } catch (err) {
-                            if (
-                              err &&
-                              typeof err === "object" &&
-                              (err as any).code === 4001
-                            ) {
-                              setSoftWarning(
-                                "You rejected submitting the trade on-chain.\nTry again and submit the order to complete the trade."
-                              );
-                            } else {
-                              setHardError(
-                                typeof err === "string"
-                                  ? err
-                                  : err instanceof Error
-                                  ? `${err.name}\n${err.message}\n${err.stack}`
-                                  : JSON.stringify(err)
-                              );
-                            }
                           }
                         }
                       }
+                    }
+                  }}
+                >
+                  <img
+                    src={tradeButtonStates[tradeButtonStatus].icon}
+                    alt={tradeButtonStates[tradeButtonStatus].altText}
+                    style={{
+                      width: "32px",
+                      height: "32px",
                     }}
-                  >
-                    <img
-                      src={tradeButtonStates[tradeButtonStatus].icon}
-                      alt={tradeButtonStates[tradeButtonStatus].altText}
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                      }}
-                    />
-                  </ButtonForm>
-                  <Checkbox
-                    readOnly
-                    checked={tradingPartner.tradeStatus.type !== "negotiating"}
-                    id="partnerAccept"
-                    label="Partner Accepts"
-                    isDisabled
                   />
-                </div>
-                {softWarning ? (
-                  <div className="softWarning">
-                    {softWarning.split("\n").map((p) => (
-                      <p>{p}</p>
-                    ))}
-                  </div>
-                ) : null}
-              </section>
-              <DetailsSection title="Partner's trade offer">
-                <TradeOffer
-                  items={getItems({
-                    balances: tradingPartner.tradeOffer,
-                    contracts,
-                    collectibles,
-                  }).filter(isItemWithKnownContractType)}
+                </ButtonForm>
+                <Checkbox
+                  readOnly
+                  checked={tradingPartner.tradeStatus.type !== "negotiating"}
+                  id="partnerAccept"
+                  label="Partner Accepts"
+                  isDisabled
                 />
-              </DetailsSection>
-            </div>
-          ) : null}
-        </div>
-      </DndProvider>
+              </div>
+              {softWarning ? (
+                <div className="softWarning">
+                  {softWarning.split("\n").map((p) => (
+                    <p>{p}</p>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+            <DetailsSection title="Partner's trade offer">
+              <TradeOffer
+                items={getItems({
+                  balances: tradingPartner.tradeOffer,
+                  contracts,
+                  collectibles,
+                }).filter(isItemWithKnownContractType)}
+              />
+            </DetailsSection>
+          </div>
+        ) : null}
+      </div>
 
       {pickBalanceItem ? (
         <PickAmountWindow

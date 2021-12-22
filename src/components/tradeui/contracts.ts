@@ -3,6 +3,7 @@ import { TokenBalance } from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
 import { BigNumber } from "ethers";
+import { chainId } from "../../settings";
 import {
   ContractKey,
   unique,
@@ -17,8 +18,6 @@ import {
   getTokenKey,
   KnownContractType,
 } from "../../utils/utils";
-
-export const chainId = ChainId.POLYGON;
 
 export function fetchContractsForBalances(
   chainId: ChainId,

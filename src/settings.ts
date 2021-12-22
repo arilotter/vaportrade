@@ -1,3 +1,5 @@
+import { ChainId } from "@0xsequence/network";
+
 // Default settings!
 const settings = {
   corsAnywhereUrl:
@@ -29,3 +31,4 @@ function storageKey(key: string) {
 }
 
 export const config: Readonly<typeof settings> = settings;
+export const chainId = ChainId.POLYGON;

@@ -1,6 +1,9 @@
 import { ChainId } from "@0xsequence/network";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
-import { Order, SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
+import type {
+  Order,
+  SignedOrder,
+} from "@traderxyz/nft-swap-sdk/dist/sdk/types";
 import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { useEffect } from "react";

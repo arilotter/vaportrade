@@ -33,6 +33,7 @@ interface WalletContentsBoxProps {
   subtractItems:
     | ReadonlyArray<Item<KnownContractType>>
     | readonly NetworkItem[];
+  className?: string;
 }
 
 const chainId = ChainId.POLYGON;
@@ -45,6 +46,7 @@ export function WalletContentsBox({
   requestTokensFetch,
   onItemSelected,
   subtractItems,
+  className,
 }: WalletContentsBoxProps) {
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
@@ -129,7 +131,7 @@ export function WalletContentsBox({
 
   return (
     <>
-      <div className="itemBoxContainer">
+      <div className={`itemBoxContainer ${className}`}>
         {error ? <div className="error">{error}</div> : null}
         <div className="itemBox">
           {erc1155Folders
