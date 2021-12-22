@@ -62,3 +62,11 @@
   padding: 16px 0;
   font-size: 200%;
 }
+
+.softWarning {
+  color: #6e3a00;
+}
+
+.softWarning p {
+  margin: 4px;
+}

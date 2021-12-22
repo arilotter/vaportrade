@@ -319,7 +319,7 @@ function Vaportrade() {
                 <Window
                   title={`Trading with ${tradingPartnerAddress}`}
                   icon={vtLogoIcon}
-                  className="window"
+                  className="tradeWindow"
                   onMinimize={() => updateTradingPartnerAddress(null)}
                   onClose={() => {
                     updateTradingPartnerAddress(null);

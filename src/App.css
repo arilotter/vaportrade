@@ -32,6 +32,11 @@ body {
   color: darkred;
   text-align: center;
 }
+.errorContainer {
+  max-height: 50vh;
+  overflow-y: scroll;
+  word-wrap: break-word;
+}
 
 .Frame {
   margin: -5px;
@@ -88,4 +93,10 @@ body {
 ::-webkit-scrollbar-button:vertical:start:increment,
 ::-webkit-scrollbar-button:vertical:end:decrement {
   display: none;
+}
+
+.tradeWindow {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 48px);
+  transform: translateY(-12px);
 }

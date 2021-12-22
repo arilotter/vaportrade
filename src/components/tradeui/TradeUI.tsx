@@ -64,6 +64,7 @@ type TradeButtonStatus =
   | "waiting_for_partner"
   | "waiting_for_order_completion";
 
+const DEFAULT_TIME = "...";
 export function TradeUI({
   indexer,
   metadata,
@@ -93,7 +94,7 @@ export function TradeUI({
   ] = useState<Item<KnownContractType> | null>(null);
 
   const [timeLeftUntilTradeExpires, setTimeLeftUntilTradeExpires] = useState(
-    "5:00"
+    DEFAULT_TIME
   );
 
   // Metadata about assets
@@ -103,7 +104,8 @@ export function TradeUI({
   );
   const [contracts, updateContracts] = useImmer<ContractsDB>(new Map());
 
-  const [error, setError] = useState<string | null>(null);
+  const [hardError, setHardError] = useState<string | null>(null);
+  const [softWarning, setSoftWarning] = useState<string | null>(null);
 
   const [requiredApprovals, updateRequiredApprovals] = useImmer<
     Map<TokenKey, boolean | Promise<boolean> | "approving">
@@ -127,7 +129,7 @@ export function TradeUI({
   );
 
   useEffect(() => {
-    if (error) {
+    if (hardError) {
       if (typeof lockedIn === "object") {
         setLockedIn(false);
       }
@@ -135,7 +137,7 @@ export function TradeUI({
         setMyOrderSent(false);
       }
     }
-  }, [error, lockedIn, myOrderSent]);
+  }, [hardError, lockedIn, myOrderSent]);
 
   useEffect(() => {
     setLockedIn(false);
@@ -191,8 +193,8 @@ export function TradeUI({
       })
       .catch((err) =>
         err instanceof Error
-          ? setError(`${err.name}\n${err.message}\n${err.stack}`)
-          : setError(JSON.stringify(err, undefined, 2))
+          ? setHardError(`${err.name}\n${err.message}\n${err.stack}`)
+          : setHardError(JSON.stringify(err, undefined, 2))
       );
 
     updateContracts((contracts) => {
@@ -240,7 +242,7 @@ export function TradeUI({
               }
             })
           )
-          .catch((err) => setError(`${err}`));
+          .catch((err) => setHardError(`${err}`));
       }
 
       updateCollectibles((collectibles) => {
@@ -389,7 +391,7 @@ export function TradeUI({
         if (partnerHash !== hash) {
           const err = `Got invalid hash from partner lockin\n: Expected ${hash}, got ${partnerHash}`;
           console.error(err);
-          setError(err);
+          setHardError(err);
         }
       } else if (tradingPartner.tradeStatus.type === "signedOrder") {
         const expiryTime = Number.parseInt(
@@ -400,7 +402,7 @@ export function TradeUI({
         if (Number.isNaN(expiryTime) || expiryTime - now > 10 * 60) {
           const err = `Trading partner's order expires at ${expiryTime}, which is more than 10 minutes from now.`;
           console.error(err);
-          setError(err);
+          setHardError(err);
         }
 
         const partnerHash = nftSwap.getOrderHash({
@@ -412,7 +414,7 @@ export function TradeUI({
         if (partnerHash !== hash) {
           const err = `Got invalid hash from partner submitting signed order\n: Expected ${hash}, got ${partnerHash}`;
           console.error(err);
-          setError(err);
+          setHardError(err);
         }
       }
     }
@@ -438,7 +440,7 @@ export function TradeUI({
         type: "lockin",
         lockedOrder: false,
       });
-      setTimeLeftUntilTradeExpires("");
+      setTimeLeftUntilTradeExpires(DEFAULT_TIME);
     }
   }, [nftSwap, order, p2p, tradingPartner.peer, lockedIn]);
 
@@ -521,11 +523,12 @@ export function TradeUI({
       </DndProvider>
     );
   }
-  if (error) {
+  if (hardError) {
     return (
-      <div>
-        <div className="error">{error}</div>
-        <ButtonForm onClick={() => setError(null)}>Clear Error</ButtonForm>
+      <div className="errorContainer">
+        <h1>An error occured.</h1>
+        <ButtonForm onClick={() => setHardError(null)}>Clear Error</ButtonForm>
+        <div className="error">{hardError}</div>
       </div>
     );
   }
@@ -614,7 +617,7 @@ export function TradeUI({
                     isDisabled={!tradeButtonStates[tradeButtonStatus].enabled}
                     onClick={async () => {
                       // disable this button ? TODO
-
+                      setSoftWarning(null);
                       // Do approvals on-click!
                       if (
                         tradeButtonStatus === "ready_for_approvals" &&
@@ -653,27 +656,49 @@ export function TradeUI({
                           );
                           const expiryTime =
                             Math.floor(new Date().getTime() / 1000) + 5 * 60;
-                          const signedOrder = await nftSwap.signOrder(
-                            {
-                              ...order,
-                              salt: BigNumber.from(randomBytes(32)).toString(), // get a real salt to sign this order
-                              expirationTimeSeconds: BigNumber.from(
-                                expiryTime
-                              ).toString(), // and get a real timestamp of now + 5 minutes
-                            },
-                            address,
-                            library.getSigner()
-                          );
-                          console.log(
-                            "[trade] got signed order, sending to peer"
-                          );
+                          try {
+                            const signedOrder = await nftSwap.signOrder(
+                              {
+                                ...order,
+                                salt: BigNumber.from(
+                                  randomBytes(32)
+                                ).toString(), // get a real salt to sign this order
+                                expirationTimeSeconds: BigNumber.from(
+                                  expiryTime
+                                ).toString(), // and get a real timestamp of now + 5 minutes
+                              },
+                              address,
+                              library.getSigner()
+                            );
+                            console.log(
+                              "[trade] got signed order, sending to peer"
+                            );
 
-                          p2p?.send(tradingPartner.peer, {
-                            type: "accept",
-                            order: signedOrder,
-                          });
-                          console.log("[trade] waiting for peer to accept");
-                          setMyOrderSent({ expiryTime });
+                            p2p?.send(tradingPartner.peer, {
+                              type: "accept",
+                              order: signedOrder,
+                            });
+                            console.log("[trade] waiting for peer to accept");
+                            setMyOrderSent({ expiryTime });
+                          } catch (err) {
+                            if (
+                              err &&
+                              typeof err === "object" &&
+                              (err as any).code === 4001
+                            ) {
+                              setSoftWarning(
+                                "You rejected the order signature.\nTry again and accept the signature request to continue."
+                              );
+                            } else {
+                              setHardError(
+                                typeof err === "string"
+                                  ? err
+                                  : err instanceof Error
+                                  ? `${err.name}\n${err.message}\n${err.stack}`
+                                  : JSON.stringify(err)
+                              );
+                            }
+                          }
                         } else {
                           if (
                             tradingPartner.tradeStatus.type !== "signedOrder"
@@ -686,25 +711,47 @@ export function TradeUI({
                           console.log(
                             "[trade] got signed order from peer, button clicked. submitting order on-chain"
                           );
-                          const fillTx = await nftSwap.fillSignedOrder(
-                            tradingPartner.tradeStatus.signedOrder
-                          );
-                          setMyOrderSent({ expiryTime: 0 }); // n/a
-                          console.log("[trade] waiting for order completion.");
-                          const fillTxReceipt = await nftSwap.awaitTransactionHash(
-                            fillTx.hash
-                          );
-                          console.log(
-                            `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
-                          );
-                          if (fillTxReceipt.status === 1) {
-                            setOrderSuccess({
-                              txHash: fillTxReceipt.transactionHash,
-                            });
-                          } else {
-                            setError(
-                              `Error making trade: Transaction ${fillTxReceipt.transactionHash} failed.`
+                          try {
+                            const fillTx = await nftSwap.fillSignedOrder(
+                              tradingPartner.tradeStatus.signedOrder
                             );
+                            setMyOrderSent({ expiryTime: 0 }); // n/a
+                            console.log(
+                              "[trade] waiting for order completion."
+                            );
+                            const fillTxReceipt = await nftSwap.awaitTransactionHash(
+                              fillTx.hash
+                            );
+                            console.log(
+                              `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
+                            );
+                            if (fillTxReceipt.status === 1) {
+                              setOrderSuccess({
+                                txHash: fillTxReceipt.transactionHash,
+                              });
+                            } else {
+                              setHardError(
+                                `Error making trade: Transaction ${fillTxReceipt.transactionHash} failed.`
+                              );
+                            }
+                          } catch (err) {
+                            if (
+                              err &&
+                              typeof err === "object" &&
+                              (err as any).code === 4001
+                            ) {
+                              setSoftWarning(
+                                "You rejected submitting the trade on-chain.\nTry again and submit the order to complete the trade."
+                              );
+                            } else {
+                              setHardError(
+                                typeof err === "string"
+                                  ? err
+                                  : err instanceof Error
+                                  ? `${err.name}\n${err.message}\n${err.stack}`
+                                  : JSON.stringify(err)
+                              );
+                            }
                           }
                         }
                       }
@@ -727,6 +774,13 @@ export function TradeUI({
                     isDisabled
                   />
                 </div>
+                {softWarning ? (
+                  <div className="softWarning">
+                    {softWarning.split("\n").map((p) => (
+                      <p>{p}</p>
+                    ))}
+                  </div>
+                ) : null}
               </section>
               <DetailsSection title="Partner's trade offer">
                 <TradeOffer
