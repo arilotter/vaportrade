@@ -548,6 +548,10 @@ function Vaportrade() {
                   correctPeer.tradeRequest = true;
                 }
               });
+
+              for (const w of windows) {
+                w.minimize();
+              }
               setTradingPartnerAddress(correctPeer.address);
             }
             setShowContacts(false);
