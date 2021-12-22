@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
 import { Window, Theme } from "packard-belle";
@@ -39,6 +39,7 @@ import { WalletSignin } from "./web3/WalletSignin";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
 import { connectorsByName, connectorsIconsByName } from "./web3/connectors";
 import { TaskBar } from "./TaskBar";
+import { WalletInfo } from "./WalletInfo";
 
 enableMapSet();
 function App() {
@@ -121,15 +122,88 @@ function Vaportrade() {
     setNFTSwap(nftSwap);
   }, [library]);
 
-  const [showContacts, setShowContacts] = useState(false);
-  const [showTrackers, setShowTrackers] = useState(false);
   const [showClippy, setShowClippy] = useState(false);
-  const [showControlPanel, setShowControlPanel] = useState(false);
-  const [showCredits, setShowCredits] = useState(false);
+  const [showContacts, setShowContacts] = useState(false);
 
-  const [tradingPartnerAddress, updateTradingPartnerAddress] = useImmer<
+  const [showTrackers, setShowTrackers] = useState<boolean | "minimized">(
+    false
+  );
+  const [showControlPanel, setShowControlPanel] = useState<
+    boolean | "minimized"
+  >(false);
+  const [showCredits, setShowCredits] = useState<boolean | "minimized">(false);
+  const [tradingPartnerAddress, setTradingPartnerAddress] = useState<
     string | null
   >(null);
+  const [showWalletInfo, setShowWalletInfo] = useState<boolean | "minimized">(
+    false
+  );
+  const walletName = (Object.keys(connectorsByName) as Array<
+    keyof typeof connectorsByName
+  >).find((c) => connectorsByName[c] === connector)!;
+
+  const walletIcon = connectorsIconsByName[walletName];
+
+  const windows: Array<{
+    isActive: boolean;
+    minimize: () => void;
+    open: () => void;
+    icon: string;
+    title: string;
+    id: number;
+  }> = useMemo(() => {
+    const windows = [];
+    if (showTrackers) {
+      windows.push({
+        isActive: showTrackers === true,
+        icon: sources.length && trackers.size ? yesIcon : noIcon,
+        title: "Peer Discovery",
+        id: 1001,
+        minimize: () => setShowTrackers("minimized"),
+        open: () => setShowTrackers(true),
+      });
+    }
+    if (showCredits) {
+      windows.push({
+        isActive: showCredits === true,
+        icon: creditsIcon,
+        title: "Credits",
+        id: 1002,
+        minimize: () => setShowCredits("minimized"),
+        open: () => setShowCredits(true),
+      });
+    }
+    if (showControlPanel) {
+      windows.push({
+        isActive: showControlPanel === true,
+        icon: controlPanelIcon,
+        title: "Control Panel",
+        id: 1003,
+        minimize: () => setShowControlPanel("minimized"),
+        open: () => setShowControlPanel(true),
+      });
+    }
+    if (showWalletInfo) {
+      windows.push({
+        isActive: showWalletInfo === true,
+        icon: walletIcon,
+        title: "Wallet Info",
+        id: 1004,
+        minimize: () => setShowWalletInfo("minimized"),
+        open: () => setShowWalletInfo(true),
+      });
+    }
+    return windows;
+  }, [
+    showControlPanel,
+    showCredits,
+    showTrackers,
+    showWalletInfo,
+    sources.length,
+    trackers.size,
+    walletIcon,
+  ]);
+
   // P2P peer connection :)
   useEffect(() => {
     if (!sources.length) {
@@ -187,7 +261,7 @@ function Vaportrade() {
               isTradingPeer(closedPeer) &&
               tradingPartnerAddress === closedPeer.address
             ) {
-              updateTradingPartnerAddress(null);
+              setTradingPartnerAddress(null);
             }
           }
         }
@@ -293,7 +367,7 @@ function Vaportrade() {
     updatePeers,
     tradingPartnerAddress,
     p2pClient,
-    updateTradingPartnerAddress,
+    setTradingPartnerAddress,
   ]);
 
   const tradeRequests = [...peers]
@@ -309,20 +383,27 @@ function Vaportrade() {
       return " ";
     }
   };
+
+  const minimizeWindows = useCallback(() => {
+    for (const w of windows) {
+      w.minimize();
+    }
+    setTradingPartnerAddress(null);
+  }, [windows]);
   return (
     <>
       <SequenceSessionProvider>
         {({ indexer, metadata }) => (
           <div className="modal">
-            {p2pClient && trackers.size && nftSwap ? (
+            {p2pClient && trackers.size && nftSwap && connector ? (
               tradingPartner ? (
                 <Window
                   title={`Trading with ${tradingPartnerAddress}`}
                   icon={vtLogoIcon}
                   className="tradeWindow"
-                  onMinimize={() => updateTradingPartnerAddress(null)}
+                  onMinimize={() => setTradingPartnerAddress(null)}
                   onClose={() => {
-                    updateTradingPartnerAddress(null);
+                    setTradingPartnerAddress(null);
                     updateTempBannedAddresses((addrs) => {
                       addrs.add(tradingPartner.address);
                     });
@@ -381,19 +462,37 @@ function Vaportrade() {
         )}
       </SequenceSessionProvider>
 
-      {showTrackers ? (
+      {showTrackers === true ? (
         <TrackersList
           sources={sources}
           trackers={trackers}
           onClose={() => setShowTrackers(false)}
+          onMinimize={() => setShowTrackers("minimized")}
         />
       ) : null}
 
-      {showControlPanel ? (
-        <ControlPanel onClose={() => setShowControlPanel(false)} />
+      {showControlPanel === true ? (
+        <ControlPanel
+          onClose={() => setShowControlPanel(false)}
+          onMinimize={() => setShowControlPanel("minimized")}
+        />
       ) : null}
 
-      {showCredits ? <Credits onClose={() => setShowCredits(false)} /> : null}
+      {showCredits === true ? (
+        <Credits
+          onClose={() => setShowCredits(false)}
+          onMinimize={() => setShowCredits("minimized")}
+        />
+      ) : null}
+
+      {connector && showWalletInfo === true ? (
+        <WalletInfo
+          connector={connector}
+          disconnect={deactivate}
+          onClose={() => setShowWalletInfo(false)}
+          onMinimize={() => setShowWalletInfo("minimized")}
+        />
+      ) : null}
 
       {showContacts ? (
         <Contacts
@@ -426,7 +525,7 @@ function Vaportrade() {
                   correctPeer.tradeRequest = true;
                 }
               });
-              updateTradingPartnerAddress(correctPeer.address);
+              setTradingPartnerAddress(correctPeer.address);
             }
             setShowContacts(false);
           }}
@@ -447,56 +546,104 @@ function Vaportrade() {
       )}
 
       <TaskBar
-        openWindows={tradeRequests.map((trader, id) => ({
-          isAlerting:
-            trader.hasNewInfo && trader.address !== tradingPartnerAddress,
-          title: trader.address,
-          icon: makeBlockyIcon(trader.address),
-          isActive: trader.address === tradingPartnerAddress,
-          onClick: () => {
-            updatePeers((peers) => {
-              for (const peer of peers) {
-                if (isTradingPeer(peer) && peer.address === trader.address) {
-                  peer.hasNewInfo = false;
+        openWindows={[
+          ...tradeRequests.map((trader, id) => ({
+            isAlerting:
+              trader.hasNewInfo && trader.address !== tradingPartnerAddress,
+            title: trader.address,
+            icon: makeBlockyIcon(trader.address),
+            isActive: trader.address === tradingPartnerAddress,
+            onClick: () => {
+              updatePeers((peers) => {
+                for (const peer of peers) {
+                  if (isTradingPeer(peer) && peer.address === trader.address) {
+                    peer.hasNewInfo = false;
+                  }
+                }
+              });
+              setTradingPartnerAddress(
+                trader.address === tradingPartnerAddress ? null : trader.address
+              );
+              for (const w of windows) {
+                w.minimize();
+              }
+            },
+            id,
+          })),
+          ...windows.map((win) => ({
+            ...win,
+            isAlerting: false,
+            onClick: () => {
+              if (win.isActive) {
+                win.minimize();
+              } else {
+                win.open();
+                setTradingPartnerAddress(null);
+                for (const w of windows) {
+                  if (w.id !== win.id) {
+                    w.minimize();
+                  }
                 }
               }
-            });
-            updateTradingPartnerAddress(
-              trader.address === tradingPartnerAddress ? null : trader.address
-            );
-          },
-          id,
-        }))}
+            },
+          })),
+        ]}
         options={[
           [
             {
-              onClick: () => setShowContacts(true),
               title: "Find People to Trade With",
               icon: findPeersIcon,
+              onClick: () => setShowContacts(true),
             },
           ],
           [
             {
               title: "Credits",
               icon: creditsIcon,
-              onClick: () => setShowCredits(true),
+              onClick: () => {
+                minimizeWindows();
+                setShowCredits(true);
+              },
             },
             {
               title: "Help",
               icon: helpIcon,
-              onClick: () => setShowClippy(true),
+              onClick: () => {
+                setShowClippy(true);
+              },
             },
             {
-              onClick: () => setShowControlPanel(true),
-              title: "Control Panel",
+              onClick: () => {},
+              title: "Settings",
               icon: controlPanelIcon,
+              options: [
+                {
+                  onClick: () => {
+                    minimizeWindows();
+                    setShowControlPanel(true);
+                  },
+                  title: "Control Panel",
+                  icon: controlPanelIcon,
+                },
+                {
+                  icon: yesIcon,
+                  title: "Peer Discovery",
+                  onClick: () => {
+                    minimizeWindows();
+                    setShowTrackers(true);
+                  },
+                },
+                {
+                  icon: walletIcon,
+                  title: `Wallet Info`,
+                  onClick: () => {
+                    minimizeWindows();
+                    setShowWalletInfo(true);
+                  },
+                },
+              ],
             },
           ],
-          // {
-          //   onClick: () => library.openWallet(undefined, undefined, chainId),
-          //   title: "Open Wallet",
-          //   icon: sequenceLogo,
-          // },
           {
             onClick: () => window.location.reload(),
             title: "Reboot",
@@ -513,30 +660,28 @@ function Vaportrade() {
             alt: sources.length
               ? `Connected to ${trackers.size}/${sources.length} trackers`
               : "Loading Trackers...",
-            onClick: () => setShowTrackers(true),
+            onClick: () => {
+              minimizeWindows();
+              setShowTrackers(true);
+            },
             icon: sources.length && trackers.size ? yesIcon : noIcon,
           },
           {
             alt: `Connected to wallet ${address}`,
-            onClick: () => {},
+            onClick: () => {
+              minimizeWindows();
+              setShowWalletInfo(true);
+            },
             icon: makeBlockyIcon(address),
           },
-          ...(connector
-            ? [
-                (() => {
-                  const name = (Object.keys(connectorsByName) as Array<
-                    keyof typeof connectorsByName
-                  >).find((c) => connectorsByName[c] === connector)!;
-
-                  const icon = connectorsIconsByName[name];
-                  return {
-                    alt: `Wallet type: ${name}`,
-                    onClick: () => {},
-                    icon: icon,
-                  };
-                })(),
-              ]
-            : []),
+          {
+            alt: `Wallet type: ${walletName}`,
+            onClick: () => {
+              minimizeWindows();
+              setShowWalletInfo(true);
+            },
+            icon: walletIcon,
+          },
         ]}
       />
     </>

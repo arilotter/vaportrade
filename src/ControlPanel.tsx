@@ -1,18 +1,20 @@
 import { ButtonForm, Window } from "packard-belle";
 import { useImmer } from "use-immer";
 import { config, setSetting } from "./settings";
-import { Writeable } from "./utils/utils";
+import { useOnKeyDown, Writeable } from "./utils/utils";
 import GitInfo from "react-git-info/macro";
 
 import controlPanelIcon from "./icons/controlPanel.png";
+import { useCallback } from "react";
 
 const gitInfo = GitInfo();
 
 interface ControlPanelProps {
   onClose: () => void;
+  onMinimize?: () => void;
 }
 
-export function ControlPanel({ onClose }: ControlPanelProps) {
+export function ControlPanel({ onClose, onMinimize }: ControlPanelProps) {
   const [modifiedConfig, updateModifiedConfig] = useImmer<
     Writeable<typeof config>
   >({ ...config });
@@ -23,9 +25,24 @@ export function ControlPanel({ onClose }: ControlPanelProps) {
   const hasChanges = realKeys.some(
     (key) => modifiedConfig[key] !== config[key]
   );
+  const tryClose = useCallback(() => {
+    if (
+      hasChanges &&
+      !window.confirm("You have unsaved changes. Reset them?")
+    ) {
+      return;
+    }
+    onClose();
+  }, [hasChanges, onClose]);
+  useOnKeyDown("Escape", tryClose);
   return (
     <div className="modal">
-      <Window title="Control Panel" icon={controlPanelIcon}>
+      <Window
+        title="Control Panel"
+        icon={controlPanelIcon}
+        onMinimize={onMinimize}
+        onClose={tryClose}
+      >
         <div style={{ padding: "4px" }}>Version: {gitInfo.commit.hash}</div>
         <div style={{ padding: "4px" }}>Build date: {gitInfo.commit.date}</div>
         {realKeys.map((configKey) => (
@@ -63,19 +80,6 @@ export function ControlPanel({ onClose }: ControlPanelProps) {
           }}
         >
           Save and Reboot
-        </ButtonForm>
-        <ButtonForm
-          onClick={() => {
-            if (
-              hasChanges &&
-              !window.confirm("You have unsaved changes. Reset them?")
-            ) {
-              return;
-            }
-            onClose();
-          }}
-        >
-          Cancel
         </ButtonForm>
       </Window>
     </div>

@@ -5,12 +5,14 @@ interface TrackersListProps {
   sources: string[];
   trackers: Set<FailableTracker>;
   onClose: () => void;
+  onMinimize: () => void;
 }
 
 export function TrackersList({
   sources,
   trackers,
   onClose,
+  onMinimize,
 }: TrackersListProps) {
   useOnKeyDown("Escape", onClose);
   const details = !sources.length ? (
@@ -44,10 +46,11 @@ export function TrackersList({
   return (
     <div className="modal">
       <Window
-        title={`Tracker Information`}
+        title="Peer Discovery"
         resizable={false}
         className="window"
         onClose={onClose}
+        onMinimize={onMinimize}
       >
         <DetailsSection title={`Trackers: ${statusIcon} ${trackerCount}`}>
           {details}

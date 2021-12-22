@@ -1,5 +1,6 @@
 .profileIcon {
   position: relative;
+  width: 48px;
 }
 
 .profileIcon::after {

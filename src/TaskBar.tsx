@@ -1,8 +1,14 @@
 import { StartMenu, ButtonIconSmall, ButtonProgram } from "packard-belle";
 import { useEffect, useState } from "react";
 
+type StartMenuProps = NestedArray<{
+  title: string;
+  icon: string;
+  onClick: () => void;
+  options?: StartMenuProps;
+}>;
 interface TaskBarProps {
-  options: NestedArray<{ title: string; icon: string; onClick: () => void }>;
+  options: StartMenuProps;
   quickLaunch?: Array<{ icon: string; title: string; onClick?: () => void }>;
   openWindows?: Array<{
     isActive: boolean;

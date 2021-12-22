@@ -4,12 +4,18 @@ import { useOnKeyDown } from "./utils/utils";
 
 interface CreditsProps {
   onClose: () => void;
+  onMinimize: () => void;
 }
-export function Credits({ onClose }: CreditsProps) {
+export function Credits({ onClose, onMinimize }: CreditsProps) {
   useOnKeyDown("Escape", onClose);
   return (
     <div className="modal">
-      <Window title="Credits" icon={creditsIcon} onClose={onClose}>
+      <Window
+        title="Credits"
+        icon={creditsIcon}
+        onClose={onClose}
+        onMinimize={onMinimize}
+      >
         <div
           style={{
             lineHeight: "2em",
