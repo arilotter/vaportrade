@@ -48,7 +48,7 @@ export function WalletInfo({
   return (
     <div className="modal">
       <Window
-        title="Wallet Info"
+        title="My Wallet"
         icon={icon}
         onMinimize={onMinimize}
         onClose={onClose}

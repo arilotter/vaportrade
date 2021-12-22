@@ -192,7 +192,7 @@ function Vaportrade() {
       windows.push({
         isActive: showWalletInfo === true,
         icon: walletIcon,
-        title: "Wallet Info",
+        title: "My Wallet",
         id: 1004,
         minimize: () => setShowWalletInfo("minimized"),
         open: () => setShowWalletInfo(true),
@@ -660,7 +660,7 @@ function Vaportrade() {
             },
             {
               icon: walletIcon,
-              title: `Wallet Info`,
+              title: `My Wallet`,
               onClick: () => {
                 minimizeWindows();
                 setShowWalletInfo(true);
