@@ -42,7 +42,19 @@ export function Credits({ onClose }: CreditsProps) {
               <a href="https://0x.org/">0x v3</a>,{" "}
               <a href="https://github.com/subins2000/p2pt">p2pt</a>,{" "}
               <a href="https://sequence.build/">sequence.js</a>,{" "}
-              <a href="https://packard-belle.netlify.app/">packard-belle</a>
+              <a href="https://packard-belle.netlify.app/">packard-belle</a>,
+              <br />
+              <a href="https://github.com/NoahZinsmeister/web3-react">
+                web3-react
+              </a>
+              , <a href="https://ethers.org/">ethers</a>,{" "}
+              <a href="https://github.com/stephensprinkle-zz/react-blockies">
+                react blockies
+              </a>
+              ,{" "}
+              <a href="https://github.com/pedrouid/blockies-ts">blockies-ts</a>,{" "}
+              <a href="https://immerjs.github.io/immer/">immer</a>, &{" "}
+              <a href="https://reactjs.org/">react</a>
             </li>
             <li>
               Special thanks: Daniel Rea and everyone on the Sequence team :)
