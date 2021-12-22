@@ -52,6 +52,7 @@ export function WalletInfo({
         icon={icon}
         onMinimize={onMinimize}
         onClose={onClose}
+        className="walletInfoWindow"
       >
         <h3 className="walletInfoContents">
           <img
@@ -72,7 +73,12 @@ export function WalletInfo({
               <ProfileIcon seed={address} />
               <p>Your wallet address is {address}</p>
             </div>
-            <div className="walletInfoContents">
+            <div
+              className="walletInfoContents"
+              style={{
+                flex: "1",
+              }}
+            >
               <WalletContentsBox
                 className="walletInfoWalletContents"
                 accountAddress={address}

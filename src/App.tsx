@@ -401,95 +401,106 @@ function Vaportrade() {
       <SequenceSessionProvider>
         {({ indexer, metadata }) => (
           <SequenceMetaProvider indexer={indexer} metadata={metadata}>
-            {({ contracts, collectibles, requestTokensFetch }) => (
-              <>
+            {({ contracts, collectibles, requestTokensFetch, hardError }) =>
+              hardError ? (
                 <div className="modal">
-                  {p2pClient && trackers.size && nftSwap && connector ? (
-                    tradingPartner ? (
-                      <Window
-                        title={`Trading with ${tradingPartnerAddress}`}
-                        icon={vtLogoIcon}
-                        className="tradeWindow"
-                        onMinimize={() => setTradingPartnerAddress(null)}
-                        onClose={() => {
-                          setTradingPartnerAddress(null);
-                          updateTempBannedAddresses((addrs) => {
-                            addrs.add(tradingPartner.address);
-                          });
-                        }}
-                      >
-                        <div className="appWindowContents">
-                          <TradeUI
-                            nftSwap={nftSwap}
-                            indexer={indexer}
-                            metadata={metadata}
-                            collectibles={collectibles}
-                            contracts={contracts}
-                            p2p={p2pClient}
-                            tradingPartner={tradingPartner}
-                            requestTokensFetch={requestTokensFetch}
-                            updateMyTradeOffer={(cb) => {
-                              updatePeers((peers) => {
-                                const tp = [...peers]
-                                  .filter(isTradingPeer)
-                                  .find(
-                                    (p) => p.address === tradingPartner.address
-                                  );
-                                if (tp) {
-                                  cb(tp.myTradeOffer);
-                                }
-                              });
-                            }}
-                          />
-                          <Chat
-                            messages={tradingPartner.chat}
-                            onSendMessage={(message) => {
-                              p2pClient?.send(tradingPartner.peer, {
-                                type: "chat",
-                                message,
-                              });
-                              updatePeers((peers) => {
-                                const correctPeer = [...peers]
-                                  .filter(isTradingPeer)
-                                  .find(
-                                    (p) => p.address === tradingPartner.address
-                                  );
-                                if (correctPeer) {
-                                  correctPeer.chat.push({
-                                    chatter: "me",
-                                    message,
-                                  });
-                                }
-                              });
-                            }}
-                          />
+                  <Window title="Error">
+                    <p>Woah, vaportrade hit an error.</p>
+                    <pre>{hardError}</pre>
+                  </Window>
+                </div>
+              ) : (
+                <>
+                  <div className="modal">
+                    {p2pClient && trackers.size && nftSwap && connector ? (
+                      tradingPartner ? (
+                        <Window
+                          title={`Trading with ${tradingPartnerAddress}`}
+                          icon={vtLogoIcon}
+                          className="tradeWindow"
+                          onMinimize={() => setTradingPartnerAddress(null)}
+                          onClose={() => {
+                            setTradingPartnerAddress(null);
+                            updateTempBannedAddresses((addrs) => {
+                              addrs.add(tradingPartner.address);
+                            });
+                          }}
+                        >
+                          <div className="appWindowContents">
+                            <TradeUI
+                              nftSwap={nftSwap}
+                              indexer={indexer}
+                              metadata={metadata}
+                              collectibles={collectibles}
+                              contracts={contracts}
+                              p2p={p2pClient}
+                              tradingPartner={tradingPartner}
+                              requestTokensFetch={requestTokensFetch}
+                              updateMyTradeOffer={(cb) => {
+                                updatePeers((peers) => {
+                                  const tp = [...peers]
+                                    .filter(isTradingPeer)
+                                    .find(
+                                      (p) =>
+                                        p.address === tradingPartner.address
+                                    );
+                                  if (tp) {
+                                    cb(tp.myTradeOffer);
+                                  }
+                                });
+                              }}
+                            />
+                            <Chat
+                              messages={tradingPartner.chat}
+                              onSendMessage={(message) => {
+                                p2pClient?.send(tradingPartner.peer, {
+                                  type: "chat",
+                                  message,
+                                });
+                                updatePeers((peers) => {
+                                  const correctPeer = [...peers]
+                                    .filter(isTradingPeer)
+                                    .find(
+                                      (p) =>
+                                        p.address === tradingPartner.address
+                                    );
+                                  if (correctPeer) {
+                                    correctPeer.chat.push({
+                                      chatter: "me",
+                                      message,
+                                    });
+                                  }
+                                });
+                              }}
+                            />
+                          </div>
+                        </Window>
+                      ) : null
+                    ) : (
+                      <Window title="Connecting to trackers">
+                        <div style={{ padding: "8px" }}>
+                          Connecting to trackers
+                          <EllipseAnimation />
                         </div>
                       </Window>
-                    ) : null
-                  ) : (
-                    <Window title="Connecting to trackers">
-                      <div style={{ padding: "8px" }}>
-                        Connecting to trackers
-                        <EllipseAnimation />
-                      </div>
-                    </Window>
-                  )}
-                </div>
+                    )}
+                  </div>
 
-                {connector && showWalletInfo === true ? (
-                  <WalletInfo
-                    connector={connector}
-                    disconnect={deactivate}
-                    onClose={() => setShowWalletInfo(false)}
-                    onMinimize={() => setShowWalletInfo("minimized")}
-                    collectibles={collectibles}
-                    contracts={contracts}
-                    indexer={indexer}
-                    requestTokensFetch={requestTokensFetch}
-                  />
-                ) : null}
-              </>
-            )}
+                  {connector && showWalletInfo === true ? (
+                    <WalletInfo
+                      connector={connector}
+                      disconnect={deactivate}
+                      onClose={() => setShowWalletInfo(false)}
+                      onMinimize={() => setShowWalletInfo("minimized")}
+                      collectibles={collectibles}
+                      contracts={contracts}
+                      indexer={indexer}
+                      requestTokensFetch={requestTokensFetch}
+                    />
+                  ) : null}
+                </>
+              )
+            }
           </SequenceMetaProvider>
         )}
       </SequenceSessionProvider>
