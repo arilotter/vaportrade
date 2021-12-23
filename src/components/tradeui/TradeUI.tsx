@@ -50,6 +50,7 @@ interface TradeUIProps {
   updateMyTradeOffer: (
     callback: (items: Array<Item<KnownContractType>>) => void
   ) => void;
+  setWalletOpen: (open: boolean) => void;
 }
 
 type TradeButtonStatus =
@@ -71,6 +72,7 @@ export function TradeUI({
   collectibles,
   contracts,
   requestTokensFetch,
+  setWalletOpen,
 }: TradeUIProps) {
   const { account: address, library } = useWeb3React<Web3Provider>();
   if (!address || !library) {
@@ -497,6 +499,7 @@ export function TradeUI({
                           approvals.set(key, "approving");
                         }
                       });
+                      setWalletOpen(true);
                       const approvalTxs = tokensThatNeedApproval.map(
                         ({ item }) =>
                           nftSwap
@@ -507,6 +510,7 @@ export function TradeUI({
                             .then((tx) => nftSwap.awaitTransactionHash(tx.hash))
                       );
                       await Promise.allSettled(approvalTxs);
+                      setWalletOpen(false);
                       // after we go thru all approval TXs, re-check approval status of each.
                       updateRequiredApprovals((approvals) => {
                         for (const { key } of tokensThatNeedApproval) {
@@ -524,6 +528,7 @@ export function TradeUI({
                         const expiryTime =
                           Math.floor(new Date().getTime() / 1000) + 5 * 60;
                         try {
+                          setWalletOpen(true);
                           const signedOrder = await nftSwap.signOrder(
                             {
                               ...order,
@@ -563,6 +568,8 @@ export function TradeUI({
                                 : JSON.stringify(err)
                             );
                           }
+                        } finally {
+                          setWalletOpen(false);
                         }
                       } else {
                         if (tradingPartner.tradeStatus.type !== "signedOrder") {
@@ -575,6 +582,8 @@ export function TradeUI({
                           "[trade] got signed order from peer, button clicked. submitting order on-chain"
                         );
                         try {
+                          setWalletOpen(true);
+
                           const fillTx = await nftSwap.fillSignedOrder(
                             tradingPartner.tradeStatus.signedOrder
                           );
@@ -613,6 +622,8 @@ export function TradeUI({
                                 : JSON.stringify(err)
                             );
                           }
+                        } finally {
+                          setWalletOpen(false);
                         }
                       }
                     }

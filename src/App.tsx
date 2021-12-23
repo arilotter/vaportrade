@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
-import { Window, Theme } from "packard-belle";
+import { Window, Theme, WindowAlert } from "packard-belle";
 import P2PT, { Peer, Tracker } from "p2pt";
 
 import { TrackersList } from "./components/TrackersList";
@@ -90,6 +90,8 @@ function Vaportrade() {
   if (!address || !library) {
     throw new Error("Vaportrade created with no account!");
   }
+  const [walletOpen, setWalletOpen] = useState(false);
+
   const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
   const [sources, updateSources] = useImmer<string[]>([]);
@@ -411,6 +413,13 @@ function Vaportrade() {
                 </div>
               ) : (
                 <>
+                  {walletOpen ? (
+                    <div className="modal darkenbg walletOpenDialog">
+                      <WindowAlert title="Waiting..." icon={walletIcon}>
+                        Confirm in your {walletName} wallet
+                      </WindowAlert>
+                    </div>
+                  ) : null}
                   <div className="modal">
                     {p2pClient && trackers.size && nftSwap && connector ? (
                       tradingPartner ? (
@@ -428,6 +437,7 @@ function Vaportrade() {
                         >
                           <div className="appWindowContents">
                             <TradeUI
+                              setWalletOpen={setWalletOpen}
                               nftSwap={nftSwap}
                               indexer={indexer}
                               metadata={metadata}
