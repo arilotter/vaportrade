@@ -72,6 +72,11 @@ export function WalletInfo({
             <div className="walletInfoContents">
               <ProfileIcon seed={address} />
               <p>Your wallet address is {address}</p>
+              <ButtonForm
+                onClick={() => navigator.clipboard.writeText(address)}
+              >
+                Copy
+              </ButtonForm>
             </div>
             <div
               className="walletInfoContents"
