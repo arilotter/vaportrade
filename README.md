@@ -25,20 +25,21 @@ Builds the app for production to the `build` folder.
 
 
 # PRE-LAUNCH TODO:
+- [] remove ghost tokenid 0
 - [] fix weird gas estimation in submission in metamask (tx failed cause of it, does Sequence offer this?)
-- [] add better in-progress states when the wallet is open (fullscreen modal?)
+- [x] add better in-progress states when the wallet is open (fullscreen modal?)
 - [x] add error handling (tons are completely unhandled)
 - [x] add timeout for orders
 - [x] use hashing of orders to verify integrity of trades
 - [x] make taskbar flash when new things happen ( just need css )
 - [x] make trading work, lol (signature error??)
 # NICE TO HAVE TODO:
-- [] add sequence support :|
 - [] make trade button flash when new things happen
 - [] add drag & drop (partially implemented, but doesn't work hehe)
 - [] buggy buggy css, please flexbox wizards, save me
 - [] figure out why we re-render at like 60fps.... eeeeeek... ugly ugly smelly react code with effects
 - [] correctly close trade req when we lose the peer. eek. sometimes doesn't work
+- [x] add sequence support :|
 - [x] add timeout expired UI
 - [x] rip out 0x, it's huge.. once trader.xyz adds order hashing & polygon we good
 - [x] ~~deploy 0x v3 to polygon yeesh~~ done, polygon did it!

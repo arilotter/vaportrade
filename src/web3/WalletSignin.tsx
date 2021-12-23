@@ -1,7 +1,6 @@
 import { useWeb3React } from "@web3-react/core";
 import { useEffect, useState } from "react";
 import {
-  ConnectorName,
   connectorsByName,
   connectorsIconsByName,
   getConnectorErrorMessage,
@@ -17,7 +16,6 @@ import rebootIcon from "../icons/reboot.png";
 import controlPanelIcon from "../icons/controlPanel.png";
 import warningIcon from "../icons/warning.png";
 import vaportradeLogo from "../icons/vticon.png";
-import { config } from "../settings";
 import { ControlPanel } from "../ControlPanel";
 interface WalletSigninProps {
   children: JSX.Element;
@@ -115,44 +113,38 @@ export function WalletSignin({ children }: WalletSigninProps) {
           </div>
           {(Object.keys(connectorsByName) as Array<
             keyof typeof connectorsByName
-          >)
-            .filter(
-              (name) =>
-                name !== ConnectorName.Sequence ||
-                config.debugModeSetMeToTheStringTrue === "true"
-            )
-            .map((name) => {
-              const currentConnector = connectorsByName[name];
-              const activating = currentConnector === activatingConnector;
-              const connected = currentConnector === connector;
-              const disabled =
-                !triedEager || !!activatingConnector || connected || !!error;
+          >).map((name) => {
+            const currentConnector = connectorsByName[name];
+            const activating = currentConnector === activatingConnector;
+            const connected = currentConnector === connector;
+            const disabled =
+              !triedEager || !!activatingConnector || connected || !!error;
 
-              return (
-                <div key={name}>
-                  <ButtonForm
-                    isDisabled={disabled}
-                    className="walletConnectButton"
-                    onClick={() => {
-                      setCachedError(null);
-                      setActivatingConnector(currentConnector);
-                      activate(connectorsByName[name]);
-                    }}
-                  >
-                    {activating && <img src={loadingIcon} alt="Loading..." />}
-                    <img
-                      className="walletConnectButtonLogo"
-                      width={16}
-                      height={16}
-                      src={connectorsIconsByName[name]}
-                      alt={`${name} logo`}
-                    />
+            return (
+              <div key={name}>
+                <ButtonForm
+                  isDisabled={disabled}
+                  className="walletConnectButton"
+                  onClick={() => {
+                    setCachedError(null);
+                    setActivatingConnector(currentConnector);
+                    activate(connectorsByName[name]);
+                  }}
+                >
+                  {activating && <img src={loadingIcon} alt="Loading..." />}
+                  <img
+                    className="walletConnectButtonLogo"
+                    width={16}
+                    height={16}
+                    src={connectorsIconsByName[name]}
+                    alt={`${name} logo`}
+                  />
 
-                    {name}
-                  </ButtonForm>
-                </div>
-              );
-            })}
+                  {name}
+                </ButtonForm>
+              </div>
+            );
+          })}
           {cachedError ? (
             <div className="walletConnectError">
               <DetailsSection title="Error">
