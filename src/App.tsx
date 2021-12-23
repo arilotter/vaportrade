@@ -415,7 +415,11 @@ function Vaportrade() {
                 <>
                   {walletOpen ? (
                     <div className="modal darkenbg walletOpenDialog">
-                      <WindowAlert title="Waiting..." icon={walletIcon}>
+                      <WindowAlert
+                        title="Waiting..."
+                        icon={walletIcon}
+                        onClose={() => setWalletOpen(false)}
+                      >
                         Confirm in your {walletName} wallet
                       </WindowAlert>
                     </div>

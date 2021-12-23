@@ -26,6 +26,7 @@ Builds the app for production to the `build` folder.
 
 # PRE-LAUNCH TODO:
 - [] remove ghost tokenid 0
+- [] p2 trade done UI has get TX hash
 - [] fix weird gas estimation in submission in metamask (tx failed cause of it, does Sequence offer this?)
 - [x] add better in-progress states when the wallet is open (fullscreen modal?)
 - [x] add error handling (tons are completely unhandled)
@@ -34,6 +35,7 @@ Builds the app for production to the `build` folder.
 - [x] make taskbar flash when new things happen ( just need css )
 - [x] make trading work, lol (signature error??)
 # NICE TO HAVE TODO:
+- [] ENS
 - [] make trade button flash when new things happen
 - [] add drag & drop (partially implemented, but doesn't work hehe)
 - [] buggy buggy css, please flexbox wizards, save me

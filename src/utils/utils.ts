@@ -288,3 +288,13 @@ export const two = BigNumber.from(2);
 export const zero = BigNumber.from(0);
 
 export type Writeable<T> = { -readonly [P in keyof T]: T[P] };
+
+export enum OrderStatus {
+  Invalid,
+  InvalidMakerAssetAmount,
+  InvalidTakerAssetAmount,
+  Fillable,
+  Expired,
+  FullyFilled,
+  Cancelled,
+}

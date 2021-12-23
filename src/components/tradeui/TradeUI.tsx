@@ -13,6 +13,7 @@ import {
   Item,
   itemToSwapItem,
   KnownContractType,
+  OrderStatus,
   TokenKey,
   TradingPeer,
   VaportradeMessage,
@@ -37,6 +38,7 @@ import { useWeb3React } from "@web3-react/core";
 import { formatBytes32String, randomBytes } from "ethers/lib/utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { chainId, config } from "../../settings";
+import type { SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
@@ -540,6 +542,7 @@ export function TradeUI({
                             address,
                             library.getSigner()
                           );
+                          setWalletOpen(false);
                           console.log(
                             "[trade] got signed order, sending to peer"
                           );
@@ -550,6 +553,13 @@ export function TradeUI({
                           });
                           console.log("[trade] waiting for peer to accept");
                           setMyOrderSent({ expiryTime });
+                          const orderFilled = await waitUntilOrderFilled(
+                            nftSwap,
+                            signedOrder
+                          );
+                          if (orderFilled) {
+                            setOrderSuccess(orderFilled);
+                          }
                         } catch (err) {
                           if (
                             err &&
@@ -746,3 +756,21 @@ export const tradeButtonStates: {
 };
 
 const fakeSalt = formatBytes32String("vaportrade_fake_salt");
+async function waitUntilOrderFilled(
+  nftSwap: NftSwap,
+  signedOrder: SignedOrder
+): Promise<false | { txHash: string }> {
+  while (true) {
+    const orderInfo = await nftSwap.exchangeContract.getOrderInfo(signedOrder);
+    if (orderInfo.orderStatus === OrderStatus.Fillable) {
+      await new Promise((res) => setTimeout(res, 10000));
+      continue;
+    } else if (orderInfo.orderStatus === OrderStatus.FullyFilled) {
+      // TODO Get tx hash that filled this order
+      return { txHash: "DUMMY_TX_HASH_TODO" };
+    } else {
+      // expired, bad order, etc
+      return false;
+    }
+  }
+}
