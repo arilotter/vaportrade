@@ -23,6 +23,7 @@
   display: flex;
   justify-content: space-evenly;
   align-items: center;
+  font-size: 0.85em;
 }
 
 .Checkbox input[type="checkbox"] + label {

@@ -7,12 +7,12 @@ import {
   ButtonIconSmall,
   Checkbox,
   DetailsSection,
+  Radio,
 } from "packard-belle";
 import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import {
   buildOrder,
-  doIGoFirst,
   getTokenKey,
   isItemWithKnownContractType,
   Item,
@@ -58,6 +58,7 @@ interface TradeUIProps {
   updateMyTradeOffer: (
     callback: (items: Array<Item<KnownContractType>>) => void
   ) => void;
+  updateGoesFirst: (goesFirstAddress: string) => void;
   setWalletOpen: (open: boolean) => void;
   onOpenWalletInfo: () => void;
   showTipUI: () => void;
@@ -79,6 +80,7 @@ export function TradeUI({
   p2p,
   nftSwap,
   updateMyTradeOffer,
+  updateGoesFirst,
   collectibles,
   contracts,
   requestTokensFetch,
@@ -97,9 +99,14 @@ export function TradeUI({
   const [myOrderSent, setMyOrderSent] = useState<
     false | { expiryTime: number }
   >(false);
-  const [orderSuccess, setOrderSuccess] = useState<false | { txHash: string }>(
-    false
-  );
+  const [orderSuccess, setOrderSuccess] = useState<
+    | false
+    | {
+        txHash: string;
+        myItems: Array<Item<"ERC20" | "ERC721" | "ERC1155">>;
+        theirItems: Array<Item<"ERC20" | "ERC721" | "ERC1155">>;
+      }
+  >(false);
 
   const [
     pickBalanceItem,
@@ -130,7 +137,11 @@ export function TradeUI({
 
   useEffect(() => {
     setLockedIn(false);
-  }, [tradingPartner.myTradeOffer, tradingPartner.tradeOffer]);
+  }, [
+    tradingPartner.myTradeOffer,
+    tradingPartner.tradeOffer,
+    tradingPartner.goesFirstAddress,
+  ]);
 
   useEffect(() => {
     if (
@@ -160,12 +171,22 @@ export function TradeUI({
   }, [p2p, tradingPartner.peer, tradingPartner.myTradeOffer]);
 
   useEffect(() => {
+    console.log("sent addr");
+    p2p.send(tradingPartner.peer, {
+      type: "set_goes_first",
+      address: tradingPartner.goesFirstAddress,
+    });
+  }, [p2p, tradingPartner.peer, tradingPartner.goesFirstAddress]);
+
+  useEffect(() => {
     if (orderSuccess) {
       setLockedIn(false);
       setPickBalanceItem(null);
       setSoftWarning(null);
+      // updateMyTradeOffer((items) => (items.length = 0));
+      updateGoesFirst("");
     }
-  }, [orderSuccess]);
+  }, [orderSuccess, updateMyTradeOffer, updateGoesFirst]);
 
   // Check if we need to approve any tokens for swapping
   useEffect(() => {
@@ -201,7 +222,7 @@ export function TradeUI({
   const bothPlayersAccepted =
     lockedIn && tradingPartner.tradeStatus.type !== "negotiating";
 
-  const iGoFirst = doIGoFirst(address, tradingPartner.address);
+  const iGoFirst = tradingPartner.goesFirstAddress === address;
 
   const myOfferTokenKeys = tradingPartner.myTradeOffer.map((item) => ({
     item,
@@ -269,9 +290,8 @@ export function TradeUI({
   const order = nftSwap
     ? buildOrder(
         nftSwap,
-        iGoFirst
-          ? [myHalfOfOrder, theirHalfOfOrder]
-          : [theirHalfOfOrder, myHalfOfOrder],
+        [myHalfOfOrder, theirHalfOfOrder],
+        tradingPartner.goesFirstAddress,
         new Date(0),
         fakeSalt
       )
@@ -507,20 +527,39 @@ export function TradeUI({
               </div>
 
               <div className="acceptOfferContents">
-                <Checkbox
-                  isDisabled={
-                    myOrderSent !== false ||
-                    (tradingPartner.myTradeOffer.length === 0 &&
-                      tradingPartner.tradeOffer.length === 0)
-                  }
-                  checked={Boolean(lockedIn)}
-                  onChange={() => {
-                    const newAcceptedState = !lockedIn;
-                    setLockedIn(newAcceptedState ? "sending" : false);
-                  }}
-                  id="myAccept"
-                  label="Accept Offer"
-                />
+                <div>
+                  <Checkbox
+                    isDisabled={
+                      (tradingPartner.goesFirstAddress !== address &&
+                        tradingPartner.goesFirstAddress !==
+                          tradingPartner.address) ||
+                      myOrderSent !== false ||
+                      (tradingPartner.myTradeOffer.length === 0 &&
+                        tradingPartner.tradeOffer.length === 0)
+                    }
+                    checked={Boolean(lockedIn)}
+                    onChange={() => {
+                      const newAcceptedState = !lockedIn;
+                      setLockedIn(newAcceptedState ? "sending" : false);
+                    }}
+                    id="myAccept"
+                    label="Accept Offer"
+                  />
+                  <div>
+                    <Radio
+                      name="myRadio"
+                      id="myRadio"
+                      isDisabled={Boolean(lockedIn)}
+                      value={"clickme"}
+                      onChange={() => updateGoesFirst(tradingPartner.address)}
+                      checked={
+                        tradingPartner.goesFirstAddress ===
+                        tradingPartner.address
+                      }
+                    />
+                    <label htmlFor="myRadio">You Pay Fees</label>
+                  </div>
+                </div>
                 <ButtonForm
                   isDisabled={!tradeButtonStates[tradeButtonStatus].enabled}
                   onClick={async () => {
@@ -593,7 +632,11 @@ export function TradeUI({
                             signedOrder
                           );
                           if (orderFilled) {
-                            setOrderSuccess(orderFilled);
+                            setOrderSuccess({
+                              txHash: orderFilled.txHash,
+                              myItems: myHalfOfOrder.items,
+                              theirItems: theirHalfOfOrder.items,
+                            });
                           }
                         } catch (err) {
                           if (
@@ -643,6 +686,8 @@ export function TradeUI({
                           if (fillTxReceipt.status === 1) {
                             setOrderSuccess({
                               txHash: fillTxReceipt.transactionHash,
+                              myItems: myHalfOfOrder.items,
+                              theirItems: theirHalfOfOrder.items,
                             });
                           } else {
                             setHardError(
@@ -683,18 +728,30 @@ export function TradeUI({
                     }}
                   />
                 </ButtonForm>
-                <Checkbox
-                  readOnly
-                  checked={tradingPartner.tradeStatus.type !== "negotiating"}
-                  id="partnerAccept"
-                  label="Partner Accepts"
-                  isDisabled
-                />
+                <div>
+                  <Checkbox
+                    readOnly
+                    checked={tradingPartner.tradeStatus.type !== "negotiating"}
+                    id="partnerAccept"
+                    label="Partner Accepts"
+                    isDisabled
+                  />
+                  <div>
+                    <Radio
+                      name="theirRadio"
+                      id="theirRadio"
+                      isDisabled={Boolean(lockedIn)}
+                      checked={tradingPartner.goesFirstAddress === address}
+                      onChange={() => updateGoesFirst(address)}
+                    />
+                    <label htmlFor="theirRadio">Partner Pays Fees</label>
+                  </div>
+                </div>
               </div>
               {softWarning ? (
                 <div className="softWarning">
                   {softWarning.split("\n").map((p) => (
-                    <p>{p}</p>
+                    <p key={p}>{p}</p>
                   ))}
                 </div>
               ) : null}
@@ -741,7 +798,15 @@ export function TradeUI({
       ) : null}
       {config.debugModeSetMeToTheStringTrue === "true" ? (
         <div>
-          <ButtonForm onClick={() => setOrderSuccess({ txHash: "dummytx" })}>
+          <ButtonForm
+            onClick={() =>
+              setOrderSuccess({
+                txHash: "dummytx",
+                myItems: myHalfOfOrder.items,
+                theirItems: theirHalfOfOrder.items,
+              })
+            }
+          >
             DEBUG set success true
           </ButtonForm>
         </div>

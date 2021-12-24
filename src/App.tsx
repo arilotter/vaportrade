@@ -313,9 +313,10 @@ function Vaportrade() {
               hasNewInfo: false,
               tradeRequest: false,
               tradeOffer: [],
+              myTradeOffer: [],
+              goesFirstAddress: "",
               tradeStatus: { type: "negotiating" },
               chat: [],
-              myTradeOffer: [],
             });
           });
         } else {
@@ -351,6 +352,14 @@ function Vaportrade() {
               } else {
                 tradingPeer.tradeStatus = { type: "negotiating" };
               }
+            } else if (msg.type === "set_goes_first") {
+              if (tradingPeer.tradeStatus.type === "signedOrder") {
+                return; // ignore messages once we have a signed order
+              }
+              if (tradingPeer.tradeStatus.type !== "negotiating") {
+                return;
+              }
+              tradingPeer.goesFirstAddress = msg.address;
             } else if (msg.type === "accept") {
               if (tradingPeer.tradeStatus.type === "signedOrder") {
                 return; // ignore messages once we have a signed order
@@ -474,6 +483,19 @@ function Vaportrade() {
                                     );
                                   if (tp) {
                                     cb(tp.myTradeOffer);
+                                  }
+                                });
+                              }}
+                              updateGoesFirst={(address) => {
+                                updatePeers((peers) => {
+                                  const tp = [...peers]
+                                    .filter(isTradingPeer)
+                                    .find(
+                                      (p) =>
+                                        p.address === tradingPartner.address
+                                    );
+                                  if (tp) {
+                                    tp.goesFirstAddress = address;
                                   }
                                 });
                               }}

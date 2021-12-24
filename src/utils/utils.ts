@@ -122,6 +122,7 @@ export interface TradingPeer {
   tradeRequest: boolean;
   hasNewInfo: boolean;
   tradeOffer: NetworkItem[];
+  goesFirstAddress: string;
   myTradeOffer: Item<KnownContractType>[];
   tradeStatus:
     | { type: "negotiating" }
@@ -167,6 +168,10 @@ export type VaportradeMessage =
       offer: NetworkItem[];
     }
   | {
+      type: "set_goes_first";
+      address: string;
+    }
+  | {
       type: "lockin";
       lockedOrder: false | { hash: string };
     }
@@ -200,6 +205,8 @@ export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
         typeof msg.lockedOrder.hash === "string"))
   ) {
     return true;
+  } else if (msg.type === "set_goes_first" && typeof msg.address === "string") {
+    return true;
   } else if (msg.type === "accept" && typeof msg.order === "object") {
     return true;
   } else if (msg.type === "chat" && typeof msg.message === "string") {
@@ -208,13 +215,6 @@ export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
     return false;
   }
 }
-
-export function doIGoFirst(myAddress: string, theirAddress: string) {
-  return BigNumber.from(myAddress.toLowerCase()).lt(
-    BigNumber.from(theirAddress.toLowerCase())
-  );
-}
-
 export interface OrderParticipant {
   address: string;
   items: Item<KnownContractType>[];
@@ -223,6 +223,7 @@ export interface OrderParticipant {
 export function buildOrder(
   swap: NftSwap,
   participants: [OrderParticipant, OrderParticipant],
+  goesFirstAddress: string,
   expiryTime: Date,
   fakeSalt: string
 ): Order {
@@ -230,13 +231,14 @@ export function buildOrder(
     throw new Error("Can't trade with yourself.");
   }
 
-  const doesFirstParticipantGoFirst = doIGoFirst(
-    participants[0].address,
-    participants[1].address
-  );
-
-  const maker = doesFirstParticipantGoFirst ? participants[0] : participants[1];
-  const taker = doesFirstParticipantGoFirst ? participants[1] : participants[0];
+  const maker =
+    goesFirstAddress === participants[0].address
+      ? participants[0]
+      : participants[1];
+  const taker =
+    goesFirstAddress === participants[0].address
+      ? participants[1]
+      : participants[0];
   return swap.buildOrder(
     maker.items.map(itemToSwapItem),
     taker.items.map(itemToSwapItem),
