@@ -149,6 +149,14 @@ export function TradeUI({
     });
   }, [p2p, tradingPartner.peer, tradingPartner.myTradeOffer]);
 
+  useEffect(() => {
+    if (orderSuccess) {
+      setLockedIn(false);
+      setPickBalanceItem(null);
+      setSoftWarning(null);
+    }
+  }, [orderSuccess]);
+
   // Check if we need to approve any tokens for swapping
   useEffect(() => {
     if (!nftSwap) {
