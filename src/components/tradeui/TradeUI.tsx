@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { sequence } from "0xsequence";
 import "./TradeUI.css";
 import P2PT from "p2pt";
-import { ButtonForm, Checkbox, DetailsSection } from "packard-belle";
+import {
+  ButtonForm,
+  ButtonIconSmall,
+  Checkbox,
+  DetailsSection,
+} from "packard-belle";
 import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import {
@@ -26,6 +31,7 @@ import tradeIcon from "./send.png";
 import tradeIconDisabled from "./sendDisabled.png";
 import loadingIcon from "../../icons/loadingIcon.gif";
 import approveIcon from "../../icons/approve.png";
+import tipIcon from "../../icons/tip.png";
 import { NftSwap } from "@traderxyz/nft-swap-sdk";
 import {
   CollectiblesDB,
@@ -53,6 +59,8 @@ interface TradeUIProps {
     callback: (items: Array<Item<KnownContractType>>) => void
   ) => void;
   setWalletOpen: (open: boolean) => void;
+  onOpenWalletInfo: () => void;
+  showTipUI: () => void;
 }
 
 type TradeButtonStatus =
@@ -75,6 +83,8 @@ export function TradeUI({
   contracts,
   requestTokensFetch,
   setWalletOpen,
+  onOpenWalletInfo,
+  showTipUI,
 }: TradeUIProps) {
   const { account: address, library } = useWeb3React<Web3Provider>();
   if (!address || !library) {
@@ -386,11 +396,28 @@ export function TradeUI({
           >
             View on Polygonscan
           </a>
+          <ButtonForm
+            onClick={() => onOpenWalletInfo()}
+            className="successWalletButton"
+          >
+            Open your wallet
+          </ButtonForm>
           <img
             src={tradeButtonStates.ready_to_sign.icon}
             alt={"traded for"}
             className="successfulTradeIcon"
           />
+          <p style={{ textAlign: "center" }}>
+            If you enjoyed using vaportrade.net,
+            <br />
+            consider donating:
+            <br />
+            <ButtonIconSmall
+              icon={tipIcon}
+              hasBorder
+              onClick={() => showTipUI()}
+            />
+          </p>
         </div>
         <div className="oneSide">
           <TradeOffer

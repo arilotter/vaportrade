@@ -3,8 +3,8 @@
   background: white;
 }
 .chatMessages {
-  max-height: 96px;
-  overflow-y: scroll;
+  max-height: 10vh;
+  overflow-y: auto;
 }
 
 .chatSender {

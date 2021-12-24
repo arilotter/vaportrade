@@ -1,6 +1,6 @@
 .itemSections {
   display: flex;
-  height: calc(100vh - 128px);
+  height: calc(90vh - 128px);
 }
 
 .itemSections .DetailsSection {
@@ -45,7 +45,7 @@
 }
 
 .successfulTradeIcon {
-  padding: 16px;
+  padding: 8px;
   width: 32px;
   height: 32px;
 }
@@ -71,4 +71,9 @@
 
 .softWarning p {
   margin: 4px;
+}
+
+.successWalletButton {
+  margin-top: 10px;
+  padding: 4px !important;
 }
