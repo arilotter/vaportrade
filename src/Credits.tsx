@@ -65,6 +65,14 @@ export function Credits({ onClose, onMinimize }: CreditsProps) {
             <li>
               Special thanks: Daniel Rea and everyone on the Sequence team :)
             </li>
+            <li>
+              Follow
+              <a href="https://twitter.com/usevaportrade">
+                {" "}
+                @usevaportrade{" "}
+              </a>{" "}
+              on that bird app!
+            </li>
           </ul>
         </div>
       </Window>
