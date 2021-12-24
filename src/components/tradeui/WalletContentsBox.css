@@ -12,8 +12,9 @@
   grid-template-columns: repeat(auto-fill, minmax(var(--itemWidth), 1fr));
   grid-auto-rows: fit-content(1em);
   padding: calc(var(--itemWidth) / 4);
-  height: calc(100% - var(--itemWidth) / 2);
-  overflow-y: scroll;
+
+  overflow-y: auto;
+  flex: 1;
 }
 
 .itemBox .icon.ExplorerIcon {
@@ -29,15 +30,28 @@
     saturate(80%) !important;
 }
 
+.icon.ExplorerIcon:focus .icon__text,
+.icon.ExplorerIcon:active .icon__text,
+.icon.ExplorerIcon:active:focus .icon__text,
+.icon.ExplorerIcon.is-active .icon__text {
+  word-wrap: break-word;
+}
+
 .Frame.Window.tokenFolder {
   position: absolute;
   z-index: 1;
   right: 16px;
   left: 16px;
   top: 128px;
+  max-height: calc(100vh - 256px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .itemBoxContainer {
   height: 100%;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }

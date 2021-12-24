@@ -4,16 +4,22 @@
   justify-content: center;
   padding: 8px;
   margin: 0;
-  overflow-y: scroll;
 }
 
 .walletInfoWalletContents {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .walletInfoWindow {
-  height: calc(80vh - 168px);
+  max-height: calc(100vh - 32px);
 
   display: flex;
   flex-direction: column;
+  margin-bottom: 22px;
+}
+
+.walletInfoButton {
+  margin: 4px;
 }

@@ -1,6 +1,6 @@
 .itemSections {
   display: flex;
-  height: calc(80vh - 168px);
+  height: calc(100vh - 128px);
 }
 
 .itemSections .DetailsSection {
@@ -11,6 +11,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .itemSections .DetailsSection.acceptOffer {

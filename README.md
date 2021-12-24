@@ -25,9 +25,12 @@ Builds the app for production to the `build` folder.
 
 
 # PRE-LAUNCH TODO:
+- [] donate link
+- [] fix skyweaver token balance 1/100th??
 - [] remove ghost tokenid 0
 - [] p2 trade done UI has get TX hash
 - [] fix weird gas estimation in submission in metamask (tx failed cause of it, does Sequence offer this?)
+- [#] fix dogshit css overflows
 - [x] add better in-progress states when the wallet is open (fullscreen modal?)
 - [x] add error handling (tons are completely unhandled)
 - [x] add timeout for orders

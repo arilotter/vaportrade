@@ -54,25 +54,28 @@ export function WalletInfo({
         onClose={onClose}
         className="walletInfoWindow"
       >
-        <h3 className="walletInfoContents">
-          <img
-            src={icon}
-            style={{
-              width: "32px",
-              height: "32px",
-              padding: "8px",
-            }}
-            alt={`${name} logo`}
-          />
-          Connected to {name}
-          <ButtonForm onClick={disconnect}>Disconnect</ButtonForm>
-        </h3>
         {address ? (
           <>
-            <div className="walletInfoContents">
+            <h3 className="walletInfoContents">
               <ProfileIcon seed={address} />
+              <img
+                src={icon}
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  padding: "8px",
+                }}
+                alt={`${name} logo`}
+              />
+              Connected to {name}
+              <ButtonForm onClick={disconnect} className="walletInfoButton">
+                Disconnect
+              </ButtonForm>
+            </h3>
+            <div className="walletInfoContents">
               <p>Your wallet address is {address}</p>
               <ButtonForm
+                className="walletInfoButton"
                 onClick={() => navigator.clipboard.writeText(address)}
               >
                 Copy
@@ -82,6 +85,10 @@ export function WalletInfo({
               className="walletInfoContents"
               style={{
                 flex: "1",
+                minHeight: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "stretch",
               }}
             >
               <WalletContentsBox
