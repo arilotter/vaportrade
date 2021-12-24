@@ -22,6 +22,11 @@
   max-width: initial;
 }
 
+.itemBox .icon.ExplorerIcon .icon__text {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .icon.ExplorerIcon:focus .icon__icon,
 .icon.ExplorerIcon:active .icon__icon,
 .icon.ExplorerIcon:active:focus .icon__icon,
@@ -35,6 +40,8 @@
 .icon.ExplorerIcon:active:focus .icon__text,
 .icon.ExplorerIcon.is-active .icon__text {
   word-wrap: break-word;
+  text-overflow: initial;
+  white-space: initial;
 }
 
 .Frame.Window.tokenFolder {

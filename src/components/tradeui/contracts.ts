@@ -114,7 +114,10 @@ export async function fetchBalances(
           .then((b) => b.balances)
       )
   );
-  return [...balances, ...extraBalances.flat()];
+  return [
+    ...balances.filter((b) => b.contractType !== "ERC1155"),
+    ...extraBalances.flat(),
+  ];
 }
 
 export function getItems({
