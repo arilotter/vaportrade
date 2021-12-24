@@ -25,10 +25,12 @@ Builds the app for production to the `build` folder.
 
 
 # PRE-LAUNCH TODO:
-- [] p2 trade done UI has get TX hash
-- [] let you pick who pays for trade
+- [] fix trades not clearing correctly after trade submit
+- [] fix trade complete css on small screens vertically
+- [~] p2 trade done UI has get TX hash
 - [~] fix weird gas estimation in submission in metamask (tx failed cause of it, does Sequence offer this?)
 - [~] fix skyweaver token balance 1/100th??
+- [x] let you pick who pays for trade
 - [x] donate link
 - [x] remove ghost tokenid 0
 - [x] fix dogshit css overflows
