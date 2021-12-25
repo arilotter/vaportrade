@@ -17,6 +17,7 @@ export function TipUI({ onClose, onMinimize }: TipUIProps) {
         icon={tipIcon}
         onClose={onClose}
         onMinimize={onMinimize}
+        resizable={false}
       >
         <div
           style={{
