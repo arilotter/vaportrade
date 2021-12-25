@@ -18,6 +18,13 @@
 .itemSections .DetailsSection.acceptOffer {
   flex: 0;
 }
+.itemSections .DetailsSection.acceptOffer .DetailsSection__title {
+  left: 0;
+  right: 0;
+  background: transparent;
+  text-align: center;
+  padding: 0;
+}
 
 .acceptOfferContents {
   display: flex;
@@ -77,4 +84,8 @@
 .successWalletButton {
   margin-top: 10px;
   padding: 4px !important;
+}
+
+.acceptOfferText {
+  background-color: #bbc3c4;
 }

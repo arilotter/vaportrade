@@ -65,6 +65,8 @@ interface TradeUIProps {
 }
 
 type TradeButtonStatus =
+  | "waiting_for_offer"
+  | "waiting_for_fee_payment_selection"
   | "waiting_for_lockin"
   | "loading_approvals"
   | "ready_for_approvals"
@@ -246,9 +248,38 @@ export function TradeUI({
     !stillLoadingApprovalStatus &&
     myOfferTokenKeys.filter(({ key }) => requiredApprovals.get(key) !== true);
 
+  const myHalfOfOrder = {
+    address: address,
+    items: tradingPartner.myTradeOffer,
+  };
+  const theirHalfOfOrder = {
+    address: tradingPartner.address,
+    items: getItems({
+      balances: tradingPartner.tradeOffer,
+      contracts,
+      collectibles,
+    }).filter(isItemWithKnownContractType),
+  };
+  const order = nftSwap
+    ? buildOrder(
+        nftSwap,
+        [myHalfOfOrder, theirHalfOfOrder],
+        tradingPartner.goesFirstAddress,
+        new Date(0),
+        fakeSalt
+      )
+    : null;
+
   let tradeButtonStatus: TradeButtonStatus;
-  if (!bothPlayersAccepted) {
-    // haven't checked boxes, wait for those.
+  if (myHalfOfOrder.items.length === 0 && theirHalfOfOrder.items.length === 0) {
+    tradeButtonStatus = "waiting_for_offer";
+  } else if (
+    tradingPartner.goesFirstAddress !== address &&
+    tradingPartner.goesFirstAddress !== tradingPartner.address
+  ) {
+    tradeButtonStatus = "waiting_for_fee_payment_selection";
+  } else if (!bothPlayersAccepted) {
+    // haven't checked lockin boxes, wait for those.
     tradeButtonStatus = "waiting_for_lockin";
   } else if (waitingForApproval) {
     tradeButtonStatus = "waiting_for_approvals";
@@ -283,27 +314,6 @@ export function TradeUI({
       }
     }
   }
-  const myHalfOfOrder = {
-    address: address,
-    items: tradingPartner.myTradeOffer,
-  };
-  const theirHalfOfOrder = {
-    address: tradingPartner.address,
-    items: getItems({
-      balances: tradingPartner.tradeOffer,
-      contracts,
-      collectibles,
-    }).filter(isItemWithKnownContractType),
-  };
-  const order = nftSwap
-    ? buildOrder(
-        nftSwap,
-        [myHalfOfOrder, theirHalfOfOrder],
-        tradingPartner.goesFirstAddress,
-        new Date(0),
-        fakeSalt
-      )
-    : null;
 
   useEffect(() => {
     if (lockedIn && order) {
@@ -542,13 +552,15 @@ export function TradeUI({
             </DetailsSection>
             <section className="DetailsSection window__section acceptOffer">
               <div className="DetailsSection__title">
-                {tradeButtonStatus === "ready_to_sign" &&
-                tradingPartner.tradeStatus.type === "signedOrder"
-                  ? `Submit trade (${timeLeftUntilTradeExpires})`
-                  : tradeButtonStatus === "waiting_for_partner" &&
-                    typeof myOrderSent === "object"
-                  ? `Waiting for order on-chain (${timeLeftUntilTradeExpires})`
-                  : tradeButtonStates[tradeButtonStatus].altText}
+                <span className="acceptOfferText">
+                  {tradeButtonStatus === "ready_to_sign" &&
+                  tradingPartner.tradeStatus.type === "signedOrder"
+                    ? `Submit trade (${timeLeftUntilTradeExpires})`
+                    : tradeButtonStatus === "waiting_for_partner" &&
+                      typeof myOrderSent === "object"
+                    ? `Waiting for order on-chain (${timeLeftUntilTradeExpires})`
+                    : tradeButtonStates[tradeButtonStatus].altText}
+                </span>
               </div>
 
               <div className="acceptOfferContents">
@@ -879,6 +891,16 @@ export const tradeButtonStates: {
   waiting_for_lockin: {
     icon: tradeIconDisabled,
     altText: "Waiting for lock-in...",
+    enabled: false,
+  },
+  waiting_for_offer: {
+    icon: tradeIconDisabled,
+    altText: "Waiting for a trade offer...",
+    enabled: false,
+  },
+  waiting_for_fee_payment_selection: {
+    icon: tradeIconDisabled,
+    altText: "Waiting for you to decide who pays fees...",
     enabled: false,
   },
   waiting_for_partner: {
