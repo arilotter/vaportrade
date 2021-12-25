@@ -332,8 +332,8 @@ function Vaportrade() {
               if (tradingPeer.tradeStatus.type === "signedOrder") {
                 return; // ignore messages once we have a signed order
               }
-              tradingPeer.tradeOffer = msg.offer;
               tradingPeer.tradeStatus = { type: "negotiating" };
+              tradingPeer.tradeOffer = msg.offer;
               tradingPeer.hasNewInfo = true;
             } else if (msg.type === "lockin") {
               if (msg.lockedOrder) {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { sequence } from "0xsequence";
 import "./TradeUI.css";
 import P2PT from "p2pt";
@@ -79,7 +79,7 @@ export function TradeUI({
   tradingPartner,
   p2p,
   nftSwap,
-  updateMyTradeOffer,
+  updateMyTradeOffer: externalUpdateMyTradeOffer,
   updateGoesFirst,
   collectibles,
   contracts,
@@ -123,6 +123,14 @@ export function TradeUI({
   const [requiredApprovals, updateRequiredApprovals] = useImmer<
     Map<TokenKey, boolean | Promise<boolean> | "approving">
   >(new Map());
+
+  const updateMyTradeOffer = useCallback(
+    (callback: (items: Item<"ERC20" | "ERC721" | "ERC1155">[]) => void) => {
+      setLockedIn(false);
+      externalUpdateMyTradeOffer(callback);
+    },
+    [externalUpdateMyTradeOffer]
+  );
 
   useEffect(() => {
     if (hardError) {
@@ -304,8 +312,8 @@ export function TradeUI({
         const hash = nftSwap.getOrderHash(order);
         if (partnerHash !== hash) {
           const err = `Got invalid hash from partner lockin\n: Expected ${hash}, got ${partnerHash}`;
-          console.error(err);
-          setHardError(err);
+          console.warn(err);
+          setSoftWarning(err);
         }
       } else if (tradingPartner.tradeStatus.type === "signedOrder") {
         const expiryTime = Number.parseInt(
@@ -499,7 +507,30 @@ export function TradeUI({
         />
         {nftSwap && order ? (
           <div className="offers">
-            <DetailsSection title="My trade offer">
+            <DetailsSection
+              title={
+                <>
+                  <span
+                    style={{
+                      paddingRight: "16px",
+                    }}
+                  >
+                    My trade offer
+                  </span>
+                  <Radio
+                    name="myRadio"
+                    id="myRadio"
+                    isDisabled={Boolean(lockedIn)}
+                    value={"clickme"}
+                    onChange={() => updateGoesFirst(tradingPartner.address)}
+                    checked={
+                      tradingPartner.goesFirstAddress === tradingPartner.address
+                    }
+                  />
+                  <label htmlFor="myRadio">I'll pay fees</label>
+                </>
+              }
+            >
               <TradeOffer
                 items={tradingPartner.myTradeOffer}
                 onItemSelected={(item) => {
@@ -521,39 +552,23 @@ export function TradeUI({
               </div>
 
               <div className="acceptOfferContents">
-                <div>
-                  <Checkbox
-                    isDisabled={
-                      (tradingPartner.goesFirstAddress !== address &&
-                        tradingPartner.goesFirstAddress !==
-                          tradingPartner.address) ||
-                      myOrderSent !== false ||
-                      (tradingPartner.myTradeOffer.length === 0 &&
-                        tradingPartner.tradeOffer.length === 0)
-                    }
-                    checked={Boolean(lockedIn)}
-                    onChange={() => {
-                      const newAcceptedState = !lockedIn;
-                      setLockedIn(newAcceptedState ? "sending" : false);
-                    }}
-                    id="myAccept"
-                    label="Accept Offer"
-                  />
-                  <div>
-                    <Radio
-                      name="myRadio"
-                      id="myRadio"
-                      isDisabled={Boolean(lockedIn)}
-                      value={"clickme"}
-                      onChange={() => updateGoesFirst(tradingPartner.address)}
-                      checked={
-                        tradingPartner.goesFirstAddress ===
-                        tradingPartner.address
-                      }
-                    />
-                    <label htmlFor="myRadio">You Pay Fees</label>
-                  </div>
-                </div>
+                <Checkbox
+                  isDisabled={
+                    (tradingPartner.goesFirstAddress !== address &&
+                      tradingPartner.goesFirstAddress !==
+                        tradingPartner.address) ||
+                    myOrderSent !== false ||
+                    (tradingPartner.myTradeOffer.length === 0 &&
+                      tradingPartner.tradeOffer.length === 0)
+                  }
+                  checked={Boolean(lockedIn)}
+                  onChange={() => {
+                    const newAcceptedState = !lockedIn;
+                    setLockedIn(newAcceptedState ? "sending" : false);
+                  }}
+                  id="myAccept"
+                  label="Accept Offer"
+                />
                 <ButtonForm
                   isDisabled={!tradeButtonStates[tradeButtonStatus].enabled}
                   onClick={async () => {
@@ -722,24 +737,14 @@ export function TradeUI({
                     }}
                   />
                 </ButtonForm>
-                <div>
+                <div className="acceptOfferSide">
                   <Checkbox
                     readOnly
                     checked={tradingPartner.tradeStatus.type !== "negotiating"}
                     id="partnerAccept"
-                    label="Partner Accepts"
+                    label="They Accept"
                     isDisabled
                   />
-                  <div>
-                    <Radio
-                      name="theirRadio"
-                      id="theirRadio"
-                      isDisabled={Boolean(lockedIn)}
-                      checked={tradingPartner.goesFirstAddress === address}
-                      onChange={() => updateGoesFirst(address)}
-                    />
-                    <label htmlFor="theirRadio">Partner Pays Fees</label>
-                  </div>
                 </div>
               </div>
               {tokensThatNeedApproval && tokensThatNeedApproval.length ? (
@@ -760,7 +765,23 @@ export function TradeUI({
                 </div>
               ) : null}
             </section>
-            <DetailsSection title="Partner's trade offer">
+            <DetailsSection
+              title={
+                <>
+                  <span style={{ paddingRight: "16px" }}>
+                    Partner's trade offer
+                  </span>
+                  <Radio
+                    name="theirRadio"
+                    id="theirRadio"
+                    isDisabled={Boolean(lockedIn)}
+                    checked={tradingPartner.goesFirstAddress === address}
+                    onChange={() => updateGoesFirst(address)}
+                  />
+                  <label htmlFor="theirRadio">They'll pay fees</label>
+                </>
+              }
+            >
               <TradeOffer
                 items={getItems({
                   balances: tradingPartner.tradeOffer,
