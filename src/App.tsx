@@ -104,11 +104,6 @@ function Vaportrade() {
     cb: (peers: Set<TradingPeer | Peer>) => void | Set<TradingPeer | Peer>
   ) => void;
 
-  // When you close a trading window, don't let them show up again until you send *them* a request.
-  const [tempBannedAddresses, updateTempBannedAddresses] = useImmer<
-    Set<string>
-  >(new Set());
-
   useEffect(() => {
     updateSources(defaultSources);
   }, [updateSources]);
@@ -402,7 +397,7 @@ function Vaportrade() {
 
   const tradeRequests = [...peers]
     .filter(isTradingPeer)
-    .filter((p) => p.tradeRequest && !tempBannedAddresses.has(p.address));
+    .filter((p) => p.tradeRequest);
 
   const tradingPartner = tradeRequests.find(
     (p) => p.address === tradingPartnerAddress
@@ -457,9 +452,6 @@ function Vaportrade() {
                           onMinimize={() => setTradingPartnerAddress(null)}
                           onClose={() => {
                             setTradingPartnerAddress(null);
-                            updateTempBannedAddresses((addrs) => {
-                              addrs.add(tradingPartner.address);
-                            });
                           }}
                         >
                           <div className="appWindowContents">
@@ -600,9 +592,6 @@ function Vaportrade() {
                   icon: makeBlockyIcon(peerAddr),
                 }))}
               onSubmit={(peerAddr) => {
-                updateTempBannedAddresses((addrs) => {
-                  addrs.delete(peerAddr);
-                });
                 const correctPeer = [...peers]
                   .filter(isTradingPeer)
                   .find((p) => p.address === peerAddr);
