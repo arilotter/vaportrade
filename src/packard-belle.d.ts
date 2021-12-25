@@ -123,7 +123,7 @@ declare module "packard-belle" {
   export function WindowExplorer(props: any): JSX.Element;
   export function WindowProgram(props: any): JSX.Element;
   export function DetailsSection(props: {
-    title: string;
+    title: React.ReactNode;
     children: React.ReactNode;
   }): JSX.Element;
 }
