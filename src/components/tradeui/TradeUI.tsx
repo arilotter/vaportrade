@@ -100,9 +100,7 @@ export function TradeUI({
   const [lockedIn, setLockedIn] = useState<
     false | "sending" | { hash: string }
   >(false);
-  const [myOrderSent, setMyOrderSent] = useState<
-    false | { expiryTime: number }
-  >(false);
+  const [myOrderSent, setMyOrderSent] = useState<false | SignedOrder>(false);
 
   const [signedOrderCache, _internalUpdateSignedOrderCache] = useState<
     ReadonlyArray<SignedOrder>
@@ -398,7 +396,7 @@ export function TradeUI({
       tradingPartner.tradeStatus.type === "signedOrder"
         ? tradingPartner.tradeStatus.signedOrder.expirationTimeSeconds
         : typeof myOrderSent === "object"
-        ? `${myOrderSent.expiryTime}`
+        ? `${myOrderSent.expirationTimeSeconds}`
         : "";
     if (expiryTimeString === "") {
       return;
@@ -504,12 +502,7 @@ export function TradeUI({
           type: "accept",
           order: matchingSignedOrder,
         });
-        setMyOrderSent({
-          expiryTime: Number.parseInt(
-            matchingSignedOrder.expirationTimeSeconds,
-            10
-          ),
-        });
+        setMyOrderSent(matchingSignedOrder);
       }
     }
   }, [
@@ -580,8 +573,22 @@ export function TradeUI({
       </div>
     );
   }
-  const openOrders = signedOrderCache.filter(
-    (order) => order.makerAddress.toLowerCase() === address.toLowerCase()
+  const fakeOrderHash =
+    order &&
+    nftSwap.getOrderHash({
+      ...order,
+      salt: fakeSalt,
+      expirationTimeSeconds: zero.toString(),
+    });
+  const openOrdersThatArentThisOne = signedOrderCache.filter(
+    (openOrder) =>
+      openOrder.makerAddress.toLowerCase() === address.toLowerCase() &&
+      (!order ||
+        nftSwap.getOrderHash({
+          ...openOrder,
+          salt: fakeSalt,
+          expirationTimeSeconds: zero.toString(),
+        }) !== fakeOrderHash)
   );
   return (
     <>
@@ -761,7 +768,7 @@ export function TradeUI({
                             order: signedOrder,
                           });
                           console.log("[trade] waiting for peer to accept");
-                          setMyOrderSent({ expiryTime });
+                          setMyOrderSent(signedOrder);
                           const orderFilled = await waitUntilOrderFilled(
                             nftSwap,
                             signedOrder
@@ -810,7 +817,9 @@ export function TradeUI({
                           const fillTx = await nftSwap.fillSignedOrder(
                             tradingPartner.tradeStatus.signedOrder
                           );
-                          setMyOrderSent({ expiryTime: 0 }); // n/a
+                          setMyOrderSent(
+                            tradingPartner.tradeStatus.signedOrder
+                          );
                           console.log("[trade] waiting for order completion.");
                           const fillTxReceipt = await nftSwap.awaitTransactionHash(
                             fillTx.hash
@@ -883,7 +892,9 @@ export function TradeUI({
                       ))}
                     </ul>
                   </div>
-                  {softWarning || openOrders.length ? <hr /> : null}
+                  {softWarning || openOrdersThatArentThisOne.length ? (
+                    <hr />
+                  ) : null}
                 </>
               ) : null}
               {softWarning ? (
@@ -893,25 +904,28 @@ export function TradeUI({
                       <p key={p}>{p}</p>
                     ))}
                   </div>
-                  {openOrders.length ? <hr /> : null}
+                  {openOrdersThatArentThisOne.length ? <hr /> : null}
                 </>
               ) : null}
-              {openOrders.length ? (
+              {openOrdersThatArentThisOne.length ? (
                 <>
                   <div className="softWarning">
                     <h3>Warning:</h3>
                     <p>
-                      You have {openOrders.length} signed trade with this
-                      address
-                      {openOrders.length > 1 ? "s" : ""} that can be filled!!
+                      You have {openOrdersThatArentThisOne.length} signed trade
+                      with this address
+                      {openOrdersThatArentThisOne.length > 1 ? "s" : ""} that
+                      can be filled!!
                     </p>
                     <p>
                       You probably shouldn't make a new order until{" "}
-                      {openOrders.length > 1 ? "they're " : "it's "}
+                      {openOrdersThatArentThisOne.length > 1
+                        ? "they're "
+                        : "it's "}
                       filled or expired.
                     </p>
                     <ul>
-                      {openOrders.map((order) => (
+                      {openOrdersThatArentThisOne.map((order) => (
                         <li>
                           (
                           {formatTimeLeft(
