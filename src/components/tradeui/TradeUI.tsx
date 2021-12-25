@@ -742,6 +742,16 @@ export function TradeUI({
                   </div>
                 </div>
               </div>
+              {tokensThatNeedApproval && tokensThatNeedApproval.length ? (
+                <div className="softWarning">
+                  You'll need to approve transferring:
+                  <ul>
+                    {tokensThatNeedApproval.map(({ item, key }) => (
+                      <li key={key}>{item.name}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {softWarning ? (
                 <div className="softWarning">
                   {softWarning.split("\n").map((p) => (
@@ -792,6 +802,7 @@ export function TradeUI({
       ) : null}
       {config.debugModeSetMeToTheStringTrue === "true" ? (
         <div>
+          debug:
           <ButtonForm
             onClick={() =>
               setOrderSuccess({
@@ -801,7 +812,14 @@ export function TradeUI({
               })
             }
           >
-            DEBUG set success true
+            set success true
+          </ButtonForm>
+          <ButtonForm
+            onClick={() => {
+              updateRequiredApprovals((m) => m.clear());
+            }}
+          >
+            reset token approvals
           </ButtonForm>
         </div>
       ) : null}
