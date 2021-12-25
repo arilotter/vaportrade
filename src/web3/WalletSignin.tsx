@@ -6,7 +6,7 @@ import {
   getConnectorErrorMessage,
   resetWalletConnector,
 } from "./connectors";
-import { useEagerConnect, useInactiveListener } from "./hooks";
+import { useInactiveListener } from "./hooks";
 import loadingIcon from "../icons/loadingIcon.gif";
 import { Web3Provider } from "@ethersproject/providers";
 import { AbstractConnector } from "@web3-react/abstract-connector";
@@ -53,11 +53,8 @@ export function WalletSignin({ children }: WalletSigninProps) {
     }
   }, [error, active, deactivate, activatingConnector]);
 
-  // handle logic to eagerly connect to the injected ethereum provider, if it exists and has granted access already
-  const triedEager = useEagerConnect();
-
   // handle logic to connect in reaction to certain events on the injected ethereum provider, if it exists
-  useInactiveListener(!triedEager || !!activatingConnector);
+  useInactiveListener(!!activatingConnector);
 
   if (active) {
     return children;
@@ -117,8 +114,7 @@ export function WalletSignin({ children }: WalletSigninProps) {
             const currentConnector = connectorsByName[name];
             const activating = currentConnector === activatingConnector;
             const connected = currentConnector === connector;
-            const disabled =
-              !triedEager || !!activatingConnector || connected || !!error;
+            const disabled = !!activatingConnector || connected || !!error;
 
             return (
               <div key={name}>
