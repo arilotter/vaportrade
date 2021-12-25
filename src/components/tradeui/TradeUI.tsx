@@ -183,7 +183,7 @@ export function TradeUI({
       setLockedIn(false);
       setPickBalanceItem(null);
       setSoftWarning(null);
-      // updateMyTradeOffer((items) => (items.length = 0));
+      updateMyTradeOffer((items) => (items.length = 0));
       updateGoesFirst("");
     }
   }, [orderSuccess, updateMyTradeOffer, updateGoesFirst]);
@@ -404,7 +404,7 @@ export function TradeUI({
     return (
       <div className="successfulTradeBox">
         <div className="oneSide">
-          <TradeOffer items={tradingPartner.myTradeOffer} />
+          <TradeOffer items={orderSuccess.myItems} />
           <div className="successLabel">You sent</div>
         </div>
         <div className="successfulTrade">
@@ -440,13 +440,7 @@ export function TradeUI({
           </p>
         </div>
         <div className="oneSide">
-          <TradeOffer
-            items={getItems({
-              balances: tradingPartner.tradeOffer,
-              contracts,
-              collectibles,
-            }).filter(isItemWithKnownContractType)}
-          />
+          <TradeOffer items={orderSuccess.theirItems} />
           <div className="successLabel">You received</div>
         </div>
       </div>
