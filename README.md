@@ -25,7 +25,8 @@ Builds the app for production to the `build` folder.
 
 
 # PRE-LAUNCH TODO:
-- [] fix token approval not sticking for IRON Titanium
+- [] keep listeners for all not-yet-filled signed orders around, and fire trade success if we hit one!
+- [x] what happens if p1 signs, p2 changes order.. how do we invalidate p1's order without paying? :| e.g. what happens if they do a new trade req, then p2 is allowed to fill the first order still if it happened fast enough? solution: cache not-yet-filled orders :)
 - [~] p2 trade done UI has get TX hash
 - [~] fix weird gas estimation in submission in metamask (tx failed cause of it, does Sequence offer this?)
 - [~] fix skyweaver token balance 1/100th??

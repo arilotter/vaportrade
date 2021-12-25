@@ -32,3 +32,4 @@ function storageKey(key: string) {
 
 export const config: Readonly<typeof settings> = settings;
 export const chainId = ChainId.POLYGON;
+export const LS_SIGNED_ORDER_CACHE_KEY = "signedOrderCache";

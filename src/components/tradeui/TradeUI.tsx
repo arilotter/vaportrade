@@ -13,6 +13,7 @@ import { WalletContentsBox } from "./WalletContentsBox";
 import { TradeOffer } from "./TradeOffer";
 import {
   buildOrder,
+  formatTimeLeft,
   getTokenKey,
   isItemWithKnownContractType,
   Item,
@@ -43,8 +44,9 @@ import { Web3Provider } from "@ethersproject/providers";
 import { useWeb3React } from "@web3-react/core";
 import { formatBytes32String, randomBytes } from "ethers/lib/utils";
 import { BigNumber } from "@ethersproject/bignumber";
-import { chainId, config } from "../../settings";
+import { chainId, config, LS_SIGNED_ORDER_CACHE_KEY } from "../../settings";
 import type { SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
+import type { OrderInfoStruct } from "@traderxyz/nft-swap-sdk/dist/contracts/ExchangeContract";
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
@@ -101,6 +103,22 @@ export function TradeUI({
   const [myOrderSent, setMyOrderSent] = useState<
     false | { expiryTime: number }
   >(false);
+
+  const [signedOrderCache, _internalUpdateSignedOrderCache] = useState<
+    ReadonlyArray<SignedOrder>
+  >(JSON.parse(localStorage.getItem(LS_SIGNED_ORDER_CACHE_KEY) ?? "[]"));
+
+  const updateSignedOrderCache = useCallback(
+    (signedOrders: ReadonlyArray<SignedOrder>) => {
+      _internalUpdateSignedOrderCache(signedOrders);
+      localStorage.setItem(
+        LS_SIGNED_ORDER_CACHE_KEY,
+        JSON.stringify(signedOrders)
+      );
+    },
+    []
+  );
+
   const [orderSuccess, setOrderSuccess] = useState<
     | false
     | {
@@ -181,7 +199,6 @@ export function TradeUI({
   }, [p2p, tradingPartner.peer, tradingPartner.myTradeOffer]);
 
   useEffect(() => {
-    console.log("sent addr");
     p2p.send(tradingPartner.peer, {
       type: "set_goes_first",
       address: tradingPartner.goesFirstAddress,
@@ -394,14 +411,9 @@ export function TradeUI({
       () =>
         setTimeLeftUntilTradeExpires(() => {
           // 30s buffer for network & desync.
-          const timeLeft = (expiryTime - 30) * 1000 - Date.now();
+          const timeLeft = expiryTime * 1000 - Date.now();
 
-          const minutes = `${Math.max(
-            0,
-            Math.floor((timeLeft % 3.6e6) / 6e4)
-          )}`;
-          const seconds = `${Math.max(0, Math.floor((timeLeft % 6e4) / 1000))}`;
-          return `${minutes}:${(seconds.length < 2 ? "0" : "") + seconds}`;
+          return formatTimeLeft(timeLeft);
         }),
       1000
     );
@@ -417,6 +429,101 @@ export function TradeUI({
       });
     }
   }, [myOrderSent, timeLeftUntilTradeExpires, p2p, tradingPartner.peer]);
+
+  useEffect(() => {
+    async function invalidateDeadOrders() {
+      const deadOrders = (
+        await Promise.all(
+          signedOrderCache.map<
+            Promise<{ order: SignedOrder; orderInfo: OrderInfoStruct | false }>
+          >((order) => {
+            const timeLeft =
+              Number.parseInt(order.expirationTimeSeconds, 10) * 1000 -
+              Date.now();
+            return timeLeft <= 0
+              ? Promise.resolve({ order, orderInfo: false })
+              : nftSwap.exchangeContract
+                  .getOrderInfo(order)
+                  .then((orderInfo) => ({ order, orderInfo }));
+          })
+        )
+      )
+        .filter(
+          ({ orderInfo }) =>
+            !orderInfo || orderInfo.orderStatus !== OrderStatus.Fillable
+        )
+        .map(({ order }) => order);
+
+      if (deadOrders.length) {
+        // Remove orders that are dead :)
+        updateSignedOrderCache(
+          signedOrderCache.filter(
+            (signedOrder) =>
+              !deadOrders.some(
+                (deadOrder) =>
+                  nftSwap.getOrderHash(deadOrder) ===
+                  nftSwap.getOrderHash(signedOrder)
+              )
+          )
+        );
+      }
+    }
+    invalidateDeadOrders();
+  }, [nftSwap, order, updateSignedOrderCache, signedOrderCache]);
+  /*
+   If Alice & Bob set up a trade, Alice signs the order and sends their signature to Bob, then Bob cancels in the vaportrade UI,
+   If Alice signs another trade request for the same trade, it means Bob could submit both when Alice only intended to do the trade once.
+   So, we cache orders, and don't re-sign the same order while one is open (not submitted on-chain and not expired).
+  */
+  // Load cached orders, and send it if it's a matching one
+  useEffect(() => {
+    if (
+      order &&
+      bothPlayersAccepted &&
+      !waitingForApproval &&
+      tokensThatNeedApproval &&
+      !tokensThatNeedApproval.length &&
+      iGoFirst &&
+      !myOrderSent
+    ) {
+      const matchingSignedOrder = signedOrderCache.find(
+        (signedOrder) =>
+          nftSwap.getOrderHash({
+            ...signedOrder,
+            salt: fakeSalt,
+            expirationTimeSeconds: zero.toString(),
+          }) ===
+          nftSwap.getOrderHash({
+            ...order,
+            salt: fakeSalt,
+            expirationTimeSeconds: zero.toString(),
+          })
+      );
+      if (matchingSignedOrder) {
+        p2p.send(tradingPartner.peer, {
+          type: "accept",
+          order: matchingSignedOrder,
+        });
+        setMyOrderSent({
+          expiryTime: Number.parseInt(
+            matchingSignedOrder.expirationTimeSeconds,
+            10
+          ),
+        });
+      }
+    }
+  }, [
+    p2p,
+    tradingPartner.peer,
+    nftSwap,
+    order,
+    signedOrderCache,
+    bothPlayersAccepted,
+    iGoFirst,
+    tokensThatNeedApproval,
+    waitingForApproval,
+    myOrderSent,
+  ]);
 
   if (orderSuccess) {
     return (
@@ -473,6 +580,9 @@ export function TradeUI({
       </div>
     );
   }
+  const openOrders = signedOrderCache.filter(
+    (order) => order.makerAddress.toLowerCase() === address.toLowerCase()
+  );
   return (
     <>
       <div className="itemSections">
@@ -641,6 +751,10 @@ export function TradeUI({
                           console.log(
                             "[trade] got signed order, sending to peer"
                           );
+                          updateSignedOrderCache([
+                            ...signedOrderCache,
+                            signedOrder,
+                          ]);
 
                           p2p?.send(tradingPartner.peer, {
                             type: "accept",
@@ -760,21 +874,57 @@ export function TradeUI({
                 </div>
               </div>
               {tokensThatNeedApproval && tokensThatNeedApproval.length ? (
-                <div className="softWarning">
-                  You'll need to approve transferring:
-                  <ul>
-                    {tokensThatNeedApproval.map(({ item, key }) => (
-                      <li key={key}>{item.name}</li>
-                    ))}
-                  </ul>
-                </div>
+                <>
+                  <div className="softWarning">
+                    You'll need to approve transferring:
+                    <ul>
+                      {tokensThatNeedApproval.map(({ item, key }) => (
+                        <li key={key}>{item.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  {softWarning || openOrders.length ? <hr /> : null}
+                </>
               ) : null}
               {softWarning ? (
-                <div className="softWarning">
-                  {softWarning.split("\n").map((p) => (
-                    <p key={p}>{p}</p>
-                  ))}
-                </div>
+                <>
+                  <div className="softWarning">
+                    {softWarning.split("\n").map((p) => (
+                      <p key={p}>{p}</p>
+                    ))}
+                  </div>
+                  {openOrders.length ? <hr /> : null}
+                </>
+              ) : null}
+              {openOrders.length ? (
+                <>
+                  <div className="softWarning">
+                    <h3>Warning:</h3>
+                    <p>
+                      You have {openOrders.length} signed trade with this
+                      address
+                      {openOrders.length > 1 ? "s" : ""} that can be filled!!
+                    </p>
+                    <p>
+                      You probably shouldn't make a new order until{" "}
+                      {openOrders.length > 1 ? "they're " : "it's "}
+                      filled or expired.
+                    </p>
+                    <ul>
+                      {openOrders.map((order) => (
+                        <li>
+                          (
+                          {formatTimeLeft(
+                            Number.parseInt(order.expirationTimeSeconds, 10) *
+                              1000 -
+                              Date.now()
+                          )}
+                          )
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
               ) : null}
             </section>
             <DetailsSection

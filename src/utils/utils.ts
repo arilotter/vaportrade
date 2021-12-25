@@ -300,3 +300,9 @@ export enum OrderStatus {
   FullyFilled,
   Cancelled,
 }
+
+export function formatTimeLeft(timeLeft: number): string {
+  const minutes = `${Math.max(0, Math.floor((timeLeft % 3.6e6) / 6e4))}`;
+  const seconds = `${Math.max(0, Math.floor((timeLeft % 6e4) / 1000))}`;
+  return `${minutes}:${(seconds.length < 2 ? "0" : "") + seconds}`;
+}
