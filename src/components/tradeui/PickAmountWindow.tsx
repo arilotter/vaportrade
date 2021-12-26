@@ -156,9 +156,12 @@ export function PickAmountWindow({
             {notEnoughMoney
               ? `not enough ${item.name}, you ${
                   type === "offer" ? "offered" : "requested"
-                } ${parsedAmount} but ${
+                } ${balanceToFixedNumber(parsedAmount, item.decimals)} but ${
                   type === "offer" ? "you" : "they"
-                } only have ${item.originalBalance}.`
+                } only have ${balanceToFixedNumber(
+                  item.originalBalance,
+                  item.decimals
+                )}.`
               : ""}
           </div>
           <div className="pickAmountButtons">
