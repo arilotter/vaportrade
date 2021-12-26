@@ -11,6 +11,7 @@ import {
   NetworkItem,
   KnownContractType,
   isKnownContractType,
+  DragItemType,
 } from "../../utils/utils";
 import { sequence } from "0xsequence";
 import { ChainId } from "@0xsequence/network";
@@ -34,6 +35,7 @@ interface WalletContentsBoxProps {
     | ReadonlyArray<Item<KnownContractType>>
     | readonly NetworkItem[];
   className?: string;
+  mine: boolean;
 }
 
 const chainId = ChainId.POLYGON;
@@ -47,6 +49,7 @@ export function WalletContentsBox({
   onItemSelected,
   subtractItems,
   className,
+  mine,
 }: WalletContentsBoxProps) {
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
@@ -158,6 +161,11 @@ export function WalletContentsBox({
                   item.tokenID
                 )}
                 onDoubleClick={() => onItemSelected(item)}
+                dragItemType={
+                  mine
+                    ? DragItemType.MY_ITEM_IN_WALLET
+                    : DragItemType.THEIR_ITEM_IN_WALLET
+                }
               />
             ))}
           {otherTokens
@@ -172,6 +180,11 @@ export function WalletContentsBox({
                   item.tokenID
                 )}
                 onDoubleClick={() => {}}
+                dragItemType={
+                  mine
+                    ? DragItemType.MY_ITEM_IN_WALLET
+                    : DragItemType.THEIR_ITEM_IN_WALLET
+                }
               />
             ))}
         </div>
@@ -196,6 +209,11 @@ export function WalletContentsBox({
                     item.tokenID
                   )}
                   onDoubleClick={() => onItemSelected(item)}
+                  dragItemType={
+                    mine
+                      ? DragItemType.MY_ITEM_IN_WALLET
+                      : DragItemType.THEIR_ITEM_IN_WALLET
+                  }
                 />
               ))}
           </div>

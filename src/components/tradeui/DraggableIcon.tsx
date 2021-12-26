@@ -14,19 +14,21 @@ interface DraggableIconProps {
   item: Item<ContractType>;
   onDoubleClick: () => void;
   isDisabled?: boolean;
+  dragItemType: typeof DragItemType[keyof typeof DragItemType];
 }
 
 export function DraggableIcon({
   item,
   onDoubleClick,
   isDisabled,
+  dragItemType,
 }: DraggableIconProps) {
-  // TODO Drag & Drop
   const [{ isDragging }, drag] = useDrag(() => ({
-    type: DragItemType.MY_ITEM,
+    type: dragItemType,
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
+    item,
   }));
   const decimalBalance = balanceToFixedNumber(
     item.balance,

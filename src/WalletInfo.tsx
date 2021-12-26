@@ -100,6 +100,7 @@ export function WalletInfo({
                 requestTokensFetch={requestTokensFetch}
                 onItemSelected={() => {}}
                 subtractItems={[]}
+                mine={true}
               />
             </div>
           </>

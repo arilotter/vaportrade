@@ -522,7 +522,7 @@ export function TradeUI({
     return (
       <div className="successfulTradeBox">
         <div className="oneSide">
-          <TradeOffer items={orderSuccess.myItems} />
+          <TradeOffer items={orderSuccess.myItems} mine={true} />
           <div className="successLabel">You sent</div>
         </div>
         <div className="successfulTrade">
@@ -558,7 +558,7 @@ export function TradeUI({
           </p>
         </div>
         <div className="oneSide">
-          <TradeOffer items={orderSuccess.theirItems} />
+          <TradeOffer items={orderSuccess.theirItems} mine={false} />
           <div className="successLabel">You received</div>
         </div>
       </div>
@@ -607,29 +607,27 @@ export function TradeUI({
                   requestTokensFetch={requestTokensFetch}
                   onItemSelected={setPickBalanceItem}
                   subtractItems={tradingPartner.myTradeOffer}
+                  mine={true}
                 />
               ),
             },
-            ...(tradingPartner
-              ? [
-                  {
-                    title: "Their Wallet",
-                    contents: (
-                      <WalletContentsBox
-                        accountAddress={tradingPartner.address}
-                        indexer={indexer}
-                        collectibles={collectibles}
-                        contracts={contracts}
-                        requestTokensFetch={requestTokensFetch}
-                        onItemSelected={() => {
-                          // noop
-                        }}
-                        subtractItems={tradingPartner.tradeOffer}
-                      />
-                    ),
-                  },
-                ]
-              : []),
+            {
+              title: "Their Wallet",
+              contents: (
+                <WalletContentsBox
+                  accountAddress={tradingPartner.address}
+                  indexer={indexer}
+                  collectibles={collectibles}
+                  contracts={contracts}
+                  requestTokensFetch={requestTokensFetch}
+                  onItemSelected={() => {
+                    // noop
+                  }}
+                  subtractItems={tradingPartner.tradeOffer}
+                  mine={false}
+                />
+              ),
+            },
           ]}
         />
         {nftSwap && order ? (
@@ -665,6 +663,8 @@ export function TradeUI({
                   const diff = item.originalBalance.sub(item.balance);
                   setPickBalanceItem({ ...item, balance: diff });
                 }}
+                onItemDropped={setPickBalanceItem}
+                mine
               />
             </DetailsSection>
             <section className="DetailsSection window__section acceptOffer">
@@ -918,7 +918,7 @@ export function TradeUI({
                       can be filled!!
                     </p>
                     <p>
-                      You probably shouldn't make a new order until{" "}
+                      You probably shouldn't sign another trade with them until{" "}
                       {openOrdersThatArentThisOne.length > 1
                         ? "they're "
                         : "it's "}
@@ -964,6 +964,7 @@ export function TradeUI({
                   contracts,
                   collectibles,
                 }).filter(isItemWithKnownContractType)}
+                mine={false}
               />
             </DetailsSection>
           </div>

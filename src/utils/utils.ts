@@ -51,10 +51,11 @@ export function getTokenKey(
 }
 export type TokenKey = ReturnType<typeof getTokenKey>;
 
-// TODO Drag & Drop
 export const DragItemType = {
-  MY_ITEM: "my_item",
-  THEIR_ITEM: "their_item",
+  MY_ITEM_IN_WALLET: "my_item_in_wallet",
+  MY_ITEM_IN_TRADE: "my_item_in_trade",
+  THEIR_ITEM_IN_WALLET: "their_item_in_wallet",
+  THEIR_ITEM_IN_TRADE: "their_item_in_trade",
 };
 
 export type KnownContractType = `ERC${20 | 721 | 1155}`;
