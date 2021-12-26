@@ -26,10 +26,11 @@ Builds the app for production to the `build` folder.
 
 # PRE-LAUNCH TODO:
 - [] keep listeners for all not-yet-filled signed orders around, and fire trade success if we hit one!
-- [x] what happens if p1 signs, p2 changes order.. how do we invalidate p1's order without paying? :| e.g. what happens if they do a new trade req, then p2 is allowed to fill the first order still if it happened fast enough? solution: cache not-yet-filled orders :)
+- [] test with erc721s - instant add-remove without amount UI, and instant drag/drop.
 - [~] p2 trade done UI has get TX hash
 - [~] fix weird gas estimation in submission in metamask (tx failed cause of it, does Sequence offer this?)
-- [~] fix skyweaver token balance 1/100th??
+- [x] fix skyweaver token balance 1/100th??
+- [x] what happens if p1 signs, p2 changes order.. how do we invalidate p1's order without paying? :| e.g. what happens if they do a new trade req, then p2 is allowed to fill the first order still if it happened fast enough? solution: cache not-yet-filled orders :)
 - [x] fix trade complete css on small screens vertically
 - [x] fix trades not clearing correctly after trade submit
 - [x] let you pick who pays for trade
@@ -44,6 +45,7 @@ Builds the app for production to the `build` folder.
 - [x] make trading work, lol (signature error??)
 # NICE TO HAVE TODO:
 - [] ENS
+- [] verified contracts :)
 - [] add "kill" button that you can race your trading partner to, lol
 - [] make trade button flash when new things happen
 - [] add drag & drop (partially implemented, but doesn't work hehe)
