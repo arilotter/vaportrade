@@ -36,7 +36,9 @@ export function DraggableIcon({
   ).toString();
 
   const title = `${
-    BigNumber.from(decimalBalance.split(".")[0]).gt(1_000_000_000)
+    item.type === "ERC721"
+      ? "" // ERC721s are unique, so there's no point in balances for them
+      : BigNumber.from(decimalBalance.split(".")[0]).gt(1_000_000_000)
       ? "a lot of"
       : addNumberCommas(decimalBalance)
   }\n${item.name}`;
@@ -46,7 +48,7 @@ export function DraggableIcon({
       className={isDisabled ? "disabledIcon" : ""}
       ref={drag}
       style={{
-        opacity: isDragging ? 0.25 : 1,
+        opacity: item.balance.isZero() ? 0.5 : isDragging ? 0.25 : 1,
         cursor: "move",
         position: "relative",
       }}

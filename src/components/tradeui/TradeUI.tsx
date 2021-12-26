@@ -532,7 +532,28 @@ export function TradeUI({
     waitingForApproval,
     myOrderSent,
   ]);
+  const addItemToTrade = useCallback(
+    (item) => {
+      if (item.type === "ERC721") {
+        updateMyTradeOffer((items) => {
+          const matchingItem = items.find(
+            (i) =>
+              i.contractAddress === item.contractAddress &&
+              i.tokenID === item.tokenID
+          );
 
+          if (matchingItem) {
+            items.splice(items.indexOf(matchingItem), 1);
+          } else {
+            items.push({ ...item });
+          }
+        });
+      } else {
+        setPickBalanceItem(item);
+      }
+    },
+    [updateMyTradeOffer]
+  );
   if (orderSuccess) {
     return (
       <div className="successfulTradeBox">
@@ -620,7 +641,7 @@ export function TradeUI({
                   collectibles={collectibles}
                   contracts={contracts}
                   requestTokensFetch={requestTokensFetch}
-                  onItemSelected={setPickBalanceItem}
+                  onItemSelected={addItemToTrade}
                   subtractItems={tradingPartner.myTradeOffer}
                   mine={true}
                   onItemDropped={(item) => {
@@ -687,11 +708,17 @@ export function TradeUI({
               <TradeOffer
                 items={tradingPartner.myTradeOffer}
                 onItemSelected={(item) => {
-                  // swap current balance :)
-                  const diff = item.originalBalance.sub(item.balance);
-                  setPickBalanceItem({ ...item, balance: diff });
+                  if (item.type === "ERC721") {
+                    updateMyTradeOffer((items) => {
+                      items.splice(items.indexOf(item), 1);
+                    });
+                  } else {
+                    // change current balance :)
+                    const diff = item.originalBalance.sub(item.balance);
+                    setPickBalanceItem({ ...item, balance: diff });
+                  }
                 }}
-                onItemDropped={setPickBalanceItem}
+                onItemDropped={addItemToTrade}
                 mine
               />
             </DetailsSection>
@@ -747,15 +774,27 @@ export function TradeUI({
                         }
                       });
                       setWalletOpen(true);
-                      const approvalTxs = tokensThatNeedApproval.map(
-                        ({ item }) =>
+                      const approvalTxs = tokensThatNeedApproval
+                        // 721s and 1155s only need one approval per contract
+                        .filter(
+                          (t) =>
+                            (t.item.type !== "ERC721" &&
+                              t.item.type !== "ERC1155") ||
+                            t.key ===
+                              tokensThatNeedApproval.find(
+                                (firstTok) =>
+                                  firstTok.item.contractAddress ===
+                                  t.item.contractAddress
+                              )?.key
+                        )
+                        .map(({ item }) =>
                           nftSwap
                             .approveTokenOrNftByAsset(
                               itemToSwapItem(item),
                               address
                             )
                             .then((tx) => nftSwap.awaitTransactionHash(tx.hash))
-                      );
+                        );
                       await Promise.allSettled(approvalTxs);
                       setWalletOpen(false);
                       // after we go thru all approval TXs, re-check approval status of each.
@@ -945,17 +984,17 @@ export function TradeUI({
                   <div className="softWarning">
                     <h3>Warning:</h3>
                     <p>
-                      You have {openOrdersThatArentThisOne.length} signed trade
+                      You have {openOrdersThatArentThisOne.length} open trade
                       with this address
                       {openOrdersThatArentThisOne.length > 1 ? "s" : ""} that
-                      can be filled!!
+                      they can complete until it expires!
                     </p>
                     <p>
                       You probably shouldn't sign another trade with them until{" "}
                       {openOrdersThatArentThisOne.length > 1
                         ? "they're "
                         : "it's "}
-                      filled or expired.
+                      completed or expired.
                     </p>
                     <ul>
                       {openOrdersThatArentThisOne.map((order) => (

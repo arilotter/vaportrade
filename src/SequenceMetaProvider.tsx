@@ -100,7 +100,7 @@ export function SequenceMetaProvider({
     async function getMeta() {
       const tokenContracts = [...contracts.values()]
         .filter((c): c is ContractInfo => typeof c === "object")
-        .filter((c) => c.type === "ERC1155");
+        .filter((c) => c.type === "ERC721" || c.type === "ERC1155");
       const myUnfetchedTokens = tokensToFetch.filter(
         (token) =>
           !collectibles.has(

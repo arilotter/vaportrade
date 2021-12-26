@@ -104,7 +104,7 @@ export function WalletContentsBox({
       contracts,
       collectibles,
       subtractItems,
-      typeFilter: ["ERC20", "ERC721"],
+      typeFilter: ["ERC20"],
     }),
   ] as Array<Item<KnownContractType>>; // ok to assert type because we filter above
 
@@ -118,15 +118,15 @@ export function WalletContentsBox({
     }),
   ];
 
-  const erc1155Folders = getItems({
+  const nftFolders = getItems({
     balances: balances.reduce<TokenBalance[]>((acc, bal) => {
-      // Only load one tokenID of each 1155
+      // Only load one tokenID of each nft
       if (!acc.some((item) => item.contractAddress === bal.contractAddress)) {
         acc.push(bal);
       }
       return acc;
     }, []),
-    typeFilter: ["ERC1155"],
+    typeFilter: ["ERC721", "ERC1155"],
     contracts,
     collectibles: undefined,
     subtractItems,
@@ -135,7 +135,7 @@ export function WalletContentsBox({
   const tokenFolderContract = tokenFolderAddress
     ? contracts.get(getContractKey(chainId, tokenFolderAddress))
     : undefined;
-  const erc155sInOpenFolder = tokenFolderAddress
+  const nftsInOpenFolder = tokenFolderAddress
     ? (getItems({
         balances: balances.filter(
           (bal) => bal.contractAddress === tokenFolderAddress
@@ -156,15 +156,16 @@ export function WalletContentsBox({
           }`}
           ref={drop}
         >
-          {erc1155Folders
+          {nftFolders
             .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-            .map(({ name, contractAddress: address, iconUrl }) => (
+            .map(({ name, contractAddress: address, iconUrl, type }) => (
               <Folder
                 key={getContractKey(chainId, address)}
                 name={name}
                 address={address}
                 iconUrl={iconUrl.length ? iconUrl : missingIcon}
                 onFolderOpen={() => setTokenFolderAddress(address)}
+                type={type as "ERC721" | "ERC1155"}
               />
             ))}
           {erc20And721
@@ -208,8 +209,7 @@ export function WalletContentsBox({
             ))}
         </div>
       </div>
-      {erc155sInOpenFolder?.length &&
-      typeof tokenFolderContract === "object" ? (
+      {nftsInOpenFolder?.length && typeof tokenFolderContract === "object" ? (
         <Window
           icon={tokenFolderContract.logoURI}
           title={`${tokenFolderContract.name} (${tokenFolderContract.address})`}
@@ -217,7 +217,7 @@ export function WalletContentsBox({
           onClose={() => setTokenFolderAddress(null)}
         >
           <div className="itemBox">
-            {erc155sInOpenFolder
+            {nftsInOpenFolder
               .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
               .map((item) => (
                 <DraggableIcon

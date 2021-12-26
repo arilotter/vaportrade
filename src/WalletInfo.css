@@ -12,7 +12,7 @@
   overflow-y: auto;
 }
 
-.walletInfoWindow {
+.Frame.walletInfoWindow {
   max-height: calc(100vh - 32px);
 
   display: flex;

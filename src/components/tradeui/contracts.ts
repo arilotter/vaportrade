@@ -104,7 +104,9 @@ export async function fetchBalances(
   });
   const extraBalances = await Promise.all(
     balances
-      .filter((b) => b.contractType === "ERC1155")
+      .filter(
+        (b) => b.contractType === "ERC1155" || b.contractType === "ERC721"
+      )
       .map((balance) =>
         indexer
           .getTokenBalances({
@@ -115,7 +117,9 @@ export async function fetchBalances(
       )
   );
   return [
-    ...balances.filter((b) => b.contractType !== "ERC1155"),
+    ...balances.filter(
+      (b) => b.contractType !== "ERC1155" && b.contractType !== "ERC721"
+    ),
     ...extraBalances.flat(),
   ];
 }
@@ -135,15 +139,29 @@ export function getItems({
 }): Item<ContractType>[] {
   return balances
     .map<Item<ContractType> | null>((balance) => {
+      const key = getContractKey(chainId, balance.contractAddress);
+      const contract = contracts.get(key);
+      if (typeof contract !== "object") {
+        return null;
+      }
+      const t =
+        contract.type ||
+        // TODO is it safe to accept an asset type from another user?
+        // Why doesn't sequence know the contract type?
+        ("contractType" in balance ? balance.contractType : balance.type);
+      const type: ContractType = isKnownContractType(t) ? t : { other: t };
+      if (
+        typeFilter &&
+        !typeFilter.includes(typeof type === "object" ? "other" : type)
+      ) {
+        return null;
+      }
       const collectible = collectibles?.get(
         getTokenKey(chainId, balance.contractAddress, balance.tokenID)
       );
       if (typeof collectible === "object") {
-        if (typeFilter && !typeFilter.includes("ERC1155")) {
-          return null;
-        }
         const item: Item<ContractType> = {
-          type: "ERC1155",
+          type,
           contractAddress: collectible.contractAddress,
           iconUrl: collectible.image,
           name: collectible.name,
@@ -154,21 +172,7 @@ export function getItems({
         };
         return item;
       }
-      const key = getContractKey(chainId, balance.contractAddress);
-      const contract = contracts.get(key);
       if (typeof contract === "object") {
-        const t =
-          contract.type ||
-          // TODO is it safe to accept an asset type from another user?
-          // Why doesn't sequence know the contract type?
-          ("contractType" in balance ? balance.contractType : balance.type);
-        const type: ContractType = isKnownContractType(t) ? t : { other: t };
-        if (
-          typeFilter &&
-          !typeFilter.includes(typeof type === "object" ? "other" : type)
-        ) {
-          return null;
-        }
         const item: Item<ContractType> = {
           type,
           contractAddress: balance.contractAddress,

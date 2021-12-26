@@ -6,10 +6,17 @@ interface FolderProps {
   name: string;
   address: string;
   iconUrl: string;
+  type: "ERC721" | "ERC1155";
   onFolderOpen: () => void;
 }
 
-export function Folder({ name, address, iconUrl, onFolderOpen }: FolderProps) {
+export function Folder({
+  name,
+  address,
+  iconUrl,
+  type,
+  onFolderOpen,
+}: FolderProps) {
   return (
     <div
       style={{
@@ -60,7 +67,7 @@ export function Folder({ name, address, iconUrl, onFolderOpen }: FolderProps) {
           pointerEvents: "none",
         }}
       >
-        ERC1155
+        {type}
       </div>
     </div>
   );
