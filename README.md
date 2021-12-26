@@ -25,9 +25,10 @@ Builds the app for production to the `build` folder.
 
 
 # PRE-LAUNCH TODO:
+- [] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
 - [] keep listeners for all not-yet-filled signed orders around, and fire trade success if we hit one!
 - [~] p2 trade done UI has get TX hash
-- [~] fix weird gas estimation in submission in metamask (tx failed cause of it, does Sequence offer this?)
+- [~] fix weird gas estimation all over the place - perhaps add buffer?
 - [x] test with erc721s - instant add-remove without amount UI, and instant drag/drop.
 - [x] fix skyweaver token balance 1/100th??
 - [x] what happens if p1 signs, p2 changes order.. how do we invalidate p1's order without paying? :| e.g. what happens if they do a new trade req, then p2 is allowed to fill the first order still if it happened fast enough? solution: cache not-yet-filled orders :)
