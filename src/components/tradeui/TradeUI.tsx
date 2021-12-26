@@ -98,8 +98,11 @@ export function TradeUI({
   }
 
   const [lockedIn, setLockedIn] = useState<
-    false | "sending" | { hash: string }
-  >(false);
+    Readonly<{
+      lockedIn: false | { hash: string };
+      sent: boolean;
+    }>
+  >({ lockedIn: false, sent: false });
   const [myOrderSent, setMyOrderSent] = useState<false | SignedOrder>(false);
 
   const [signedOrderCache, _internalUpdateSignedOrderCache] = useState<
@@ -144,7 +147,7 @@ export function TradeUI({
 
   const updateMyTradeOffer = useCallback(
     (callback: (items: Item<"ERC20" | "ERC721" | "ERC1155">[]) => void) => {
-      setLockedIn(false);
+      setLockedIn({ lockedIn: false, sent: false });
       externalUpdateMyTradeOffer(callback);
     },
     [externalUpdateMyTradeOffer]
@@ -152,8 +155,8 @@ export function TradeUI({
 
   useEffect(() => {
     if (hardError) {
-      if (typeof lockedIn === "object") {
-        setLockedIn(false);
+      if (lockedIn.lockedIn) {
+        setLockedIn({ lockedIn: false, sent: false });
       }
       if (myOrderSent) {
         setMyOrderSent(false);
@@ -162,7 +165,7 @@ export function TradeUI({
   }, [hardError, lockedIn, myOrderSent]);
 
   useEffect(() => {
-    setLockedIn(false);
+    setLockedIn({ lockedIn: false, sent: false });
   }, [
     tradingPartner.myTradeOffer,
     tradingPartner.tradeOffer,
@@ -171,7 +174,8 @@ export function TradeUI({
 
   useEffect(() => {
     if (
-      (!lockedIn || tradingPartner.tradeStatus.type === "negotiating") &&
+      (!lockedIn.lockedIn ||
+        tradingPartner.tradeStatus.type === "negotiating") &&
       myOrderSent
     ) {
       setMyOrderSent(false);
@@ -205,7 +209,7 @@ export function TradeUI({
 
   useEffect(() => {
     if (orderSuccess) {
-      setLockedIn(false);
+      setLockedIn({ lockedIn: false, sent: false });
       setPickBalanceItem(null);
       setSoftWarning(null);
       updateMyTradeOffer((items) => (items.length = 0));
@@ -245,7 +249,7 @@ export function TradeUI({
   });
 
   const bothPlayersAccepted =
-    lockedIn && tradingPartner.tradeStatus.type !== "negotiating";
+    lockedIn.lockedIn && tradingPartner.tradeStatus.type !== "negotiating";
 
   const iGoFirst = tradingPartner.goesFirstAddress === address;
 
@@ -331,7 +335,7 @@ export function TradeUI({
   }
 
   useEffect(() => {
-    if (lockedIn && order) {
+    if (lockedIn.lockedIn && order) {
       if (tradingPartner.tradeStatus.type === "locked_in") {
         const partnerHash = tradingPartner.tradeStatus.orderHash;
         const hash = nftSwap.getOrderHash(order);
@@ -375,19 +379,30 @@ export function TradeUI({
   ]);
 
   useEffect(() => {
-    if (order && lockedIn === "sending") {
-      const hash = nftSwap.getOrderHash(order);
-      p2p.send(tradingPartner.peer, {
-        type: "lockin",
-        lockedOrder: { hash },
-      });
-      setLockedIn({ hash });
-    } else if (!lockedIn) {
-      p2p.send(tradingPartner.peer, {
-        type: "lockin",
-        lockedOrder: false,
-      });
-      setTimeLeftUntilTradeExpires(DEFAULT_TIME);
+    if (!order) {
+      return;
+    }
+    if (!lockedIn.sent) {
+      if (lockedIn.lockedIn) {
+        p2p.send(tradingPartner.peer, {
+          type: "lockin",
+          lockedOrder: { hash: lockedIn.lockedIn.hash },
+        });
+        setLockedIn({
+          ...lockedIn,
+          sent: true,
+        });
+      } else {
+        p2p.send(tradingPartner.peer, {
+          type: "lockin",
+          lockedOrder: false,
+        });
+        setLockedIn({
+          ...lockedIn,
+          sent: true,
+        });
+        setTimeLeftUntilTradeExpires(DEFAULT_TIME);
+      }
     }
   }, [nftSwap, order, p2p, tradingPartner.peer, lockedIn]);
 
@@ -658,7 +673,7 @@ export function TradeUI({
                   <Radio
                     name="myRadio"
                     id="myRadio"
-                    isDisabled={Boolean(lockedIn)}
+                    isDisabled={Boolean(lockedIn.lockedIn)}
                     value={"clickme"}
                     onChange={() => updateGoesFirst(tradingPartner.address)}
                     checked={
@@ -703,10 +718,15 @@ export function TradeUI({
                     (tradingPartner.myTradeOffer.length === 0 &&
                       tradingPartner.tradeOffer.length === 0)
                   }
-                  checked={Boolean(lockedIn)}
+                  checked={Boolean(lockedIn.lockedIn)}
                   onChange={() => {
-                    const newAcceptedState = !lockedIn;
-                    setLockedIn(newAcceptedState ? "sending" : false);
+                    const newAcceptedState = !lockedIn.lockedIn;
+                    setLockedIn({
+                      sent: false,
+                      lockedIn: newAcceptedState
+                        ? { hash: nftSwap.getOrderHash(order) }
+                        : false,
+                    });
                   }}
                   id="myAccept"
                   label="Accept Offer"
@@ -963,7 +983,7 @@ export function TradeUI({
                   <Radio
                     name="theirRadio"
                     id="theirRadio"
-                    isDisabled={Boolean(lockedIn)}
+                    isDisabled={Boolean(lockedIn.lockedIn)}
                     checked={tradingPartner.goesFirstAddress === address}
                     onChange={() => updateGoesFirst(address)}
                   />
