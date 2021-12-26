@@ -44,6 +44,7 @@ Builds the app for production to the `build` folder.
 - [x] make trading work, lol (signature error??)
 # NICE TO HAVE TODO:
 - [] ENS
+- [] add "kill" button that you can race your trading partner to, lol
 - [] make trade button flash when new things happen
 - [] add drag & drop (partially implemented, but doesn't work hehe)
 - [] buggy buggy css, please flexbox wizards, save me

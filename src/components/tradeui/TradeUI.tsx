@@ -613,7 +613,7 @@ export function TradeUI({
             ...(tradingPartner
               ? [
                   {
-                    title: "Trading Partner's Wallet",
+                    title: "Their Wallet",
                     contents: (
                       <WalletContentsBox
                         accountAddress={tradingPartner.address}
@@ -945,7 +945,7 @@ export function TradeUI({
               title={
                 <>
                   <span style={{ paddingRight: "16px" }}>
-                    Partner's trade offer
+                    Their trade offer
                   </span>
                   <Radio
                     name="theirRadio"
@@ -1069,7 +1069,7 @@ export const tradeButtonStates: {
   },
   waiting_for_partner: {
     icon: loadingIcon,
-    altText: "Waiting for partner...",
+    altText: "Waiting for them...",
     enabled: false,
   },
 };
