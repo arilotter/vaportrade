@@ -608,6 +608,19 @@ export function TradeUI({
                   onItemSelected={setPickBalanceItem}
                   subtractItems={tradingPartner.myTradeOffer}
                   mine={true}
+                  onItemDropped={(item) => {
+                    updateMyTradeOffer((items) => {
+                      const matchingItem = items.find(
+                        (i) =>
+                          i.contractAddress === item.contractAddress &&
+                          i.tokenID === item.tokenID
+                      );
+
+                      if (matchingItem) {
+                        items.splice(items.indexOf(matchingItem), 1);
+                      }
+                    });
+                  }}
                 />
               ),
             },

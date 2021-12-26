@@ -100,3 +100,12 @@ body {
   max-height: calc(100vh - 48px);
   transform: translateY(-12px);
 }
+
+.canDrop {
+  background-color: rgba(0, 0, 170, 0.3);
+  background-blend-mode: overlay;
+}
+
+.isHovering {
+  background-color: rgba(0, 0, 170, 0.7);
+}

@@ -35,8 +35,8 @@ export function TradeOffer({
     <div className="tradeOffer">
       <div className="itemBoxContainer" ref={drop}>
         <div
-          className={`itemBox ${canDrop ? "itemBoxCanDrop" : ""} ${
-            isHovering ? "itemBoxIsHovering" : ""
+          className={`itemBox ${canDrop ? "canDrop" : ""} ${
+            isHovering ? "isHovering" : ""
           }`}
         >
           {[...items]

@@ -24,6 +24,7 @@ import {
   fetchBalances,
   getItems,
 } from "./contracts";
+import { useDrop } from "react-dnd";
 interface WalletContentsBoxProps {
   accountAddress: string;
   indexer: sequence.indexer.Indexer;
@@ -31,6 +32,7 @@ interface WalletContentsBoxProps {
   contracts: ContractsDB;
   requestTokensFetch: (tokens: FetchableToken[]) => void;
   onItemSelected: (item: Item<KnownContractType>) => void;
+  onItemDropped?: (item: Item<KnownContractType>) => void;
   subtractItems:
     | ReadonlyArray<Item<KnownContractType>>
     | readonly NetworkItem[];
@@ -50,7 +52,19 @@ export function WalletContentsBox({
   subtractItems,
   className,
   mine,
+  onItemDropped,
 }: WalletContentsBoxProps) {
+  const [{ canDrop, isHovering }, drop] = useDrop(() => ({
+    accept: mine
+      ? DragItemType.MY_ITEM_IN_TRADE
+      : DragItemType.THEIR_ITEM_IN_TRADE,
+    drop: onItemDropped,
+    collect: (monitor) => ({
+      canDrop: !!monitor.canDrop(),
+      isHovering: !!monitor.isOver() && !!monitor.canDrop(),
+    }),
+  }));
+
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
 
@@ -136,7 +150,12 @@ export function WalletContentsBox({
     <>
       <div className={`itemBoxContainer ${className}`}>
         {error ? <div className="error">{error}</div> : null}
-        <div className="itemBox">
+        <div
+          className={`itemBox ${canDrop ? "canDrop" : ""} ${
+            isHovering ? "isHovering" : ""
+          }`}
+          ref={drop}
+        >
           {erc1155Folders
             .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
             .map(({ name, contractAddress: address, iconUrl }) => (
