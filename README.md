@@ -25,6 +25,7 @@ Builds the app for production to the `build` folder.
 
 
 # PRE-LAUNCH TODO:
+- [ ] why doesn't closing a trade work?
 - [~] fix weird gas estimation all over the place - perhaps add buffer?
 - [x] p2 trade done UI has get TX hash
 - [x] keep listeners for all not-yet-filled signed orders around, and fire trade success if we hit one!
@@ -46,7 +47,7 @@ Builds the app for production to the `build` folder.
 # NICE TO HAVE TODO:
 - [] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
 - [] ENS, unstoppable domains?
-- [] why does Sequence logout feel so buggy
+- [] why does Sequence logout feel so buggy, how do I deauth?
 - [] add "kill" button that you can race your trading partner to, lol
 - [] make trade button flash when new things happen
 - [] buggy buggy css, please flexbox wizards, save me
