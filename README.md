@@ -1,7 +1,7 @@
 # vaportrade
 It's lit!
 
-PRs welcome! The CSS is super hacky, the design needs work, I depend on a weird library called packard-belle when I should really be writing these styles myself, there's `<div><div><div></div></div></div>`s everywhere, and it scales terribly on different screen sizes. <3 to anyone who contributes :)
+PRs welcome! The CSS is super hacky, the design needs work, I depend on a component library called packard-belle when I should really be writing these styles myself, there's `<div><div><div></div></div></div>`s everywhere, and it scales terribly on different screen sizes. <3 to anyone who contributes :)
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
@@ -11,10 +11,10 @@ In the project directory, you can run:
 
 ### `npm run start`
 
-Runs the app in the development mode.\
+Runs the app in the development mode.
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-The page will reload if you make edits.\
+The page will reload if you make edits.
 You will also see any lint errors in the console.
 
 Make sure you're running a cors-anywhere proxy at localhost:8080.
@@ -25,10 +25,9 @@ Builds the app for production to the `build` folder.
 
 
 # PRE-LAUNCH TODO:
-- [] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
-- [] keep listeners for all not-yet-filled signed orders around, and fire trade success if we hit one!
-- [~] p2 trade done UI has get TX hash
 - [~] fix weird gas estimation all over the place - perhaps add buffer?
+- [x] p2 trade done UI has get TX hash
+- [x] keep listeners for all not-yet-filled signed orders around, and fire trade success if we hit one!
 - [x] test with erc721s - instant add-remove without amount UI, and instant drag/drop.
 - [x] fix skyweaver token balance 1/100th??
 - [x] what happens if p1 signs, p2 changes order.. how do we invalidate p1's order without paying? :| e.g. what happens if they do a new trade req, then p2 is allowed to fill the first order still if it happened fast enough? solution: cache not-yet-filled orders :)
@@ -45,6 +44,7 @@ Builds the app for production to the `build` folder.
 - [x] make taskbar flash when new things happen ( just need css )
 - [x] make trading work, lol (signature error??)
 # NICE TO HAVE TODO:
+- [] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
 - [] ENS, unstoppable domains?
 - [] why does Sequence logout feel so buggy
 - [] add "kill" button that you can race your trading partner to, lol

@@ -46,7 +46,12 @@ import { formatBytes32String, randomBytes } from "ethers/lib/utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { chainId, config, LS_SIGNED_ORDER_CACHE_KEY } from "../../settings";
 import type { SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
-import type { OrderInfoStruct } from "@traderxyz/nft-swap-sdk/dist/contracts/ExchangeContract";
+import type {
+  FillEvent,
+  OrderInfoStruct,
+} from "@traderxyz/nft-swap-sdk/dist/contracts/ExchangeContract";
+import type { TypedListener } from "@traderxyz/nft-swap-sdk/dist/contracts/common";
+
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
   metadata: sequence.metadata.Metadata;
@@ -78,6 +83,12 @@ type TradeButtonStatus =
   | "waiting_for_order_completion";
 
 const DEFAULT_TIME = "...";
+
+interface CachedSignedOrder {
+  signedOrder: SignedOrder;
+  myItems: Array<Item<"ERC20" | "ERC721" | "ERC1155">>;
+  theirItems: Array<Item<"ERC20" | "ERC721" | "ERC1155">>;
+}
 export function TradeUI({
   indexer,
   tradingPartner,
@@ -106,11 +117,11 @@ export function TradeUI({
   const [myOrderSent, setMyOrderSent] = useState<false | SignedOrder>(false);
 
   const [signedOrderCache, _internalUpdateSignedOrderCache] = useState<
-    ReadonlyArray<SignedOrder>
+    ReadonlyArray<Readonly<CachedSignedOrder>>
   >(JSON.parse(localStorage.getItem(LS_SIGNED_ORDER_CACHE_KEY) ?? "[]"));
 
   const updateSignedOrderCache = useCallback(
-    (signedOrders: ReadonlyArray<SignedOrder>) => {
+    (signedOrders: ReadonlyArray<Readonly<CachedSignedOrder>>) => {
       _internalUpdateSignedOrderCache(signedOrders);
       localStorage.setItem(
         LS_SIGNED_ORDER_CACHE_KEY,
@@ -448,16 +459,19 @@ export function TradeUI({
       const deadOrders = (
         await Promise.all(
           signedOrderCache.map<
-            Promise<{ order: SignedOrder; orderInfo: OrderInfoStruct | false }>
-          >((order) => {
+            Promise<{
+              signedOrder: SignedOrder;
+              orderInfo: OrderInfoStruct | false;
+            }>
+          >(({ signedOrder }) => {
             const timeLeft =
-              Number.parseInt(order.expirationTimeSeconds, 10) * 1000 -
+              Number.parseInt(signedOrder.expirationTimeSeconds, 10) * 1000 -
               Date.now();
             return timeLeft <= 0
-              ? Promise.resolve({ order, orderInfo: false })
+              ? Promise.resolve({ signedOrder, orderInfo: false })
               : nftSwap.exchangeContract
-                  .getOrderInfo(order)
-                  .then((orderInfo) => ({ order, orderInfo }));
+                  .getOrderInfo(signedOrder)
+                  .then((orderInfo) => ({ signedOrder, orderInfo }));
           })
         )
       )
@@ -465,13 +479,13 @@ export function TradeUI({
           ({ orderInfo }) =>
             !orderInfo || orderInfo.orderStatus !== OrderStatus.Fillable
         )
-        .map(({ order }) => order);
+        .map(({ signedOrder }) => signedOrder);
 
       if (deadOrders.length) {
         // Remove orders that are dead :)
         updateSignedOrderCache(
           signedOrderCache.filter(
-            (signedOrder) =>
+            ({ signedOrder }) =>
               !deadOrders.some(
                 (deadOrder) =>
                   nftSwap.getOrderHash(deadOrder) ===
@@ -482,6 +496,27 @@ export function TradeUI({
       }
     }
     invalidateDeadOrders();
+
+    // Listen for existing orders to finish, show success if they do.
+    const cancelWatchingOrders = signedOrderCache.map(
+      ({ signedOrder, myItems, theirItems }) => {
+        const { cancelListeners, orderFilled } = waitUntilOrderFilled(
+          nftSwap,
+          signedOrder
+        );
+        orderFilled.then((result) => {
+          if (typeof result === "object") {
+            setOrderSuccess({
+              txHash: result.txHash,
+              myItems,
+              theirItems,
+            });
+          }
+        });
+        return cancelListeners;
+      }
+    );
+    return () => cancelWatchingOrders.forEach((cancel) => cancel());
   }, [nftSwap, order, updateSignedOrderCache, signedOrderCache]);
   /*
    If Alice & Bob set up a trade, Alice signs the order and sends their signature to Bob, then Bob cancels in the vaportrade UI,
@@ -500,7 +535,7 @@ export function TradeUI({
       !myOrderSent
     ) {
       const matchingSignedOrder = signedOrderCache.find(
-        (signedOrder) =>
+        ({ signedOrder }) =>
           nftSwap.getOrderHash({
             ...signedOrder,
             salt: fakeSalt,
@@ -515,9 +550,9 @@ export function TradeUI({
       if (matchingSignedOrder) {
         p2p.send(tradingPartner.peer, {
           type: "accept",
-          order: matchingSignedOrder,
+          order: matchingSignedOrder.signedOrder,
         });
-        setMyOrderSent(matchingSignedOrder);
+        setMyOrderSent(matchingSignedOrder.signedOrder);
       }
     }
   }, [
@@ -618,10 +653,11 @@ export function TradeUI({
     });
   const openOrdersThatArentThisOne = signedOrderCache.filter(
     (openOrder) =>
-      openOrder.makerAddress.toLowerCase() === address.toLowerCase() &&
+      openOrder.signedOrder.makerAddress.toLowerCase() ===
+        address.toLowerCase() &&
       (!order ||
         nftSwap.getOrderHash({
-          ...openOrder,
+          ...openOrder.signedOrder,
           salt: fakeSalt,
           expirationTimeSeconds: zero.toString(),
         }) !== fakeOrderHash)
@@ -832,7 +868,11 @@ export function TradeUI({
                           );
                           updateSignedOrderCache([
                             ...signedOrderCache,
-                            signedOrder,
+                            {
+                              signedOrder,
+                              myItems: myHalfOfOrder.items,
+                              theirItems: theirHalfOfOrder.items,
+                            },
                           ]);
 
                           p2p?.send(tradingPartner.peer, {
@@ -844,8 +884,8 @@ export function TradeUI({
                           const orderFilled = await waitUntilOrderFilled(
                             nftSwap,
                             signedOrder
-                          );
-                          if (orderFilled) {
+                          ).orderFilled;
+                          if (typeof orderFilled === "object") {
                             setOrderSuccess({
                               txHash: orderFilled.txHash,
                               myItems: myHalfOfOrder.items,
@@ -1001,7 +1041,10 @@ export function TradeUI({
                         <li>
                           (
                           {formatTimeLeft(
-                            Number.parseInt(order.expirationTimeSeconds, 10) *
+                            Number.parseInt(
+                              order.signedOrder.expirationTimeSeconds,
+                              10
+                            ) *
                               1000 -
                               Date.now()
                           )}
@@ -1148,21 +1191,84 @@ export const tradeButtonStates: {
 };
 
 const fakeSalt = formatBytes32String("vaportrade_fake_salt");
-async function waitUntilOrderFilled(
+function waitUntilOrderFilled(
   nftSwap: NftSwap,
   signedOrder: SignedOrder
-): Promise<false | { txHash: string }> {
-  while (true) {
-    const orderInfo = await nftSwap.exchangeContract.getOrderInfo(signedOrder);
-    if (orderInfo.orderStatus === OrderStatus.Fillable) {
-      await new Promise((res) => setTimeout(res, 10000));
-      continue;
-    } else if (orderInfo.orderStatus === OrderStatus.FullyFilled) {
-      // TODO Get tx hash that filled this order
-      return { txHash: "DUMMY_TX_HASH_TODO" };
-    } else {
-      // expired, bad order, etc
-      return false;
+): {
+  orderFilled: Promise<false | { txHash: string } | "cancelled">;
+  cancelListeners: () => void;
+} {
+  const orderHash = nftSwap.getOrderHash(signedOrder);
+  const fillEventFilter = nftSwap.exchangeContract.filters.Fill(
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    orderHash
+  );
+  let fillEventCallback: TypedListener<FillEvent> | undefined;
+  const waitFill = new Promise<{ txHash: string }>((res) => {
+    fillEventCallback = (
+      _a,
+      _b,
+      _c,
+      _d,
+      _e,
+      _f,
+      _g,
+      _h,
+      _i,
+      _j,
+      _k,
+      _l,
+      _m,
+      _n,
+      fillEvent
+    ) => res({ txHash: fillEvent.transactionHash });
+    nftSwap.exchangeContract.on(fillEventFilter, fillEventCallback);
+  });
+  let done = false;
+  const orderFilled = Promise.race([
+    waitFill,
+    (async () => {
+      while (!done) {
+        const orderInfo = await nftSwap.exchangeContract.getOrderInfo(
+          signedOrder
+        );
+        if (
+          orderInfo.orderStatus === OrderStatus.Fillable ||
+          // if it's filled, the other promise will catch it.
+          orderInfo.orderStatus === OrderStatus.FullyFilled
+        ) {
+          await new Promise((res) => setTimeout(res, 10000));
+          continue;
+        } else {
+          // expired, bad order, etc
+          done = true;
+        }
+      }
+      return false as const;
+    })(),
+  ]);
+
+  let cancel: () => void;
+  const cancelled = new Promise<"cancelled">((res) => {
+    cancel = () => res("cancelled");
+  });
+  const cancelListeners = () => {
+    done = true;
+    // Always true, but Typescript doesn't get that Promise callbacks run immediately.
+    if (fillEventCallback) {
+      nftSwap.exchangeContract.off(fillEventFilter, fillEventCallback);
     }
-  }
+    cancel();
+  };
+  orderFilled.then(cancelListeners);
+
+  return {
+    orderFilled: Promise.race([cancelled, orderFilled]),
+    cancelListeners,
+  };
 }
