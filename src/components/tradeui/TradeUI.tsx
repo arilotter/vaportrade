@@ -33,7 +33,12 @@ import tradeIconDisabled from "./sendDisabled.png";
 import loadingIcon from "../../icons/loadingIcon.gif";
 import approveIcon from "../../icons/approve.png";
 import tipIcon from "../../icons/tip.png";
-import { NftSwap } from "@traderxyz/nft-swap-sdk";
+import {
+  FillEvent,
+  NftSwap,
+  OrderInfoStruct,
+  SignedOrder,
+} from "@traderxyz/nft-swap-sdk";
 import {
   CollectiblesDB,
   ContractsDB,
@@ -45,12 +50,7 @@ import { useWeb3React } from "@web3-react/core";
 import { formatBytes32String, randomBytes } from "ethers/lib/utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { chainId, config, LS_SIGNED_ORDER_CACHE_KEY } from "../../settings";
-import type { SignedOrder } from "@traderxyz/nft-swap-sdk/dist/sdk/types";
-import type {
-  FillEvent,
-  OrderInfoStruct,
-} from "@traderxyz/nft-swap-sdk/dist/contracts/ExchangeContract";
-import type { TypedListener } from "@traderxyz/nft-swap-sdk/dist/contracts/common";
+import { TypedListener } from "@traderxyz/nft-swap-sdk/dist/contracts/common";
 
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
