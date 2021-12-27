@@ -31,9 +31,9 @@ interface WalletContentsBoxProps {
   collectibles: CollectiblesDB;
   contracts: ContractsDB;
   requestTokensFetch: (tokens: FetchableToken[]) => void;
-  onItemSelected: (item: Item<KnownContractType>) => void;
+  onItemSelected?: (item: Item<KnownContractType>) => void;
   onItemDropped?: (item: Item<KnownContractType>) => void;
-  subtractItems:
+  subtractItems?:
     | ReadonlyArray<Item<KnownContractType>>
     | readonly NetworkItem[];
   className?: string;
@@ -98,7 +98,7 @@ export function WalletContentsBox({
     );
   }, [balances, requestTokensFetch]);
 
-  const erc20And721 = [
+  const erc20 = [
     ...getItems({
       balances,
       contracts,
@@ -148,7 +148,10 @@ export function WalletContentsBox({
 
   return (
     <>
-      <div className={`itemBoxContainer ${className}`}>
+      <div
+        className={`itemBoxContainer ${className}`}
+        onContextMenu={(ev) => ev.preventDefault()}
+      >
         {error ? <div className="error">{error}</div> : null}
         <div
           className={`itemBox ${canDrop ? "canDrop" : ""} ${
@@ -158,17 +161,17 @@ export function WalletContentsBox({
         >
           {nftFolders
             .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-            .map(({ name, contractAddress: address, iconUrl, type }) => (
+            .map(({ name, contractAddress, iconUrl, type }) => (
               <Folder
-                key={getContractKey(chainId, address)}
+                key={getContractKey(chainId, contractAddress)}
                 name={name}
-                address={address}
+                contractAddress={contractAddress}
                 iconUrl={iconUrl.length ? iconUrl : missingIcon}
-                onFolderOpen={() => setTokenFolderAddress(address)}
+                onFolderOpen={() => setTokenFolderAddress(contractAddress)}
                 type={type as "ERC721" | "ERC1155"}
               />
             ))}
-          {erc20And721
+          {erc20
             // sort assets with icons first :)
             // really should sort by price tho
             .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
@@ -180,11 +183,31 @@ export function WalletContentsBox({
                   item.contractAddress,
                   item.tokenID
                 )}
-                onDoubleClick={() => onItemSelected(item)}
+                onDoubleClick={() => {
+                  if (onItemSelected) {
+                    onItemSelected(item);
+                  }
+                }}
                 dragItemType={
                   mine
                     ? DragItemType.MY_ITEM_IN_WALLET
                     : DragItemType.THEIR_ITEM_IN_WALLET
+                }
+                menuOptions={
+                  onItemSelected
+                    ? [
+                        {
+                          title: subtractItems?.some(
+                            (i) =>
+                              i.contractAddress === item.contractAddress &&
+                              i.tokenID === item.tokenID
+                          )
+                            ? "Change Amount..."
+                            : "Add to Trade...",
+                          onClick: () => onItemSelected(item),
+                        },
+                      ]
+                    : []
                 }
               />
             ))}
@@ -216,7 +239,7 @@ export function WalletContentsBox({
           className="tokenFolder"
           onClose={() => setTokenFolderAddress(null)}
         >
-          <div className="itemBox">
+          <div className="itemBox" onContextMenu={(ev) => ev.preventDefault()}>
             {nftsInOpenFolder
               .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
               .map((item) => (
@@ -227,11 +250,35 @@ export function WalletContentsBox({
                     item.contractAddress,
                     item.tokenID
                   )}
-                  onDoubleClick={() => onItemSelected(item)}
+                  onDoubleClick={() => {
+                    if (onItemSelected) {
+                      onItemSelected(item);
+                    }
+                  }}
                   dragItemType={
                     mine
                       ? DragItemType.MY_ITEM_IN_WALLET
                       : DragItemType.THEIR_ITEM_IN_WALLET
+                  }
+                  menuOptions={
+                    onItemSelected
+                      ? [
+                          {
+                            title: subtractItems?.some(
+                              (i) =>
+                                i.contractAddress === item.contractAddress &&
+                                i.tokenID === item.tokenID
+                            )
+                              ? item.type === "ERC721"
+                                ? "Remove from Trade"
+                                : "Change Amount..."
+                              : item.type === "ERC721"
+                              ? "Add to Trade"
+                              : "Add to Trade...",
+                            onClick: () => onItemSelected(item),
+                          },
+                        ]
+                      : []
                   }
                 />
               ))}

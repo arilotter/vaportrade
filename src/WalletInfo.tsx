@@ -11,7 +11,6 @@ import {
   FetchableToken,
 } from "./components/tradeui/contracts";
 import "./WalletInfo.css";
-import { useOnKeyDown } from "./utils/utils";
 
 interface WalletInfoProps {
   connector: AbstractConnector;
@@ -35,7 +34,6 @@ export function WalletInfo({
   disconnect,
   requestTokensFetch,
 }: WalletInfoProps) {
-  useOnKeyDown("Escape", onClose);
   const [address, setAddress] = useState<string | null>(null);
   useEffect(() => {
     connector.getAccount().then(setAddress);
@@ -98,8 +96,6 @@ export function WalletInfo({
                 collectibles={collectibles}
                 contracts={contracts}
                 requestTokensFetch={requestTokensFetch}
-                onItemSelected={() => {}}
-                subtractItems={[]}
                 mine={true}
               />
             </div>

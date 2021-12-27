@@ -38,7 +38,7 @@ export function Contacts<T>({
     <div className="modal darkenbg">
       <Window
         className="WindowAction contactsWindow"
-        title="Pick a trading partner"
+        title="Find People to Trade With"
         onClose={onClose}
         onHelp={onHelp}
         resizable={false}
@@ -48,7 +48,7 @@ export function Contacts<T>({
           <div className="contactsSearch">
             <div className="contactsFilters">
               <div className="WindowAction__location">
-                <label>Load partners from:</label>
+                <label>Load people from:</label>
                 <FakeSelect title="The Internet" isDisabled />
               </div>
               <div className="WindowAction__location">
@@ -74,9 +74,9 @@ export function Contacts<T>({
                 options={[
                   options.length
                     ? {
-                        title: "No peers match filter.",
-                        value: "No peers match filter.",
-                        alt: "No peers match filter.",
+                        title: "No online addresses match filter.",
+                        value: "No online addresses match filter.",
+                        alt: "No online addresses match filter.",
                         icon: searchIcon,
                       }
                     : {
@@ -101,7 +101,7 @@ export function Contacts<T>({
               Send Trade Request
             </ButtonForm>
             <ButtonForm onClick={requestMorePeers} className="pre">
-              Request more peers
+              Request More Peers
             </ButtonForm>
             <ButtonForm onClick={onClose} className="pre">
               Cancel

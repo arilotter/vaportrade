@@ -5,16 +5,20 @@ import {
   ContractType,
   DragItemType,
   Item,
+  PropertiesContext,
+  RightClickMenuContext,
 } from "../../utils/utils";
 import missingIcon from "./missing.png";
 import "./DraggableIcon.css";
 import { BigNumber } from "ethers";
+import { useCallback, useContext, MouseEvent } from "react";
 
 interface DraggableIconProps {
   item: Item<ContractType>;
   onDoubleClick: () => void;
   isDisabled?: boolean;
   dragItemType: typeof DragItemType[keyof typeof DragItemType];
+  menuOptions?: ContextMenuOptions[];
 }
 
 export function DraggableIcon({
@@ -22,7 +26,27 @@ export function DraggableIcon({
   onDoubleClick,
   isDisabled,
   dragItemType,
+  menuOptions,
 }: DraggableIconProps) {
+  const { setContextMenu } = useContext(RightClickMenuContext);
+  const { openPropertiesWindow } = useContext(PropertiesContext);
+  const onContext = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setContextMenu({
+        x: e.pageX,
+        y: e.pageY,
+        menuOptions: [
+          ...(menuOptions ? [...menuOptions, "divider" as const] : []),
+          {
+            title: "Properties",
+            onClick: () => openPropertiesWindow(item),
+          },
+        ],
+      });
+    },
+    [menuOptions, setContextMenu, openPropertiesWindow, item]
+  );
   const [{ isDragging }, drag] = useDrag(() => ({
     type: dragItemType,
     collect: (monitor) => ({
@@ -52,6 +76,7 @@ export function DraggableIcon({
         cursor: "move",
         position: "relative",
       }}
+      onContextMenu={onContext}
     >
       <ExplorerIcon
         onDoubleClick={isDisabled ? () => {} : onDoubleClick}

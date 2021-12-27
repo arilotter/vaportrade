@@ -705,9 +705,6 @@ export function TradeUI({
                   collectibles={collectibles}
                   contracts={contracts}
                   requestTokensFetch={requestTokensFetch}
-                  onItemSelected={() => {
-                    // noop
-                  }}
                   subtractItems={tradingPartner.tradeOffer}
                   mine={false}
                 />
@@ -755,6 +752,11 @@ export function TradeUI({
                   }
                 }}
                 onItemDropped={addItemToTrade}
+                onRemoveFromTrade={(item) => {
+                  updateMyTradeOffer((items) => {
+                    items.splice(items.indexOf(item), 1);
+                  });
+                }}
                 mine
               />
             </DetailsSection>

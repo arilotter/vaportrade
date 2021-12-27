@@ -2,7 +2,8 @@ import { ChainId } from "@0xsequence/network";
 import { NftSwap, Order, SignedOrder } from "@traderxyz/nft-swap-sdk";
 import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
-import { useEffect } from "react";
+import { createContext, useEffect } from "react";
+import { PropertiesProps } from "../components/tradeui/Properties";
 
 export interface FailableTracker extends Tracker {
   failed: boolean;
@@ -303,3 +304,27 @@ export function formatTimeLeft(timeLeft: number): string {
   const seconds = `${Math.max(0, Math.floor((timeLeft % 6e4) / 1000))}`;
   return `${minutes}:${(seconds.length < 2 ? "0" : "") + seconds}`;
 }
+
+export interface Menu {
+  x: number;
+  y: number;
+  menuOptions: Array<"divider" | ContextMenuOptions>;
+}
+
+export const RightClickMenuContext = createContext<{
+  contextMenu: Menu | null;
+  setContextMenu: (contextMenu: Menu) => void;
+}>({
+  setContextMenu: () => {},
+  contextMenu: null,
+});
+
+export const PropertiesContext = createContext<{
+  properties: PropertiesProps[];
+  openPropertiesWindow: (props: PropertiesProps) => void;
+  closePropertiesWindow: (props: PropertiesProps) => void;
+}>({
+  properties: [],
+  openPropertiesWindow: () => {},
+  closePropertiesWindow: () => {},
+});

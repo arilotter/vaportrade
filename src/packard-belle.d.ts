@@ -50,7 +50,6 @@ declare module "packard-belle" {
   export function ButtonIconSmall(
     props: any & { icon: string; hasBorder: boolean }
   ): JSX.Element;
-  export function StandardMenu(props: any): JSX.Element;
   export function StandardMenuHOC(props: any): JSX.Element;
   export function ExplorerIcon(props: any): JSX.Element;
   export function ListIcon(props: any): JSX.Element;
@@ -126,5 +125,20 @@ declare module "packard-belle" {
     title: React.ReactNode;
     children: React.ReactNode;
   }): JSX.Element;
+  export function StandardMenu(props: {
+    isActive: boolean;
+    className?: string;
+    closeOnClick: (e: () => void) => void;
+    mouseEnterItem?: (e: any) => void;
+    options: Array<"divider" | ContextMenuOptions>;
+  }): JSX.Element;
+}
+interface ContextMenuOptions {
+  title: string;
+  className?: string;
+  icon?: string;
+  isDisabled?: boolean;
+  onClick?: () => void;
+  options?: Array<Divider | ContextMenuOptions>;
 }
 interface NestedArray<T> extends Array<T | NestedArray<T>> {}

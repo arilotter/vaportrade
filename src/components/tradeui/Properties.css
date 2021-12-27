@@ -1,0 +1,15 @@
+.propsImage {
+  text-align: center;
+}
+.propsImage img {
+  max-width: 128px;
+}
+
+.propsProp {
+  padding: 4px 8px;
+}
+
+.propsProp span {
+  display: inline-block;
+  width: 96px;
+}

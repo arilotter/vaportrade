@@ -22,6 +22,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+}
+.modal * {
+  pointer-events: initial;
 }
 .darkenbg {
   background: rgba(0, 0, 0, 0.8);
@@ -108,4 +112,9 @@ body {
 
 .isHovering {
   background-color: rgba(0, 0, 170, 0.7);
+}
+
+.StandardMenu.css div:active,
+.StandardMenu.css div .active {
+  display: block !important;
 }

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
-import { Window, Theme, WindowAlert } from "packard-belle";
+import { Window, Theme, WindowAlert, StandardMenu } from "packard-belle";
 import P2PT, { Peer, Tracker } from "p2pt";
 
 import { TrackersList } from "./components/TrackersList";
@@ -10,6 +10,9 @@ import {
   FailableTracker,
   isTradingPeer,
   isVaportradeMessage,
+  Menu,
+  PropertiesContext,
+  RightClickMenuContext,
   TradingPeer,
   VaportradeMessage,
 } from "./utils/utils";
@@ -45,9 +48,16 @@ import { SequenceMetaProvider } from "./SequenceMetaProvider";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TipUI } from "./TipUI";
+import { Properties, PropertiesProps } from "./components/tradeui/Properties";
 
 enableMapSet();
 function App() {
+  const [contextMenu, setContextMenu] = useState<Menu | null>(null);
+  useEffect(() => {
+    const listener = () => setContextMenu(null);
+    window.addEventListener("resize", listener);
+    return () => window.removeEventListener("resize", listener);
+  });
   return (
     <div
       style={{
@@ -58,15 +68,43 @@ function App() {
         backgroundRepeat: "no-repeat",
         height: "100%",
       }}
+      onClick={() => setContextMenu(null)}
+      onDrag={() => setContextMenu(null)}
     >
       <Theme className="container">
-        <DndProvider backend={HTML5Backend}>
-          <Web3ReactProvider getLibrary={getLibrary}>
-            <WalletSignin>
-              <Vaportrade />
-            </WalletSignin>
-          </Web3ReactProvider>
-        </DndProvider>
+        <RightClickMenuContext.Provider
+          value={{
+            contextMenu,
+            setContextMenu,
+          }}
+        >
+          <DndProvider backend={HTML5Backend}>
+            <Web3ReactProvider getLibrary={getLibrary}>
+              <WalletSignin>
+                <Vaportrade />
+              </WalletSignin>
+            </Web3ReactProvider>
+          </DndProvider>
+        </RightClickMenuContext.Provider>
+        {contextMenu ? (
+          <div
+            style={{
+              position: "fixed",
+              top: `${contextMenu.y}px`,
+              left: `${contextMenu.x}px`,
+            }}
+          >
+            <StandardMenu
+              isActive
+              className="css"
+              options={contextMenu.menuOptions}
+              closeOnClick={(onClicked) => () => {
+                setContextMenu(null);
+                onClicked();
+              }}
+            />
+          </div>
+        ) : null}
       </Theme>
     </div>
   );
@@ -149,6 +187,29 @@ function Vaportrade() {
 
   const walletIcon = connectorsIconsByName[walletName];
 
+  const [
+    activePropertiesWindowIndex,
+    setActivePropertiesWindowIndex,
+  ] = useState(-1);
+  const [properties, updateProperties] = useImmer<Array<PropertiesProps>>([]);
+
+  const closePropertiesWindow = useCallback(
+    (props: PropertiesProps) => {
+      const matching = properties.findIndex(
+        (pw) =>
+          pw.contractAddress === props.contractAddress &&
+          pw.tokenID === props.tokenID
+      );
+      updateProperties((propertiesWindows) => {
+        if (matching !== -1) {
+          propertiesWindows.splice(matching, 1);
+        }
+      });
+      setActivePropertiesWindowIndex(-1);
+    },
+    [properties, updateProperties]
+  );
+
   const windows: Array<{
     isActive: boolean;
     minimize: () => void;
@@ -219,6 +280,29 @@ function Vaportrade() {
     trackers.size,
     walletIcon,
   ]);
+
+  const openPropertiesWindow = useCallback(
+    (props: PropertiesProps) => {
+      updateProperties((propertiesWindows) => {
+        if (
+          !propertiesWindows.some(
+            (pw) =>
+              pw.contractAddress === props.contractAddress &&
+              pw.tokenID === props.tokenID
+          )
+        ) {
+          propertiesWindows.push(props);
+        }
+        const idx = propertiesWindows.findIndex(
+          (pw) =>
+            pw.contractAddress === props.contractAddress &&
+            pw.tokenID === props.tokenID
+        );
+        setActivePropertiesWindowIndex(idx);
+      });
+    },
+    [updateProperties]
+  );
 
   // P2P peer connection :)
   useEffect(() => {
@@ -419,7 +503,13 @@ function Vaportrade() {
   return (
     <SequenceSessionProvider>
       {({ indexer, metadata }) => (
-        <>
+        <PropertiesContext.Provider
+          value={{
+            properties,
+            closePropertiesWindow,
+            openPropertiesWindow,
+          }}
+        >
           <SequenceMetaProvider indexer={indexer} metadata={metadata}>
             {({ contracts, collectibles, requestTokensFetch, hardError }) =>
               hardError ? (
@@ -628,6 +718,15 @@ function Vaportrade() {
               onOutOfMessages={() => setShowClippy(false)}
             />
           )}
+          {activePropertiesWindowIndex !== -1 ? (
+            <Properties
+              {...properties[activePropertiesWindowIndex]}
+              onClose={() =>
+                closePropertiesWindow(properties[activePropertiesWindowIndex])
+              }
+              onMinimize={() => setActivePropertiesWindowIndex(-1)}
+            ></Properties>
+          ) : null}
 
           <TaskBar
             openWindows={[
@@ -673,6 +772,20 @@ function Vaportrade() {
                         w.minimize();
                       }
                     }
+                  }
+                },
+              })),
+              ...properties.map((props, index) => ({
+                isActive: activePropertiesWindowIndex === index,
+                icon: props.iconUrl,
+                title: `${props.name} Properties`,
+                id: 5000 + index,
+                isAlerting: false,
+                onClick: () => {
+                  if (activePropertiesWindowIndex === index) {
+                    setActivePropertiesWindowIndex(-1);
+                  } else {
+                    setActivePropertiesWindowIndex(index);
                   }
                 },
               })),
@@ -780,7 +893,7 @@ function Vaportrade() {
               },
             ]}
           />
-        </>
+        </PropertiesContext.Provider>
       )}
     </SequenceSessionProvider>
   );

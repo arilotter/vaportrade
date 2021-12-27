@@ -1,10 +1,12 @@
 import { ExplorerIcon } from "packard-belle";
+import { useCallback, MouseEvent, useContext } from "react";
+import { PropertiesContext, RightClickMenuContext } from "../../utils/utils";
 import folderBg from "./folder_bg.png";
 import folderFg from "./folder_fg.png";
 
 interface FolderProps {
   name: string;
-  address: string;
+  contractAddress: string;
   iconUrl: string;
   type: "ERC721" | "ERC1155";
   onFolderOpen: () => void;
@@ -12,16 +14,49 @@ interface FolderProps {
 
 export function Folder({
   name,
-  address,
+  contractAddress,
   iconUrl,
   type,
   onFolderOpen,
 }: FolderProps) {
+  const { setContextMenu } = useContext(RightClickMenuContext);
+  const { openPropertiesWindow } = useContext(PropertiesContext);
+  const onContext = useCallback(
+    (e: MouseEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setContextMenu({
+        x: e.pageX,
+        y: e.pageY,
+        menuOptions: [
+          {
+            title: "Open",
+            onClick: onFolderOpen,
+          },
+          "divider" as const,
+          {
+            title: "Properties",
+            onClick: () =>
+              openPropertiesWindow({ name, contractAddress, iconUrl, type }),
+          },
+        ],
+      });
+    },
+    [
+      setContextMenu,
+      onFolderOpen,
+      openPropertiesWindow,
+      contractAddress,
+      iconUrl,
+      name,
+      type,
+    ]
+  );
   return (
     <div
       style={{
         position: "relative",
       }}
+      onContextMenu={onContext}
     >
       <img
         src={folderBg}
@@ -51,7 +86,7 @@ export function Folder({
       />
       <ExplorerIcon
         onDoubleClick={onFolderOpen}
-        alt={`${name} (${address})`}
+        alt={`${name} (${contractAddress})`}
         icon={folderFg}
         title={name}
       />

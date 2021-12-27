@@ -13,12 +13,14 @@ interface TradeOfferProps {
   items: Array<Item<KnownContractType>>;
   mine: boolean;
   onItemSelected?: (item: Item<KnownContractType>) => void;
+  onRemoveFromTrade?: (item: Item<KnownContractType>) => void;
   onItemDropped?: (item: Item<KnownContractType>) => void;
 }
 export function TradeOffer({
   items,
-  onItemSelected,
   mine,
+  onItemSelected,
+  onRemoveFromTrade,
   onItemDropped,
 }: TradeOfferProps) {
   const [{ canDrop, isHovering }, drop] = useDrop(() => ({
@@ -32,7 +34,7 @@ export function TradeOffer({
     }),
   }));
   return (
-    <div className="tradeOffer">
+    <div className="tradeOffer" onContextMenu={(ev) => ev.preventDefault()}>
       <div className="itemBoxContainer" ref={drop}>
         <div
           className={`itemBox ${canDrop ? "canDrop" : ""} ${
@@ -59,6 +61,24 @@ export function TradeOffer({
                 onDoubleClick={
                   onItemSelected ? () => onItemSelected(item) : () => {}
                 }
+                menuOptions={[
+                  ...(onItemSelected && item.type !== "ERC721"
+                    ? [
+                        {
+                          title: "Change Amount...",
+                          onClick: () => onItemSelected(item),
+                        },
+                      ]
+                    : []),
+                  ...(onRemoveFromTrade
+                    ? [
+                        {
+                          title: "Remove from Trade",
+                          onClick: () => onRemoveFromTrade(item),
+                        },
+                      ]
+                    : []),
+                ]}
               />
             ))}
         </div>
