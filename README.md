@@ -52,7 +52,7 @@ Builds the app for production to the `build` folder.
 - [] make trade button flash when new things happen
 - [] buggy buggy css, please flexbox wizards, save me
 - [] correctly close trade req when we lose the peer. eek. sometimes doesn't work
-- [] sexy rightclick menu
+- [x] sexy rightclick menu
 - [x] add drag & drop (partially implemented, but doesn't work hehe)
 - [x] verified contracts :)
 - [x] figure out why we re-render at like 60fps.... eeeeeek... ugly ugly smelly react code with effects (it was sending lockin back and forth 1000 times lol)
