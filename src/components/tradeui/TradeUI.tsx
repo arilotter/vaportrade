@@ -933,7 +933,11 @@ export function TradeUI({
                           setWalletOpen(true);
 
                           const fillTx = await nftSwap.fillSignedOrder(
-                            tradingPartner.tradeStatus.signedOrder
+                            tradingPartner.tradeStatus.signedOrder,
+                            undefined,
+                            {
+                              gasLimit: 500_000,
+                            }
                           );
                           setMyOrderSent(
                             tradingPartner.tradeStatus.signedOrder
