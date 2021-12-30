@@ -76,6 +76,12 @@ export function Credits({ onClose, onMinimize }: CreditsProps) {
                 vaportrade.net@gmail.com
               </a>
             </li>
+            <li>
+              vaportrade.net is open source!{" "}
+              <a href="https://github.com/arilotter/vaportrade/">
+                https://github.com/arilotter/vaportrade/
+              </a>
+            </li>
           </ul>
         </div>
       </Window>
