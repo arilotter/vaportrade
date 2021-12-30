@@ -33,6 +33,7 @@ import tradeIconDisabled from "./sendDisabled.png";
 import loadingIcon from "../../icons/loadingIcon.gif";
 import approveIcon from "../../icons/approve.png";
 import tipIcon from "../../icons/tip.png";
+import cancelIcon from "../../icons/cancel.png";
 import {
   FillEvent,
   NftSwap,
@@ -1076,16 +1077,34 @@ export function TradeUI({
                     <ul>
                       {openOrdersThatArentThisOne.map((order) => (
                         <li>
-                          (
-                          {formatTimeLeft(
-                            Number.parseInt(
-                              order.signedOrder.expirationTimeSeconds,
-                              10
-                            ) *
-                              1000 -
-                              Date.now()
-                          )}
-                          )
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                          >
+                            (
+                            {formatTimeLeft(
+                              Number.parseInt(
+                                order.signedOrder.expirationTimeSeconds,
+                                10
+                              ) *
+                                1000 -
+                                Date.now()
+                            )}
+                            ){" "}
+                            <ButtonIconSmall
+                              icon={cancelIcon}
+                              onClick={async () => {
+                                setWalletOpen(true);
+                                try {
+                                  await nftSwap.cancelOrder(order.signedOrder);
+                                } finally {
+                                  setWalletOpen(false);
+                                }
+                              }}
+                            />
+                          </div>
                         </li>
                       ))}
                     </ul>

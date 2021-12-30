@@ -47,9 +47,12 @@ declare module "packard-belle" {
   }): JSX.Element;
   export function StartButton(props: any): JSX.Element;
   export function ButtonIconLarge(props: any & { icon: string }): JSX.Element;
-  export function ButtonIconSmall(
-    props: any & { icon: string; hasBorder: boolean }
-  ): JSX.Element;
+  export function ButtonIconSmall(props: {
+    icon: string;
+    title?: string;
+    hasBorder?: boolean;
+    onClick?: () => void;
+  }): JSX.Element;
   export function StandardMenuHOC(props: any): JSX.Element;
   export function ExplorerIcon(props: any): JSX.Element;
   export function ListIcon(props: any): JSX.Element;
