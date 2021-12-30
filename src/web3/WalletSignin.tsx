@@ -79,13 +79,14 @@ export function WalletSignin({ children }: WalletSigninProps) {
             />
             <h3>WARNING</h3>
             <p>
-              <strong>VAPORTRADE.NET IS ALPHA SOFTWARE.</strong>
+              <strong>VAPORTRADE.NET IS IN BETA.</strong>
             </p>
             <p>
-              <strong>
-                IT MIGHT DESTROY ALL YOUR CRYPTO, PUT YOUR WALLET IN AN
-                UNRECOVERABLE STATE, OR DO OTHER UNEXPECTED THINGS.
-              </strong>
+              While it doesn't do anything novel on-chain & it uses
+              battle-tested contracts, it could still be buggy.
+              <br />
+              Until it's gotten some more use and eyeballs on it, you shouldn't
+              trade with people you don't know.
             </p>
             <p>
               <strong>
