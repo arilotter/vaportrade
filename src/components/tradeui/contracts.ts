@@ -149,7 +149,14 @@ export function getItems({
         // TODO is it safe to accept an asset type from another user?
         // Why doesn't sequence know the contract type?
         ("contractType" in balance ? balance.contractType : balance.type);
-      const type: ContractType = isKnownContractType(t) ? t : { other: t };
+      const type: ContractType =
+        // hack to mark matic a native token type
+        contract.address === "0x0000000000000000000000000000000000001010" ||
+        balance.contractAddress === "0x0000000000000000000000000000000000001010"
+          ? { other: "native" }
+          : isKnownContractType(t)
+          ? t
+          : { other: t };
       if (
         typeFilter &&
         !typeFilter.includes(typeof type === "object" ? "other" : type)

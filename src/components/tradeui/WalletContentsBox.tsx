@@ -12,6 +12,7 @@ import {
   KnownContractType,
   isKnownContractType,
   DragItemType,
+  itemSort,
 } from "../../utils/utils";
 import { sequence } from "0xsequence";
 import { ChainId } from "@0xsequence/network";
@@ -163,7 +164,7 @@ export function WalletContentsBox({
           ref={drop}
         >
           {nftFolders
-            .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
+            .sort(itemSort)
             .map(({ name, contractAddress, iconUrl, type }) => (
               <Folder
                 key={getContractKey(chainId, contractAddress)}
@@ -174,11 +175,70 @@ export function WalletContentsBox({
                 type={type as "ERC721" | "ERC1155"}
               />
             ))}
-          {erc20
-            // sort assets with icons first :)
-            // really should sort by price tho
-            .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-            .map((item) => (
+          {erc20.sort(itemSort).map((item) => (
+            <DraggableIcon
+              item={item}
+              key={getTokenKey(
+                ChainId.POLYGON,
+                item.contractAddress,
+                item.tokenID
+              )}
+              onDoubleClick={() => {
+                if (onItemSelected) {
+                  onItemSelected(item);
+                }
+              }}
+              dragItemType={
+                mine
+                  ? DragItemType.MY_ITEM_IN_WALLET
+                  : DragItemType.THEIR_ITEM_IN_WALLET
+              }
+              menuOptions={
+                onItemSelected
+                  ? [
+                      {
+                        title: subtractItems?.some(
+                          (i) =>
+                            i.contractAddress === item.contractAddress &&
+                            i.tokenID === item.tokenID
+                        )
+                          ? "Change Amount..."
+                          : "Add to Trade...",
+                        onClick: () => onItemSelected(item),
+                      },
+                    ]
+                  : []
+              }
+            />
+          ))}
+          {otherTokens.sort(itemSort).map((item) => (
+            <DraggableIcon
+              isDisabled
+              item={item}
+              key={getTokenKey(
+                ChainId.POLYGON,
+                item.contractAddress,
+                item.tokenID
+              )}
+              onDoubleClick={() => {}}
+              dragItemType={
+                mine
+                  ? DragItemType.MY_ITEM_IN_WALLET
+                  : DragItemType.THEIR_ITEM_IN_WALLET
+              }
+            />
+          ))}
+        </div>
+      </div>
+      {nftsInOpenFolder?.length && typeof tokenFolderContract === "object" ? (
+        <Window
+          icon={tokenFolderContract.logoURI}
+          title={`${tokenFolderContract.name} (${tokenFolderContract.address})`}
+          className="tokenFolder"
+          onClose={() => setTokenFolderAddress(null)}
+        >
+          <div className="itemBox" onContextMenu={(ev) => ev.preventDefault()}>
+            {nftsInOpenFolder.sort(itemSort).map((item) => (
               <DraggableIcon
                 item={item}
                 key={getTokenKey(
@@ -205,7 +265,11 @@ export function WalletContentsBox({
                               i.contractAddress === item.contractAddress &&
                               i.tokenID === item.tokenID
                           )
-                            ? "Change Amount..."
+                            ? item.type === "ERC721"
+                              ? "Remove from Trade"
+                              : "Change Amount..."
+                            : item.type === "ERC721"
+                            ? "Add to Trade"
                             : "Add to Trade...",
                           onClick: () => onItemSelected(item),
                         },
@@ -214,77 +278,6 @@ export function WalletContentsBox({
                 }
               />
             ))}
-          {otherTokens
-            .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-            .map((item) => (
-              <DraggableIcon
-                isDisabled
-                item={item}
-                key={getTokenKey(
-                  ChainId.POLYGON,
-                  item.contractAddress,
-                  item.tokenID
-                )}
-                onDoubleClick={() => {}}
-                dragItemType={
-                  mine
-                    ? DragItemType.MY_ITEM_IN_WALLET
-                    : DragItemType.THEIR_ITEM_IN_WALLET
-                }
-              />
-            ))}
-        </div>
-      </div>
-      {nftsInOpenFolder?.length && typeof tokenFolderContract === "object" ? (
-        <Window
-          icon={tokenFolderContract.logoURI}
-          title={`${tokenFolderContract.name} (${tokenFolderContract.address})`}
-          className="tokenFolder"
-          onClose={() => setTokenFolderAddress(null)}
-        >
-          <div className="itemBox" onContextMenu={(ev) => ev.preventDefault()}>
-            {nftsInOpenFolder
-              .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-              .map((item) => (
-                <DraggableIcon
-                  item={item}
-                  key={getTokenKey(
-                    ChainId.POLYGON,
-                    item.contractAddress,
-                    item.tokenID
-                  )}
-                  onDoubleClick={() => {
-                    if (onItemSelected) {
-                      onItemSelected(item);
-                    }
-                  }}
-                  dragItemType={
-                    mine
-                      ? DragItemType.MY_ITEM_IN_WALLET
-                      : DragItemType.THEIR_ITEM_IN_WALLET
-                  }
-                  menuOptions={
-                    onItemSelected
-                      ? [
-                          {
-                            title: subtractItems?.some(
-                              (i) =>
-                                i.contractAddress === item.contractAddress &&
-                                i.tokenID === item.tokenID
-                            )
-                              ? item.type === "ERC721"
-                                ? "Remove from Trade"
-                                : "Change Amount..."
-                              : item.type === "ERC721"
-                              ? "Add to Trade"
-                              : "Add to Trade...",
-                            onClick: () => onItemSelected(item),
-                          },
-                        ]
-                      : []
-                  }
-                />
-              ))}
           </div>
         </Window>
       ) : null}

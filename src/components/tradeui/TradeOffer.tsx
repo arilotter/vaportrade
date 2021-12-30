@@ -4,6 +4,7 @@ import {
   DragItemType,
   getTokenKey,
   Item,
+  itemSort,
   KnownContractType,
 } from "../../utils/utils";
 import { DraggableIcon } from "./DraggableIcon";
@@ -44,46 +45,42 @@ export function TradeOffer({
             isHovering ? "isHovering" : ""
           }`}
         >
-          {[...items]
-            // sort assets with icons first :)
-            // really should sort by price tho
-            .sort((a, b) => +Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-            .map((item) => (
-              <DraggableIcon
-                dragItemType={
-                  mine
-                    ? DragItemType.MY_ITEM_IN_TRADE
-                    : DragItemType.THEIR_ITEM_IN_TRADE
-                }
-                item={item}
-                key={getTokenKey(
-                  ChainId.POLYGON,
-                  item.contractAddress,
-                  item.tokenID
-                )}
-                onDoubleClick={
-                  onItemSelected ? () => onItemSelected(item) : () => {}
-                }
-                menuOptions={[
-                  ...(onItemSelected && item.type !== "ERC721"
-                    ? [
-                        {
-                          title: "Change Amount...",
-                          onClick: () => onItemSelected(item),
-                        },
-                      ]
-                    : []),
-                  ...(onRemoveFromTrade
-                    ? [
-                        {
-                          title: "Remove from Trade",
-                          onClick: () => onRemoveFromTrade(item),
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-            ))}
+          {[...items].sort(itemSort).map((item) => (
+            <DraggableIcon
+              dragItemType={
+                mine
+                  ? DragItemType.MY_ITEM_IN_TRADE
+                  : DragItemType.THEIR_ITEM_IN_TRADE
+              }
+              item={item}
+              key={getTokenKey(
+                ChainId.POLYGON,
+                item.contractAddress,
+                item.tokenID
+              )}
+              onDoubleClick={
+                onItemSelected ? () => onItemSelected(item) : () => {}
+              }
+              menuOptions={[
+                ...(onItemSelected && item.type !== "ERC721"
+                  ? [
+                      {
+                        title: "Change Amount...",
+                        onClick: () => onItemSelected(item),
+                      },
+                    ]
+                  : []),
+                ...(onRemoveFromTrade
+                  ? [
+                      {
+                        title: "Remove from Trade",
+                        onClick: () => onRemoveFromTrade(item),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          ))}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { ChainId } from "@0xsequence/network";
-
 // Default settings!
 const settings = {
+  background: "#008080",
   corsAnywhereUrl:
     process.env.NODE_ENV === "production"
       ? "https://cors.vaportrade.net/"

@@ -1,5 +1,8 @@
 import { Window } from "packard-belle";
+import missingIcon from "./missing.png";
+import warningIcon from "../../icons/warning.png";
 import { ContractType, useOnKeyDown } from "../../utils/utils";
+import { verifiedContracts } from "../../utils/verified";
 import "./Properties.css";
 export interface PropertiesProps {
   name: string;
@@ -29,10 +32,10 @@ export function Properties({
         onClose={onClose}
         onMinimize={onMinimize}
         title={`${name} Properties`}
-        icon={iconUrl}
+        icon={iconUrl || missingIcon}
       >
         <div className="propsImage">
-          <img src={iconUrl} alt={name} />
+          <img src={iconUrl || missingIcon} alt={name} />
         </div>
         <div className="propsProp">
           <span>Name:</span>
@@ -42,7 +45,7 @@ export function Properties({
           <span>Type:</span>
           {type === undefined || typeof type === "string"
             ? type
-            : `Unknown: ${type.other}`}
+            : `Unsupported: ${type.other}`}
         </div>
         <div className="propsProp">
           <span>Contract Address:</span>
@@ -56,6 +59,46 @@ export function Properties({
             {tokenID}
           </div>
         ) : null}
+        {verifiedContracts.has(contractAddress) ? (
+          <div className="propsProp">
+            <p style={{ maxWidth: "315px" }}>
+              This token's Contract Address has been verified by vaportrade.net.
+            </p>
+            <p>
+              When you trade verified tokens, you can be sure
+              <br />
+              they're not fake tokens with the same image & name.
+            </p>
+            <p>
+              For more info about this verified token, go to{" "}
+              <a href={verifiedContracts.get(contractAddress)}>
+                {verifiedContracts.get(contractAddress)}
+              </a>
+            </p>
+          </div>
+        ) : (
+          <div className="propsProp">
+            <img src={warningIcon} alt="NOT VERIFIED WARNING" />
+            <p>
+              This token is <strong>NOT</strong>verified.
+            </p>
+            <p>
+              It could be a lesser-known token, but it also could be a fake
+              token
+              <br /> using the same name and icon as a real one.
+            </p>
+            <p>
+              <strong>DO NOT</strong> accept this token in trades, unless you're
+              sure that the Contract Address
+              <br /> matches the Contract Address of the token you're asking
+              for.
+            </p>
+            <p>
+              If this is your token & you'd like to be verified, send me an
+              e-mail or Twitter DM (see credits).
+            </p>
+          </div>
+        )}
       </Window>
     </div>
   );

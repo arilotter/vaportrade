@@ -51,6 +51,7 @@ import { formatBytes32String, randomBytes } from "ethers/lib/utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { chainId, config, LS_SIGNED_ORDER_CACHE_KEY } from "../../settings";
 import { TypedListener } from "@traderxyz/nft-swap-sdk/dist/contracts/common";
+import { verifiedContracts } from "../../utils/verified";
 
 interface TradeUIProps {
   indexer: sequence.indexer.Indexer;
@@ -290,6 +291,9 @@ export function TradeUI({
       collectibles,
     }).filter(isItemWithKnownContractType),
   };
+  const unverifiedItems = theirHalfOfOrder.items.filter(
+    (item) => !verifiedContracts.has(item.contractAddress)
+  );
   const order = nftSwap
     ? buildOrder(
         nftSwap,
@@ -996,6 +1000,33 @@ export function TradeUI({
                   />
                 </div>
               </div>
+              {unverifiedItems.length ? (
+                <>
+                  <div className="softWarning">
+                    <p>
+                      <strong>WARNING!</strong> There are unverified items in
+                      their trade offer. Unless you know what you're doing,{" "}
+                      <strong>you might be getting scammed.</strong>
+                    </p>
+                    <p>
+                      Right-click these items in their trade offer and click
+                      Properties for more info.
+                    </p>
+                    <ul>
+                      {unverifiedItems.map((item) => (
+                        <li key={item.contractAddress + item.tokenID}>
+                          {item.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {(tokensThatNeedApproval && tokensThatNeedApproval.length) ||
+                  softWarning ||
+                  openOrdersThatArentThisOne.length ? (
+                    <hr />
+                  ) : null}
+                </>
+              ) : null}
               {tokensThatNeedApproval && tokensThatNeedApproval.length ? (
                 <>
                   <div className="softWarning">

@@ -4,6 +4,7 @@ import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { createContext, useEffect } from "react";
 import { PropertiesProps } from "../components/tradeui/Properties";
+import { verifiedContracts } from "./verified";
 
 export interface FailableTracker extends Tracker {
   failed: boolean;
@@ -328,3 +329,12 @@ export const PropertiesContext = createContext<{
   openPropertiesWindow: () => {},
   closePropertiesWindow: () => {},
 });
+
+export function itemSort(a: Item<ContractType>, b: Item<ContractType>): number {
+  return (
+    (+verifiedContracts.has(b.contractAddress) -
+      +verifiedContracts.has(a.contractAddress)) *
+      2 +
+    (+Boolean(b.iconUrl) - +Boolean(a.iconUrl))
+  );
+}

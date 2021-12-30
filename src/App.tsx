@@ -26,6 +26,7 @@ import yesIcon from "./icons/yes.png";
 import rebootIcon from "./icons/reboot.png";
 import creditsIcon from "./icons/credits.png";
 import tipIcon from "./icons/tip.png";
+import missingIcon from "./components/tradeui/missing.png";
 import backgroundImg from "./background.png";
 import "./App.css";
 import { EllipseAnimation } from "./utils/EllipseAnimation";
@@ -48,6 +49,7 @@ import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { TipUI } from "./TipUI";
 import { Properties, PropertiesProps } from "./components/tradeui/Properties";
+import { config } from "./settings";
 
 enableMapSet();
 function App() {
@@ -60,11 +62,8 @@ function App() {
   return (
     <div
       style={{
-        background: `url(${backgroundImg})`,
-        backgroundSize: "50% auto",
+        background: `${config.background} url(${backgroundImg}) no-repeat scroll 50% center / 50%`,
         imageRendering: "pixelated",
-        backgroundPosition: "50%",
-        backgroundRepeat: "no-repeat",
         height: "100%",
       }}
       onClick={() => setContextMenu(null)}
@@ -540,6 +539,17 @@ function Vaportrade() {
                           className="tradeWindow"
                           onMinimize={() => setTradingPartnerAddress(null)}
                           onClose={() => {
+                            updatePeers((peers) => {
+                              const tradingPeer = [...peers]
+                                .filter(isTradingPeer)
+                                .find(
+                                  (p) => p.peer.id === tradingPartner.peer.id
+                                );
+                              if (!tradingPeer) {
+                                return;
+                              }
+                              tradingPeer.tradeRequest = false;
+                            });
                             setTradingPartnerAddress(null);
                           }}
                         >
@@ -776,7 +786,7 @@ function Vaportrade() {
               })),
               ...properties.map((props, index) => ({
                 isActive: activePropertiesWindowIndex === index,
-                icon: props.iconUrl,
+                icon: props.iconUrl || missingIcon,
                 title: `${props.name} Properties`,
                 id: 5000 + index,
                 isAlerting: false,

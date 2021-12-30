@@ -25,8 +25,9 @@ Builds the app for production to the `build` folder.
 
 
 # PRE-LAUNCH TODO:
-- [ ] why doesn't closing a trade work?
 - [~] fix weird gas estimation all over the place - perhaps add buffer?
+- [x] add verified tokens list!
+- [x] why doesn't closing a trade work?
 - [x] p2 trade done UI has get TX hash
 - [x] keep listeners for all not-yet-filled signed orders around, and fire trade success if we hit one!
 - [x] test with erc721s - instant add-remove without amount UI, and instant drag/drop.

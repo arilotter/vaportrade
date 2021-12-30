@@ -71,7 +71,10 @@ export function Credits({ onClose, onMinimize }: CreditsProps) {
                 {" "}
                 @usevaportrade{" "}
               </a>{" "}
-              on that bird app!
+              on that bird app or shoot me an email at{" "}
+              <a href="mailto:vaportrade.net@gmail.com">
+                vaportrade.net@gmail.com
+              </a>
             </li>
           </ul>
         </div>

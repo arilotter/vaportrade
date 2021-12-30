@@ -9,9 +9,11 @@ import {
   RightClickMenuContext,
 } from "../../utils/utils";
 import missingIcon from "./missing.png";
+import warningIcon from "../../icons/warning.png";
 import "./DraggableIcon.css";
 import { BigNumber } from "ethers";
 import { useCallback, useContext, MouseEvent } from "react";
+import { verifiedContracts } from "../../utils/verified";
 
 interface DraggableIconProps {
   item: Item<ContractType>;
@@ -87,6 +89,25 @@ export function DraggableIcon({
         icon={item.iconUrl || missingIcon}
         title={title}
       />
+      <div
+        style={{
+          position: "absolute",
+          top: "21px",
+          left: "8px",
+          padding: "1px",
+          pointerEvents: "none",
+        }}
+      >
+        {!verifiedContracts.has(item.contractAddress) ? (
+          <img
+            src={warningIcon}
+            alt="Unverified Token!"
+            style={{
+              width: "16px",
+            }}
+          />
+        ) : null}
+      </div>
       {typeof item.type === "string" ? (
         <div
           style={{
