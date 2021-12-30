@@ -77,21 +77,15 @@ export function WalletSignin({ children }: WalletSigninProps) {
               src={warningIcon}
               alt={"Warning!"}
             />
-            <h3>WARNING</h3>
             <p>
               <strong>VAPORTRADE.NET IS IN BETA.</strong>
             </p>
             <p>
-              While it doesn't do anything novel on-chain & it uses
-              battle-tested contracts, it could still be buggy.
+              While it doesn't do anything new on-chain & it uses battle-tested
+              0x v3 contracts, it could still be buggy.
               <br />
               Until it's gotten some more use and eyeballs on it, you shouldn't
               trade with people you don't know.
-            </p>
-            <p>
-              <strong>
-                VAPORTRADE.NET IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.
-              </strong>
             </p>
             <p>
               vaportrade.net uses peer-to-peer (p2p) communication via WebRTC.
@@ -177,6 +171,15 @@ export function WalletSignin({ children }: WalletSigninProps) {
               />
               Reload
             </ButtonForm>
+          </div>
+          <div
+            style={{
+              textAlign: "center",
+            }}
+          >
+            <a href="https://github.com/arilotter/vaportrade/">
+              click here for the source code!
+            </a>
           </div>
         </Window>
       )}

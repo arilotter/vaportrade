@@ -1,7 +1,6 @@
-# vaportrade
-It's lit!
+# https://vaportrade.net/
 
-PRs welcome! The CSS is super hacky, the design needs work, I depend on a component library called packard-belle when I should really be writing these styles myself, there's `<div><div><div></div></div></div>`s everywhere, and it scales terribly on different screen sizes. <3 to anyone who contributes :)
+PRs welcome! The CSS is pretty hacky, I depend on a component library called packard-belle & inline a bunch of stuff when I should really be writing these styles myself, there's `<div><div><div></div></div></div>`s everywhere, and it scales terribly on different screen sizes. <3 to anyone who contributes, PRs, bugs, and suggestions welcome! :)
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
@@ -46,13 +45,13 @@ Builds the app for production to the `build` folder.
 - [x] make taskbar flash when new things happen ( just need css )
 - [x] make trading work, lol (signature error??)
 # NICE TO HAVE TODO:
-- [] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
-- [] ENS, unstoppable domains?
-- [] why does Sequence logout feel so buggy, how do I deauth?
-- [] add "kill" button that you can race your trading partner to, lol
-- [] make trade button flash when new things happen
-- [] buggy buggy css, please flexbox wizards, save me
-- [] correctly close trade req when we lose the peer. eek. sometimes doesn't work
+- [ ] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
+- [ ] ENS, unstoppable domains?
+- [ ] why does Sequence logout feel so buggy, how do I deauth?
+- [ ] add "kill" button that you can race your trading partner to, lol
+- [ ] make trade button flash when new things happen
+- [ ] buggy buggy css, please flexbox wizards, save me
+- [ ] correctly close trade req when we lose the peer. eek. sometimes doesn't work
 - [x] sexy rightclick menu
 - [x] add drag & drop (partially implemented, but doesn't work hehe)
 - [x] verified contracts :)
