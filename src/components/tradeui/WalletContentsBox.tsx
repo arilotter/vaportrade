@@ -54,16 +54,19 @@ export function WalletContentsBox({
   mine,
   onItemDropped,
 }: WalletContentsBoxProps) {
-  const [{ canDrop, isHovering }, drop] = useDrop(() => ({
-    accept: mine
-      ? DragItemType.MY_ITEM_IN_TRADE
-      : DragItemType.THEIR_ITEM_IN_TRADE,
-    drop: onItemDropped,
-    collect: (monitor) => ({
-      canDrop: !!monitor.canDrop(),
-      isHovering: !!monitor.isOver() && !!monitor.canDrop(),
+  const [{ canDrop, isHovering }, drop] = useDrop(
+    () => ({
+      accept: mine
+        ? DragItemType.MY_ITEM_IN_TRADE
+        : DragItemType.THEIR_ITEM_IN_TRADE,
+      drop: onItemDropped,
+      collect: (monitor) => ({
+        canDrop: !!monitor.canDrop(),
+        isHovering: !!monitor.isOver() && !!monitor.canDrop(),
+      }),
     }),
-  }));
+    [mine, onItemDropped]
+  );
 
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<TokenBalance[]>([]);

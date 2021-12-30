@@ -47,13 +47,16 @@ export function DraggableIcon({
     },
     [menuOptions, setContextMenu, openPropertiesWindow, item]
   );
-  const [{ isDragging }, drag] = useDrag(() => ({
-    type: dragItemType,
-    collect: (monitor) => ({
-      isDragging: !!monitor.isDragging(),
+  const [{ isDragging }, drag] = useDrag(
+    () => ({
+      type: dragItemType,
+      collect: (monitor) => ({
+        isDragging: !!monitor.isDragging(),
+      }),
+      item,
     }),
-    item,
-  }));
+    [dragItemType]
+  );
   const decimalBalance = balanceToFixedNumber(
     item.balance,
     item.decimals

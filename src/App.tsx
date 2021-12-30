@@ -24,7 +24,6 @@ import controlPanelIcon from "./icons/controlPanel.png";
 import noIcon from "./icons/no.png";
 import yesIcon from "./icons/yes.png";
 import rebootIcon from "./icons/reboot.png";
-import vtLogoIcon from "./icons/vticon.png";
 import creditsIcon from "./icons/credits.png";
 import tipIcon from "./icons/tip.png";
 import backgroundImg from "./background.png";
@@ -534,10 +533,10 @@ function Vaportrade() {
                   ) : null}
                   <div className="modal">
                     {p2pClient && trackers.size && nftSwap && connector ? (
-                      tradingPartner ? (
+                      tradingPartnerAddress && tradingPartner ? (
                         <Window
                           title={`Trading with ${tradingPartnerAddress}`}
-                          icon={vtLogoIcon}
+                          icon={makeBlockyIcon(tradingPartnerAddress)}
                           className="tradeWindow"
                           onMinimize={() => setTradingPartnerAddress(null)}
                           onClose={() => {

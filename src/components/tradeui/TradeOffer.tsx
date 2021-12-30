@@ -23,16 +23,19 @@ export function TradeOffer({
   onRemoveFromTrade,
   onItemDropped,
 }: TradeOfferProps) {
-  const [{ canDrop, isHovering }, drop] = useDrop(() => ({
-    accept: mine
-      ? DragItemType.MY_ITEM_IN_WALLET
-      : DragItemType.THEIR_ITEM_IN_WALLET,
-    drop: onItemDropped,
-    collect: (monitor) => ({
-      canDrop: !!monitor.canDrop(),
-      isHovering: !!monitor.isOver() && !!monitor.canDrop(),
+  const [{ canDrop, isHovering }, drop] = useDrop(
+    () => ({
+      accept: mine
+        ? DragItemType.MY_ITEM_IN_WALLET
+        : DragItemType.THEIR_ITEM_IN_WALLET,
+      drop: onItemDropped,
+      collect: (monitor) => ({
+        canDrop: !!monitor.canDrop(),
+        isHovering: !!monitor.isOver() && !!monitor.canDrop(),
+      }),
     }),
-  }));
+    [mine, onItemDropped]
+  );
   return (
     <div className="tradeOffer" onContextMenu={(ev) => ev.preventDefault()}>
       <div className="itemBoxContainer" ref={drop}>
