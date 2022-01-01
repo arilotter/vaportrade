@@ -28,6 +28,7 @@ import creditsIcon from "./icons/credits.png";
 import tipIcon from "./icons/tip.png";
 import missingIcon from "./components/tradeui/missing.png";
 import backgroundImg from "./background.png";
+import testnetBackgroundImg from "./testnetBackground.png";
 import "./App.css";
 import { EllipseAnimation } from "./utils/EllipseAnimation";
 import { SequenceSessionProvider } from "./sequence/SequenceSessionProvider";
@@ -40,7 +41,6 @@ import { Credits } from "./Credits";
 import { useWeb3React, Web3ReactProvider } from "@web3-react/core";
 import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
 import { WalletSignin } from "./web3/WalletSignin";
-import { NftSwap } from "@traderxyz/nft-swap-sdk";
 import { connectorsByName, connectorsIconsByName } from "./web3/connectors";
 import { TaskBar } from "./TaskBar";
 import { WalletInfo } from "./WalletInfo";
@@ -50,6 +50,7 @@ import { HTML5Backend } from "react-dnd-html5-backend";
 import { TipUI } from "./TipUI";
 import { Properties, PropertiesProps } from "./components/tradeui/Properties";
 import { config } from "./settings";
+import { ChainId } from "@0xsequence/network";
 
 enableMapSet();
 function App() {
@@ -59,10 +60,13 @@ function App() {
     window.addEventListener("resize", listener);
     return () => window.removeEventListener("resize", listener);
   });
+  const isTestnetMode = config.testnetModeSetMeToTheStringTrue === "true";
   return (
     <div
       style={{
-        background: `${config.background} url(${backgroundImg}) no-repeat scroll 50% center / 50%`,
+        background: `${isTestnetMode ? "red" : config.background} url(${
+          isTestnetMode ? testnetBackgroundImg : backgroundImg
+        }) no-repeat scroll 50% center / 50%`,
         imageRendering: "pixelated",
         height: "100%",
       }}
@@ -109,7 +113,7 @@ function App() {
 }
 
 function getLibrary(provider: ExternalProvider) {
-  return new Web3Provider(provider); // this will vary according to whether you use e.g. ethers or web3.js}
+  return new Web3Provider(provider, "any"); // this will vary according to whether you use e.g. ethers or web3.js}
 }
 
 const defaultSources = [
@@ -130,7 +134,6 @@ function Vaportrade() {
   }
   const [walletOpen, setWalletOpen] = useState(false);
 
-  const [nftSwap, setNFTSwap] = useState<NftSwap | null>(null);
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
   const [sources, updateSources] = useImmer<string[]>([]);
   const [peers, _updatePeers] = useImmer<Set<TradingPeer | Peer>>(new Set());
@@ -157,11 +160,6 @@ function Vaportrade() {
     setP2pClient(p2p);
   }, [p2pClient, sources]);
 
-  useEffect(() => {
-    const nftSwap = new NftSwap(library, library.getSigner(), 137);
-    setNFTSwap(nftSwap);
-  }, [library]);
-
   const [showClippy, setShowClippy] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
 
@@ -181,9 +179,12 @@ function Vaportrade() {
   const [showTipUI, setShowTipUI] = useState<boolean | "minimized">(false);
   const walletName = (Object.keys(connectorsByName) as Array<
     keyof typeof connectorsByName
-  >).find((c) => connectorsByName[c] === connector)!;
+  >).find((c) => connectorsByName[c] === connector);
+  if (!walletName) {
+    deactivate();
+  }
 
-  const walletIcon = connectorsIconsByName[walletName];
+  const walletIcon = connectorsIconsByName[walletName!];
 
   const [
     activePropertiesWindowIndex,
@@ -193,6 +194,7 @@ function Vaportrade() {
 
   const closePropertiesWindow = useCallback(
     (props: PropertiesProps) => {
+      setActivePropertiesWindowIndex(-1);
       const matching = properties.findIndex(
         (pw) =>
           pw.contractAddress === props.contractAddress &&
@@ -203,7 +205,6 @@ function Vaportrade() {
           propertiesWindows.splice(matching, 1);
         }
       });
-      setActivePropertiesWindowIndex(-1);
     },
     [properties, updateProperties]
   );
@@ -394,6 +395,10 @@ function Vaportrade() {
               goesFirstAddress: "",
               tradeStatus: { type: "negotiating" },
               chat: [],
+              chainID:
+                config.testnetModeSetMeToTheStringTrue === "true"
+                  ? ChainId.POLYGON_MUMBAI
+                  : ChainId.POLYGON,
             });
           });
         } else {
@@ -437,6 +442,20 @@ function Vaportrade() {
                 return;
               }
               tradingPeer.goesFirstAddress = msg.address;
+            } else if (msg.type === "set_chain") {
+              if (tradingPeer.tradeStatus.type === "signedOrder") {
+                return; // ignore messages once we have a signed order
+              }
+              if (tradingPeer.tradeStatus.type !== "negotiating") {
+                return;
+              }
+              if (tradingPeer.chainID === msg.chainID) {
+                return;
+              }
+              tradingPeer.chainID = msg.chainID;
+              tradingPeer.myTradeOffer = [];
+              tradingPeer.tradeOffer = [];
+              tradingPeer.tradeStatus = { type: "negotiating" };
             } else if (msg.type === "accept") {
               if (tradingPeer.tradeStatus.type === "signedOrder") {
                 return; // ignore messages once we have a signed order
@@ -500,7 +519,7 @@ function Vaportrade() {
 
   return (
     <SequenceSessionProvider>
-      {({ indexer, metadata }) => (
+      {({ indexers, metadata }) => (
         <PropertiesContext.Provider
           value={{
             properties,
@@ -508,7 +527,7 @@ function Vaportrade() {
             openPropertiesWindow,
           }}
         >
-          <SequenceMetaProvider indexer={indexer} metadata={metadata}>
+          <SequenceMetaProvider indexers={indexers} metadata={metadata}>
             {({ contracts, collectibles, requestTokensFetch, hardError }) =>
               hardError ? (
                 <div className="modal">
@@ -531,7 +550,7 @@ function Vaportrade() {
                     </div>
                   ) : null}
                   <div className="modal">
-                    {p2pClient && trackers.size && nftSwap && connector ? (
+                    {p2pClient && trackers.size && connector ? (
                       tradingPartnerAddress && tradingPartner ? (
                         <Window
                           title={`Trading with ${tradingPartnerAddress}`}
@@ -556,8 +575,7 @@ function Vaportrade() {
                           <div className="appWindowContents">
                             <TradeUI
                               setWalletOpen={setWalletOpen}
-                              nftSwap={nftSwap}
-                              indexer={indexer}
+                              indexers={indexers}
                               metadata={metadata}
                               collectibles={collectibles}
                               contracts={contracts}
@@ -587,6 +605,23 @@ function Vaportrade() {
                                     );
                                   if (tp) {
                                     tp.goesFirstAddress = address;
+                                  }
+                                });
+                              }}
+                              updateChain={(chainID) => {
+                                updatePeers((peers) => {
+                                  const tp = [...peers]
+                                    .filter(isTradingPeer)
+                                    .find(
+                                      (p) =>
+                                        p.address === tradingPartner.address
+                                    );
+                                  if (tp) {
+                                    tp.myTradeOffer = [];
+                                    tp.tradeOffer = [];
+                                    tp.tradeStatus = { type: "negotiating" };
+                                    tp.goesFirstAddress = "";
+                                    tp.chainID = chainID;
                                   }
                                 });
                               }}
@@ -637,7 +672,7 @@ function Vaportrade() {
                       onMinimize={() => setShowWalletInfo("minimized")}
                       collectibles={collectibles}
                       contracts={contracts}
-                      indexer={indexer}
+                      indexers={indexers}
                       requestTokensFetch={requestTokensFetch}
                     />
                   ) : null}

@@ -4,11 +4,13 @@ import warningIcon from "../../icons/warning.png";
 import { ContractType, useOnKeyDown } from "../../utils/utils";
 import { verifiedContracts } from "../../utils/verified";
 import "./Properties.css";
+import { chainConfigs, SupportedChain } from "../../utils/multichain";
 export interface PropertiesProps {
   name: string;
   contractAddress: string;
   iconUrl: string;
   type: ContractType;
+  chainID: SupportedChain;
   tokenID?: string;
 }
 
@@ -21,6 +23,7 @@ export function Properties({
   contractAddress,
   iconUrl,
   type,
+  chainID,
   tokenID,
   onClose,
   onMinimize,
@@ -49,7 +52,9 @@ export function Properties({
         </div>
         <div className="propsProp">
           <span>Contract Address:</span>
-          <a href={`https://polygonscan.com/token/${contractAddress}`}>
+          <a
+            href={`${chainConfigs[chainID].explorerUrl}/token/${contractAddress}`}
+          >
             {contractAddress}
           </a>
         </div>
@@ -59,7 +64,7 @@ export function Properties({
             {tokenID}
           </div>
         ) : null}
-        {verifiedContracts.has(contractAddress) ? (
+        {verifiedContracts[chainID].has(contractAddress) ? (
           <div className="propsProp">
             <p style={{ maxWidth: "315px" }}>
               This token's Contract Address has been verified by vaportrade.net.
@@ -71,8 +76,8 @@ export function Properties({
             </p>
             <p>
               For more info about this verified token, go to{" "}
-              <a href={verifiedContracts.get(contractAddress)}>
-                {verifiedContracts.get(contractAddress)}
+              <a href={verifiedContracts[chainID].get(contractAddress)}>
+                {verifiedContracts[chainID].get(contractAddress)}
               </a>
             </p>
           </div>

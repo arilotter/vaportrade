@@ -1,11 +1,12 @@
 import { sequence } from "0xsequence";
 import { Session } from "@0xsequence/auth";
-import { sequenceContext, ChainId } from "@0xsequence/network";
+import { sequenceContext, NetworkConfig } from "@0xsequence/network";
 import * as ethers from "ethers";
 import { Window } from "packard-belle";
 import { useState, useEffect } from "react";
 import { config } from "../settings";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
+import { chainConfigs, Indexers, supportedChains } from "../utils/multichain";
 import sequenceLogo from "./sequence.png";
 
 interface SequenceSessionProviderProps {
@@ -13,7 +14,7 @@ interface SequenceSessionProviderProps {
 }
 
 interface SequenceIndexerProps {
-  indexer: sequence.indexer.Indexer;
+  indexers: Indexers;
   metadata: sequence.metadata.Metadata;
 }
 
@@ -27,7 +28,7 @@ type State =
     }
   | { error: Array<string> }
   | {
-      indexer: sequence.indexer.Indexer;
+      indexers: Indexers;
       metadata: sequence.metadata.Metadata;
     };
 
@@ -37,16 +38,15 @@ enum SignerLevel {
   Bronze = 1,
 }
 
-const DefaultThreshold = SignerLevel.Gold;
-
 export function SequenceSessionProvider({
   children,
 }: SequenceSessionProviderProps) {
   const [state, setState] = useState<State>({ waitingFor: "signer" });
   useEffect(() => {
     async function getIndexer() {
+      // Hardcoded useless wallet key, so that you can get into Sequence API.
       const signer = ethers.Wallet.fromMnemonic(
-        "major danger this key only test please avoid main net use okay"
+        "charge era satisfy ocean inmate miracle frown slab security note cover amused"
       );
       setState({ waitingFor: "signer_address" });
       const signerAddress = await signer.getAddress();
@@ -54,8 +54,20 @@ export function SequenceSessionProvider({
       const session = await Session.open({
         sequenceApiUrl: services.api,
         sequenceMetadataUrl: services.metadata,
-        context: { ...sequenceContext, nonStrict: true },
-        networks,
+        context: sequenceContext,
+        networks: Object.entries(chainConfigs)
+          .filter(
+            ([_, chain]) =>
+              (config.testnetModeSetMeToTheStringTrue === "true") ===
+              chain.testnet
+          )
+          .reduce(
+            (networks, [chainId, chain]) => [
+              ...networks,
+              { ...chain, chainId: Number.parseInt(chainId) },
+            ],
+            [] as NetworkConfig[]
+          ),
         referenceSigner: signerAddress,
         signers: [
           {
@@ -63,7 +75,7 @@ export function SequenceSessionProvider({
             weight: SignerLevel.Gold,
           },
         ],
-        threshold: DefaultThreshold,
+        threshold: SignerLevel.Gold,
         metadata: {
           name: "vaportrade",
           // 1 day JWT expiry
@@ -71,11 +83,23 @@ export function SequenceSessionProvider({
         },
       });
       setState({ waitingFor: "indexer_and_metadata" });
-      const [indexer, metadata] = await Promise.all([
-        session.getIndexerClient(ChainId.POLYGON),
+      const [indexers, metadata] = await Promise.all([
+        Promise.all(
+          supportedChains.map((chainID) =>
+            session.getIndexerClient(chainID).then((indexer) => ({
+              chainID,
+              indexer,
+            }))
+          )
+        ).then((p) =>
+          p.reduce<Indexers>((indexers, { chainID, indexer }) => {
+            indexers[chainID] = indexer;
+            return indexers;
+          }, {} as any)
+        ),
         session.getMetadataClient(),
       ]);
-      setState({ indexer, metadata });
+      setState({ indexers, metadata });
     }
     getIndexer().catch((err) => {
       console.error(`Failed to get Indexer.`, err, new Error().stack);
@@ -145,22 +169,5 @@ const corsProxy = config.corsAnywhereUrl;
 
 export const services = {
   api: `${corsProxy}https://api.sequence.app`,
-  guard: `${corsProxy}https://guard.sequence.app`,
   metadata: `${corsProxy}https://metadata.sequence.app`,
-  indexer: `${corsProxy}https://polygon-indexer.sequence.app`,
-  relayer: `${corsProxy}https://polygon-relayer.sequence.app`,
-  nodes: `${corsProxy}https://nodes.sequence.app/polygon`,
 } as const;
-
-export const networks = [
-  {
-    chainId: ChainId.POLYGON,
-    name: "polygon",
-    title: "Polygon",
-    rpcUrl: services.nodes,
-    relayer: { url: services.relayer },
-    indexerUrl: services.indexer,
-    isDefaultChain: true,
-    isAuthChain: true,
-  },
-];

@@ -15,7 +15,6 @@ import {
   itemSort,
 } from "../../utils/utils";
 import { sequence } from "0xsequence";
-import { ChainId } from "@0xsequence/network";
 import { Folder } from "./Folder";
 import { DraggableIcon } from "./DraggableIcon";
 import {
@@ -26,8 +25,10 @@ import {
   getItems,
 } from "./contracts";
 import { useDrop } from "react-dnd";
+import { SupportedChain } from "../../utils/multichain";
 interface WalletContentsBoxProps {
   accountAddress: string;
+  chainID: SupportedChain;
   indexer: sequence.indexer.Indexer;
   collectibles: CollectiblesDB;
   contracts: ContractsDB;
@@ -39,12 +40,13 @@ interface WalletContentsBoxProps {
     | readonly NetworkItem[];
   className?: string;
   mine: boolean;
+  isInTrade: boolean;
+  reloadNonce: number;
 }
-
-const chainId = ChainId.POLYGON;
 
 export function WalletContentsBox({
   accountAddress,
+  chainID,
   indexer,
   collectibles,
   contracts,
@@ -54,6 +56,8 @@ export function WalletContentsBox({
   className,
   mine,
   onItemDropped,
+  isInTrade,
+  reloadNonce,
 }: WalletContentsBoxProps) {
   const [{ canDrop, isHovering }, drop] = useDrop(
     () => ({
@@ -83,10 +87,11 @@ export function WalletContentsBox({
 
   // Get all balances for user's address
   useEffect(() => {
+    setBalances([]);
     fetchBalances(indexer, accountAddress)
       .then(setBalances)
       .catch((err) => setError(`${err}`));
-  }, [indexer, accountAddress]);
+  }, [indexer, accountAddress, reloadNonce]);
 
   // Request contract metadata fetch for all balances
   useEffect(() => {
@@ -94,13 +99,14 @@ export function WalletContentsBox({
       balances
         .filter((bal) => isKnownContractType(bal.contractType))
         .map((bal) => ({
+          chainID,
           accountAddress: bal.accountAddress,
           contractAddress: bal.contractAddress,
           contractType: bal.contractType as KnownContractType,
           tokenID: bal.tokenID,
         }))
     );
-  }, [balances, requestTokensFetch]);
+  }, [balances, requestTokensFetch, chainID]);
 
   const erc20 = [
     ...getItems({
@@ -137,7 +143,7 @@ export function WalletContentsBox({
   });
 
   const tokenFolderContract = tokenFolderAddress
-    ? contracts.get(getContractKey(chainId, tokenFolderAddress))
+    ? contracts.get(getContractKey(chainID, tokenFolderAddress))
     : undefined;
   const nftsInOpenFolder = tokenFolderAddress
     ? (getItems({
@@ -167,8 +173,9 @@ export function WalletContentsBox({
             .sort(itemSort)
             .map(({ name, contractAddress, iconUrl, type }) => (
               <Folder
-                key={getContractKey(chainId, contractAddress)}
+                key={getContractKey(chainID, contractAddress)}
                 name={name}
+                chainID={chainID}
                 contractAddress={contractAddress}
                 iconUrl={iconUrl.length ? iconUrl : missingIcon}
                 onFolderOpen={() => setTokenFolderAddress(contractAddress)}
@@ -178,11 +185,7 @@ export function WalletContentsBox({
           {erc20.sort(itemSort).map((item) => (
             <DraggableIcon
               item={item}
-              key={getTokenKey(
-                ChainId.POLYGON,
-                item.contractAddress,
-                item.tokenID
-              )}
+              key={getTokenKey(chainID, item.contractAddress, item.tokenID)}
               onDoubleClick={() => {
                 if (onItemSelected) {
                   onItemSelected(item);
@@ -194,7 +197,7 @@ export function WalletContentsBox({
                   : DragItemType.THEIR_ITEM_IN_WALLET
               }
               menuOptions={
-                onItemSelected
+                isInTrade && onItemSelected
                   ? [
                       {
                         title: subtractItems?.some(
@@ -215,11 +218,7 @@ export function WalletContentsBox({
             <DraggableIcon
               isDisabled
               item={item}
-              key={getTokenKey(
-                ChainId.POLYGON,
-                item.contractAddress,
-                item.tokenID
-              )}
+              key={getTokenKey(chainID, item.contractAddress, item.tokenID)}
               onDoubleClick={() => {}}
               dragItemType={
                 mine
@@ -241,11 +240,7 @@ export function WalletContentsBox({
             {nftsInOpenFolder.sort(itemSort).map((item) => (
               <DraggableIcon
                 item={item}
-                key={getTokenKey(
-                  ChainId.POLYGON,
-                  item.contractAddress,
-                  item.tokenID
-                )}
+                key={getTokenKey(chainID, item.contractAddress, item.tokenID)}
                 onDoubleClick={() => {
                   if (onItemSelected) {
                     onItemSelected(item);
@@ -257,7 +252,7 @@ export function WalletContentsBox({
                     : DragItemType.THEIR_ITEM_IN_WALLET
                 }
                 menuOptions={
-                  onItemSelected
+                  isInTrade && onItemSelected
                     ? [
                         {
                           title: subtractItems?.some(

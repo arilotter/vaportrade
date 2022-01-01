@@ -1,5 +1,6 @@
 import { sequence } from "0xsequence";
 import { ContractInfo } from "@0xsequence/metadata";
+import { ChainId } from "@0xsequence/network";
 import { useCallback, useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import {
@@ -9,11 +10,15 @@ import {
   fetchContractsForBalances,
   fetchCollectibles,
 } from "./components/tradeui/contracts";
-import { chainId } from "./settings";
-import { getContractKey, getTokenKey } from "./utils/utils";
+import { Indexers } from "./utils/multichain";
+import {
+  getContractKey,
+  getTokenKey,
+  getTokenKeyFromToken,
+} from "./utils/utils";
 
 interface SequenceMetaProviderProps {
-  indexer: sequence.indexer.Indexer;
+  indexers: Indexers;
   metadata: sequence.metadata.Metadata;
   children: (props: SequenceMetaProps) => JSX.Element;
 }
@@ -26,7 +31,7 @@ interface SequenceMetaProps {
 }
 
 export function SequenceMetaProvider({
-  indexer,
+  indexers,
   metadata,
   children,
 }: SequenceMetaProviderProps) {
@@ -55,44 +60,88 @@ export function SequenceMetaProvider({
     [updateTokensToFetch]
   );
 
-  // Get all contracts for user's balances
+  // Get all contracts for any list of tokens
   useEffect(() => {
     if (!metadata) {
       return;
     }
-    const ctr = fetchContractsForBalances(
-      chainId,
-      metadata,
-      tokensToFetch.map((t) => t.contractAddress),
-      contracts
-    );
-    if (!ctr) {
-      return;
-    }
-
-    ctr.batchPromise
-      .then(({ contractInfoMap }) => {
-        updateContracts((contracts) => {
-          for (const contractAddress of ctr.batchContractAddresses) {
-            const key = getContractKey(chainId, contractAddress);
-            contracts.set(key, contractInfoMap[contractAddress.toLowerCase()]);
-          }
-        });
-      })
-      .catch((err) =>
-        err instanceof Error
-          ? setHardError(`${err.name}\n${err.message}\n${err.stack}`)
-          : setHardError(JSON.stringify(err, undefined, 2))
-      );
-
-    updateContracts((contracts) => {
-      for (const contractAddress of ctr.batchContractAddresses) {
-        const key = getContractKey(chainId, contractAddress);
-        if (!contracts.has(key)) {
-          contracts.set(key, "fetching");
+    const addressesByChainID = tokensToFetch.reduce<Map<ChainId, Set<string>>>(
+      (map, { chainID, contractAddress }) => {
+        if (!map.has(chainID)) {
+          map.set(chainID, new Set());
         }
+        map.get(chainID)!.add(contractAddress.toLowerCase());
+        return map;
+      },
+      new Map()
+    );
+    for (const [chainID, addresses] of addressesByChainID.entries()) {
+      const addrs = [...addresses];
+      const contractFetch = fetchContractsForBalances(
+        chainID,
+        metadata,
+        addrs,
+        contracts
+      );
+      if (!contractFetch) {
+        continue;
       }
-    });
+
+      contractFetch.batchPromise
+        .then(({ contractInfoMap }) => {
+          const infoMapAddrs = Object.keys(contractInfoMap);
+          updateContracts((contracts) => {
+            for (const contractAddress of addrs) {
+              const key = getContractKey(chainID, contractAddress);
+              if (contracts.has(key) && contracts.get(key) !== "fetching") {
+                continue;
+              }
+              if (
+                infoMapAddrs.some(
+                  (c) => c.toLowerCase() === contractAddress.toLowerCase()
+                )
+              ) {
+                contracts.set(
+                  key,
+                  contractInfoMap[contractAddress.toLowerCase()]
+                );
+              } else {
+                // no contract meta found!
+                contracts.set(key, {
+                  address: contractAddress,
+                  chainId: chainID,
+                  logoURI: "",
+                  name: contractAddress,
+                  symbol: "???",
+                  type: "???",
+                  extensions: {
+                    blacklist: false,
+                    description: "Unknown Token",
+                    link: "",
+                    ogImage: "",
+                    originAddress: "",
+                    originChainId: 0,
+                  },
+                });
+              }
+            }
+          });
+        })
+        .catch((err) =>
+          err instanceof Error
+            ? setHardError(`${err.name}\n${err.message}\n${err.stack}`)
+            : setHardError(JSON.stringify(err, undefined, 2))
+        );
+
+      updateContracts((contracts) => {
+        for (const contractAddress of contractFetch.batchContractAddresses) {
+          const key = getContractKey(chainID, contractAddress);
+          if (!contracts.has(key)) {
+            contracts.set(key, "fetching");
+          }
+        }
+      });
+    }
   }, [tokensToFetch, metadata, contracts, updateContracts]);
 
   // Get all collectible balances for user's contracts.
@@ -102,18 +151,17 @@ export function SequenceMetaProvider({
         .filter((c): c is ContractInfo => typeof c === "object")
         .filter((c) => c.type === "ERC721" || c.type === "ERC1155");
       const myUnfetchedTokens = tokensToFetch.filter(
-        (token) =>
-          !collectibles.has(
-            getTokenKey(chainId, token.contractAddress, token.tokenID)
-          )
+        (token) => !collectibles.has(getTokenKeyFromToken(token))
       );
 
       for (const contract of tokenContracts) {
         const tokens = myUnfetchedTokens.filter(
-          (t) => t.contractAddress === contract.address
+          (t) =>
+            t.contractAddress.toLowerCase() ===
+              contract.address.toLowerCase() && t.chainID === contract.chainId
         );
         fetchCollectibles(
-          chainId,
+          contract.chainId,
           metadata,
           contract,
           tokens.map((token) => token.tokenID)
@@ -122,7 +170,7 @@ export function SequenceMetaProvider({
             updateCollectibles((collectibles) => {
               for (const item of fetched) {
                 const key = getTokenKey(
-                  chainId,
+                  item.chainID,
                   item.contractAddress,
                   item.tokenID
                 );
@@ -141,7 +189,7 @@ export function SequenceMetaProvider({
             continue;
           }
           const key = getTokenKey(
-            chainId,
+            balance.chainID,
             balance.contractAddress,
             balance.tokenID
           );
@@ -153,7 +201,7 @@ export function SequenceMetaProvider({
     }
     getMeta();
   }, [
-    indexer,
+    indexers,
     metadata,
     tokensToFetch,
     contracts,

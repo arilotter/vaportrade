@@ -90,3 +90,12 @@
 .acceptOfferText {
   background-color: #bbc3c4;
 }
+
+.refreshButton div {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+.refreshButton img {
+  padding-right: 4px;
+}

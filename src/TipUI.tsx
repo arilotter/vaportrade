@@ -33,11 +33,11 @@ export function TipUI({ onClose, onMinimize }: TipUIProps) {
             Ethereum or Polygon networks at this address:
           </p>
           <p>
-            0x831dE831A64405aF965C67d6E0De2F9876fa2d99{" "}
+            0xBF03137B38e6051C497f5C071d2D1DBd08bE181A{" "}
             <ButtonForm
               onClick={() =>
                 navigator.clipboard.writeText(
-                  "0x831dE831A64405aF965C67d6E0De2F9876fa2d99"
+                  "0xBF03137B38e6051C497f5C071d2D1DBd08bE181A"
                 )
               }
             >
@@ -47,7 +47,7 @@ export function TipUI({ onClose, onMinimize }: TipUIProps) {
           <img
             src={walletQR}
             width="64"
-            alt="0x831dE831A64405aF965C67d6E0De2F9876fa2d99"
+            alt="0xBF03137B38e6051C497f5C071d2D1DBd08bE181A"
           />
         </div>
       </Window>

@@ -1,5 +1,6 @@
 import { ExplorerIcon } from "packard-belle";
 import { useCallback, MouseEvent, useContext } from "react";
+import { SupportedChain } from "../../utils/multichain";
 import { PropertiesContext, RightClickMenuContext } from "../../utils/utils";
 import folderBg from "./folder_bg.png";
 import folderFg from "./folder_fg.png";
@@ -9,6 +10,7 @@ interface FolderProps {
   contractAddress: string;
   iconUrl: string;
   type: "ERC721" | "ERC1155";
+  chainID: SupportedChain;
   onFolderOpen: () => void;
 }
 
@@ -17,6 +19,7 @@ export function Folder({
   contractAddress,
   iconUrl,
   type,
+  chainID,
   onFolderOpen,
 }: FolderProps) {
   const { setContextMenu } = useContext(RightClickMenuContext);
@@ -36,7 +39,13 @@ export function Folder({
           {
             title: "Properties",
             onClick: () =>
-              openPropertiesWindow({ name, contractAddress, iconUrl, type }),
+              openPropertiesWindow({
+                name,
+                contractAddress,
+                iconUrl,
+                type,
+                chainID,
+              }),
           },
         ],
       });
@@ -49,6 +58,7 @@ export function Folder({
       iconUrl,
       name,
       type,
+      chainID,
     ]
   );
   return (

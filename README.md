@@ -22,9 +22,30 @@ Make sure you're running a cors-anywhere proxy at localhost:8080.
 
 Builds the app for production to the `build` folder.
 
+# NICE TO HAVE TODO:
+- [ ] fix partially reverted TXs showing "trade successful"
+- [ ] get Sequence indexer without hack, so we don't have to use a random wallet using a hardcoded key
+- [ ] other chains support
+- [ ] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
+- [ ] ENS, unstoppable domains?
+- [ ] why does Sequence logout feel so buggy, how do I deauth?
+- [ ] add "kill" button that you can race your trading partner to, lol
+- [ ] make trade button flash when new things happen
+- [ ] buggy buggy css, please flexbox wizards, save me
+- [ ] correctly close trade req when we lose the peer. eek. sometimes doesn't work
+- [x] sexy rightclick menu
+- [x] add drag & drop (partially implemented, but doesn't work hehe)
+- [x] verified contracts :)
+- [x] figure out why we re-render at like 60fps.... eeeeeek... ugly ugly smelly react code with effects (it was sending lockin back and forth 1000 times lol)
+- [x] add sequence support :|
+- [x] add timeout expired UI
+- [x] rip out 0x, it's huge.. once trader.xyz adds order hashing & polygon we good
+- [x] ~~deploy 0x v3 to polygon yeesh~~ done, polygon did it!
+- [x] ~~clicking folders in your wallet can show contents of your trading partner's wallet~~ can't repro
+- [x] ~~trading partner's offer doesn't load tokenID metadata, just shows parent contract~~
 
 # PRE-LAUNCH TODO:
-- [~] fix weird gas estimation all over the place - perhaps add buffer?
+- [x] fix weird gas estimation all over the place - perhaps add buffer?
 - [x] add verified tokens list!
 - [x] why doesn't closing a trade work?
 - [x] p2 trade done UI has get TX hash
@@ -44,21 +65,3 @@ Builds the app for production to the `build` folder.
 - [x] use hashing of orders to verify integrity of trades
 - [x] make taskbar flash when new things happen ( just need css )
 - [x] make trading work, lol (signature error??)
-# NICE TO HAVE TODO:
-- [ ] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
-- [ ] ENS, unstoppable domains?
-- [ ] why does Sequence logout feel so buggy, how do I deauth?
-- [ ] add "kill" button that you can race your trading partner to, lol
-- [ ] make trade button flash when new things happen
-- [ ] buggy buggy css, please flexbox wizards, save me
-- [ ] correctly close trade req when we lose the peer. eek. sometimes doesn't work
-- [x] sexy rightclick menu
-- [x] add drag & drop (partially implemented, but doesn't work hehe)
-- [x] verified contracts :)
-- [x] figure out why we re-render at like 60fps.... eeeeeek... ugly ugly smelly react code with effects (it was sending lockin back and forth 1000 times lol)
-- [x] add sequence support :|
-- [x] add timeout expired UI
-- [x] rip out 0x, it's huge.. once trader.xyz adds order hashing & polygon we good
-- [x] ~~deploy 0x v3 to polygon yeesh~~ done, polygon did it!
-- [x] ~~clicking folders in your wallet can show contents of your trading partner's wallet~~ can't repro
-- [x] ~~trading partner's offer doesn't load tokenID metadata, just shows parent contract~~

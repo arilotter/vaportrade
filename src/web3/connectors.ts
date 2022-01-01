@@ -1,5 +1,4 @@
-import { services } from "../sequence/SequenceSessionProvider";
-import { SequenceConnector } from "@arilotter/web3-react-sequence-connector";
+import { SequenceConnector } from "./Web3ReactSequenceConnector";
 import {
   InjectedConnector,
   NoEthereumProviderError,
@@ -15,22 +14,33 @@ import { AbstractConnector } from "@web3-react/abstract-connector";
 import sequenceIcon from "./sequence.png";
 import walletConnectIcon from "./walletconnect.png";
 import metamaskIcon from "./metamask.png";
+import { chainConfigs, supportedChains } from "../utils/multichain";
+import { ChainId } from "@0xsequence/network";
+import { config } from "../settings";
 
 export const sequence = new SequenceConnector({
-  chainId: 137,
+  supportedChainIds: supportedChains.slice(),
   connectOptions: {
     app: "vaportrade.net",
+    networkId:
+      config.testnetModeSetMeToTheStringTrue === "true"
+        ? ChainId.POLYGON_MUMBAI
+        : ChainId.POLYGON,
   },
 });
 
 export const injected = new InjectedConnector({
-  supportedChainIds: [137],
+  supportedChainIds: supportedChains.slice(),
 });
 
 const walletconnect = new WalletConnectConnector({
-  rpc: { 137: services.nodes },
+  rpc: Object.fromEntries(
+    Object.entries(chainConfigs).map(([chainID, config]) => [
+      chainID,
+      config.rpcUrl,
+    ])
+  ),
   qrcode: true,
-  chainId: 137,
 });
 
 export enum ConnectorName {
@@ -59,7 +69,9 @@ export function getConnectorErrorMessage(error: Error) {
   if (error instanceof NoEthereumProviderError) {
     return "No web3 browser extension detected, install MetaMask on desktop or visit from a dApp browser on mobile.";
   } else if (error instanceof UnsupportedChainIdError) {
-    return "You're connected to an unsupported network. vaportrade.net only supports Polygon.";
+    return `You're connected to an unsupported network. Switch to one of: ${supportedChains
+      .map((id) => chainConfigs[id].title)
+      .join(", ")}`;
   } else if (
     error instanceof UserRejectedRequestErrorInjected ||
     error instanceof UserRejectedRequestErrorWalletConnect
@@ -67,16 +79,30 @@ export function getConnectorErrorMessage(error: Error) {
     return "To use vaportrade.net, allow it to connect to your wallet.";
   } else {
     console.error(error);
-    return "An unknown error occurred while connecting to your wallet. Check the console for more details.";
+    return "An unknown error occurred while connecting to your wallet. Reload and try again. Check the console for more details.";
   }
 }
 
-export function resetWalletConnector(connector: AbstractConnector) {
+export function resetWalletConnector(connector: AbstractConnector | undefined) {
   if (connector) {
     if (connector instanceof WalletConnectConnector) {
       connector.walletConnectProvider = undefined;
     } else if (connector instanceof SequenceConnector) {
       connector.wallet = undefined;
     }
+  }
+}
+export function isConnectorMultichain(
+  connector: AbstractConnector | undefined
+) {
+  if (connector instanceof WalletConnectConnector) {
+    return (
+      connector.walletConnectProvider.connector._peerMeta.url ===
+      "https://sequence.app"
+    );
+  } else if (connector instanceof SequenceConnector) {
+    return true;
+  } else {
+    return false;
   }
 }

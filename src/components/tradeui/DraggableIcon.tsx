@@ -98,7 +98,7 @@ export function DraggableIcon({
           pointerEvents: "none",
         }}
       >
-        {!verifiedContracts.has(item.contractAddress) ? (
+        {!verifiedContracts[item.chainID].has(item.contractAddress) ? (
           <img
             src={warningIcon}
             alt="Unverified Token!"

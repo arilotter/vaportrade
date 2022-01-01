@@ -1,16 +1,24 @@
 import { AbstractConnector } from "@web3-react/abstract-connector";
 import { connectorsByName, connectorsIconsByName } from "./web3/connectors";
 import { ButtonForm, Window } from "packard-belle";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { ProfileIcon } from "./components/ProfileIcon";
 import { WalletContentsBox } from "./components/tradeui/WalletContentsBox";
-import { sequence } from "0xsequence";
 import {
   CollectiblesDB,
   ContractsDB,
   FetchableToken,
 } from "./components/tradeui/contracts";
 import "./WalletInfo.css";
+import {
+  chainConfigs,
+  Indexers,
+  SupportedChain,
+  supportedChains,
+} from "./utils/multichain";
+import { PropertiesContext } from "./utils/utils";
+import { ChainPicker } from "./utils/ChainPicker";
+import reloadIcon from "./icons/reload.png";
 
 interface WalletInfoProps {
   connector: AbstractConnector;
@@ -19,7 +27,7 @@ interface WalletInfoProps {
   onMinimize: () => void;
   onClose: () => void;
 
-  indexer: sequence.indexer.Indexer;
+  indexers: Indexers;
   collectibles: CollectiblesDB;
   contracts: ContractsDB;
   requestTokensFetch: (tokens: FetchableToken[]) => void;
@@ -28,13 +36,21 @@ export function WalletInfo({
   connector,
   collectibles,
   contracts,
-  indexer,
+  indexers,
   onMinimize,
   onClose,
   disconnect,
   requestTokensFetch,
 }: WalletInfoProps) {
+  const { openPropertiesWindow } = useContext(PropertiesContext);
+
   const [address, setAddress] = useState<string | null>(null);
+  // use auth chain by default
+  const [chainID, setChainID] = useState<SupportedChain>(
+    supportedChains.find((chain) => chainConfigs[chain].isAuthChain)!
+  );
+  const [reloadNonce, setReloadNonce] = useState(0);
+
   useEffect(() => {
     connector.getAccount().then(setAddress);
   }, [connector, setAddress]);
@@ -80,6 +96,29 @@ export function WalletInfo({
               </ButtonForm>
             </div>
             <div
+              style={{
+                padding: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <ButtonForm
+                className="refreshButton"
+                onClick={() => {
+                  setReloadNonce(reloadNonce + 1);
+                }}
+              >
+                <div>
+                  <img src={reloadIcon} alt="Refresh" height={16} />
+                  Refresh Wallet
+                </div>
+              </ButtonForm>
+              <div>
+                Chain: <ChainPicker chain={chainID} setChain={setChainID} />
+              </div>
+            </div>
+            <div
               className="walletInfoContents"
               style={{
                 flex: "1",
@@ -90,13 +129,17 @@ export function WalletInfo({
               }}
             >
               <WalletContentsBox
+                chainID={chainID}
                 className="walletInfoWalletContents"
                 accountAddress={address}
-                indexer={indexer}
+                indexer={indexers[chainID]}
                 collectibles={collectibles}
                 contracts={contracts}
                 requestTokensFetch={requestTokensFetch}
-                mine={true}
+                mine
+                onItemSelected={openPropertiesWindow}
+                isInTrade={false}
+                reloadNonce={reloadNonce}
               />
             </div>
           </>
