@@ -1,4 +1,3 @@
-import { ChainId } from "@0xsequence/network";
 import { useDrop } from "react-dnd";
 import {
   DragItemType,
@@ -54,7 +53,7 @@ export function TradeOffer({
               }
               item={item}
               key={getTokenKey(
-                ChainId.POLYGON,
+                item.chainID,
                 item.contractAddress,
                 item.tokenID
               )}

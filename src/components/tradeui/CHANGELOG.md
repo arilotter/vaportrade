@@ -1,0 +1,11 @@
+# Jan. 2nd, 2022
+ - Vaportrade is now licensed under GPLv3.
+ - Added multichain support.
+ - Added testnet support.
+ - Made switching between your wallet & their wallet tabs instant.
+ - Added "Refresh Wallet" buttons to load new assets.
+ - Added per-chain order expiry times.
+ - Removed requirement for partner's signed orders to not be valid for too long. That's their problem, not an issue.
+ - Fixed collectibles caching bug when you switch to a tab with a superset of your assets.
+ - Fixed timer not ticking down for orders still in progress.
+ - Fixed broken wallet sessions not auto-logging-out.

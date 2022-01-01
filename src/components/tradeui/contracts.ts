@@ -3,7 +3,6 @@ import { TokenBalance } from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
 import { BigNumber } from "ethers";
-import { chainId } from "../../settings";
 import {
   ContractKey,
   unique,
@@ -36,7 +35,6 @@ export function fetchContractsForBalances(
   const batchContractAddresses: string[] = [];
   for (const contractAddress of contractAddresses) {
     const key = getContractKey(chainId, contractAddress);
-
     if (contractAddress !== "0x0" && !contracts.has(key)) {
       batchContractAddresses.push(contractAddress);
     }
@@ -53,6 +51,7 @@ export function fetchContractsForBalances(
 }
 
 export interface Collectible {
+  chainID: ChainId;
   contractAddress: string;
   tokenID: string;
   image: string;
@@ -83,6 +82,7 @@ export async function fetchCollectibles(
   return tokenIDs.map((tokenID) => {
     const tokenMetadata = meta.find((x) => x && x.tokenId === tokenID);
     const collectible: Collectible = {
+      chainID: contract.chainId,
       contractAddress: contract.address,
       image: tokenMetadata?.image ?? "",
       decimals: tokenMetadata?.decimals ?? contract.decimals ?? 0,
@@ -139,7 +139,8 @@ export function getItems({
 }): Item<ContractType>[] {
   return balances
     .map<Item<ContractType> | null>((balance) => {
-      const key = getContractKey(chainId, balance.contractAddress);
+      const chainID = "chainId" in balance ? balance.chainId : balance.chainID;
+      const key = getContractKey(chainID, balance.contractAddress);
       const contract = contracts.get(key);
       if (typeof contract !== "object") {
         return null;
@@ -164,11 +165,12 @@ export function getItems({
         return null;
       }
       const collectible = collectibles?.get(
-        getTokenKey(chainId, balance.contractAddress, balance.tokenID)
+        getTokenKey(chainID, balance.contractAddress, balance.tokenID)
       );
       if (typeof collectible === "object") {
         const item: Item<ContractType> = {
           type,
+          chainID,
           contractAddress: collectible.contractAddress,
           iconUrl: collectible.image,
           name: collectible.name,
@@ -182,6 +184,7 @@ export function getItems({
       if (typeof contract === "object") {
         const item: Item<ContractType> = {
           type,
+          chainID,
           contractAddress: balance.contractAddress,
           balance: BigNumber.from(balance.balance),
           iconUrl: contract.logoURI,
@@ -222,6 +225,7 @@ export function getItems({
 export type CollectiblesDB = Map<TokenKey, Collectible | "fetching">;
 export type ContractsDB = Map<ContractKey, ContractInfo | "fetching">;
 export interface FetchableToken {
+  chainID: ChainId;
   contractAddress: string;
   tokenID: string;
 }

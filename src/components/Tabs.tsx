@@ -39,10 +39,16 @@ export function Tabs({ tabs, style, className }: TabsProps) {
           >
             {tab.title}
           </ButtonForm>
-          // <div className="tab">{tab.title}</div>
         ))}
       </div>
-      <div className="tabContents">{tabs[realSelectedTab].contents}</div>
+      {tabs.map((tab, i) => (
+        <div
+          className="tabContents"
+          style={i !== realSelectedTab ? { display: "none" } : {}}
+        >
+          {tab.contents}
+        </div>
+      ))}
     </div>
   );
 }

@@ -3,7 +3,9 @@ import { NftSwap, Order, SignedOrder } from "@traderxyz/nft-swap-sdk";
 import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
 import { createContext, useEffect } from "react";
+import { FetchableToken } from "../components/tradeui/contracts";
 import { PropertiesProps } from "../components/tradeui/Properties";
+import { SupportedChain, supportedChains } from "./multichain";
 import { verifiedContracts } from "./verified";
 
 export interface FailableTracker extends Tracker {
@@ -40,12 +42,19 @@ export function getContractKey(chainId: ChainId, contractAddress: string) {
 }
 export type ContractKey = ReturnType<typeof getContractKey>;
 
+export function getTokenKeyFromToken({
+  chainID,
+  contractAddress,
+  tokenID,
+}: FetchableToken) {
+  return getTokenKey(chainID, contractAddress, tokenID);
+}
 export function getTokenKey(
-  chainId: ChainId,
+  chainID: ChainId,
   contractAddress: string,
   tokenID: string
 ) {
-  return `${chainId}-${contractAddress.toLowerCase()}-${tokenID}` as const;
+  return `${chainID}-${contractAddress.toLowerCase()}-${tokenID}` as const;
 }
 export type TokenKey = ReturnType<typeof getTokenKey>;
 
@@ -70,6 +79,7 @@ export function isItemWithKnownContractType(
 
 export interface Item<CT extends ContractType> {
   type: CT;
+  chainID: SupportedChain;
   contractAddress: string;
   name: string;
   tokenID: string;
@@ -81,6 +91,7 @@ export interface Item<CT extends ContractType> {
 
 export interface NetworkItem {
   type: KnownContractType;
+  chainID: SupportedChain;
   contractAddress: string;
   tokenID: string;
   balance: string; // bignumber
@@ -122,6 +133,7 @@ export interface TradingPeer {
   hasNewInfo: boolean;
   tradeOffer: NetworkItem[];
   goesFirstAddress: string;
+  chainID: SupportedChain;
   myTradeOffer: Item<KnownContractType>[];
   tradeStatus:
     | { type: "negotiating" }
@@ -171,6 +183,10 @@ export type VaportradeMessage =
       address: string;
     }
   | {
+      type: "set_chain";
+      chainID: SupportedChain;
+    }
+  | {
       type: "lockin";
       lockedOrder: false | { hash: string };
     }
@@ -205,6 +221,12 @@ export function isVaportradeMessage(msg: any): msg is VaportradeMessage {
   ) {
     return true;
   } else if (msg.type === "set_goes_first" && typeof msg.address === "string") {
+    return true;
+  } else if (
+    msg.type === "set_chain" &&
+    typeof msg.chainID === "number" &&
+    supportedChains.includes(msg.chainID)
+  ) {
     return true;
   } else if (msg.type === "accept" && typeof msg.order === "object") {
     return true;
@@ -332,8 +354,8 @@ export const PropertiesContext = createContext<{
 
 export function itemSort(a: Item<ContractType>, b: Item<ContractType>): number {
   return (
-    (+verifiedContracts.has(b.contractAddress) -
-      +verifiedContracts.has(a.contractAddress)) *
+    (+verifiedContracts[b.chainID].has(b.contractAddress) -
+      +verifiedContracts[a.chainID].has(a.contractAddress)) *
       2 +
     (+Boolean(b.iconUrl) - +Boolean(a.iconUrl))
   );

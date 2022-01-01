@@ -1,4 +1,3 @@
-import { ChainId } from "@0xsequence/network";
 // Default settings!
 const settings = {
   background: "#008080",
@@ -8,6 +7,8 @@ const settings = {
       : "http://localhost:8080/",
   sequenceWalletWebappUrl: "https://sequence.app",
   debugModeSetMeToTheStringTrue:
+    process.env.NODE_ENV === "development" ? "true" : "false",
+  testnetModeSetMeToTheStringTrue:
     process.env.NODE_ENV === "development" ? "true" : "false",
 };
 
@@ -31,5 +32,4 @@ function storageKey(key: string) {
 }
 
 export const config: Readonly<typeof settings> = settings;
-export const chainId = ChainId.POLYGON;
 export const LS_SIGNED_ORDER_CACHE_KEY = "signedOrderCache";

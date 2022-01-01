@@ -81,6 +81,7 @@ declare module "packard-belle" {
     onClick?: (option: SelectBoxOption["value"]) => void;
   }): JSX.Element;
   export function SelectBoxSimple(props: any): JSX.Element;
+
   export function StartMenu(props: any): JSX.Element;
   export function TaskBar(props: {
     options: NestedArray<{ title: string; icon: string; onClick: () => void }>;
