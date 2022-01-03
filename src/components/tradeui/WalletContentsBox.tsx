@@ -12,6 +12,7 @@ import {
   KnownContractType,
   isKnownContractType,
   DragItemType,
+  normalizeAddress,
 } from "../../utils/utils";
 import { sequence } from "0xsequence";
 import { Folder } from "./Folder";
@@ -148,7 +149,9 @@ export function WalletContentsBox({
   const nftsInOpenFolder = tokenFolderAddress
     ? (getItems({
         balances: balances.filter(
-          (bal) => bal.contractAddress === tokenFolderAddress
+          (bal) =>
+            normalizeAddress(bal.contractAddress) ===
+            normalizeAddress(tokenFolderAddress)
         ),
         contracts,
         collectibles,

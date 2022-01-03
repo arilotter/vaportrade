@@ -1,6 +1,7 @@
 # Jan. 3rd, 2022 mini-update #2
 - Allow refreshing approval status by clicking the button
 - Allow copy-pasting chat text
+- Fixed opening folders
 # Jan. 3rd, 2022 mini-update
  - Improved approval wording.
  - Added reload button to hard errors
