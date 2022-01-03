@@ -1,3 +1,8 @@
+# Jan. 3rd, 2022
+ - Added native token balance display in wallets.
+ - Added error message when trying to sign a message using Sequence if the config hasn't been deployed.
+ - Added an error when trying to dispatch a tx if you can't afford the protocol fee (wETH not supported for now)
+ - Changed non-NFT tokens to display Symbols instead of token full names
 # Jan. 2nd, 2022
  - Vaportrade is now licensed under GPLv3.
  - Added multichain support.

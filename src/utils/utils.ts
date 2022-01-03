@@ -2,18 +2,21 @@ import { ChainId } from "@0xsequence/network";
 import { NftSwap, Order, SignedOrder } from "@traderxyz/nft-swap-sdk";
 import { BigNumber, ethers, FixedNumber } from "ethers";
 import { Peer, Tracker } from "p2pt";
-import { createContext, useEffect } from "react";
+import { useEffect } from "react";
 import { FetchableToken } from "../components/tradeui/contracts";
-import { PropertiesProps } from "../components/tradeui/Properties";
 import { SupportedChain, supportedChains } from "./multichain";
-import { verifiedContracts } from "./verified";
 
 export interface FailableTracker extends Tracker {
   failed: boolean;
 }
+export type Address = `0x${string}`;
 
-export function normalizeAddress(address: string): string {
-  return address === "0x0" ? address : ethers.utils.getAddress(address);
+export function normalizeAddress(address: Address): Address;
+export function normalizeAddress(address: string): Address;
+export function normalizeAddress(address: string): Address {
+  return (address === "0x0"
+    ? address
+    : ethers.utils.getAddress(address)) as Address;
 }
 
 export function chunk<T>(originalArr: readonly T[], chunkSize: number) {
@@ -80,8 +83,9 @@ export function isItemWithKnownContractType(
 export interface Item<CT extends ContractType> {
   type: CT;
   chainID: SupportedChain;
-  contractAddress: string;
+  contractAddress: Address;
   name: string;
+  symbol: string;
   tokenID: string;
   iconUrl: string;
   balance: BigNumber;
@@ -328,35 +332,5 @@ export function formatTimeLeft(timeLeft: number): string {
   return `${minutes}:${(seconds.length < 2 ? "0" : "") + seconds}`;
 }
 
-export interface Menu {
-  x: number;
-  y: number;
-  menuOptions: Array<"divider" | ContextMenuOptions>;
-}
-
-export const RightClickMenuContext = createContext<{
-  contextMenu: Menu | null;
-  setContextMenu: (contextMenu: Menu) => void;
-}>({
-  setContextMenu: () => {},
-  contextMenu: null,
-});
-
-export const PropertiesContext = createContext<{
-  properties: PropertiesProps[];
-  openPropertiesWindow: (props: PropertiesProps) => void;
-  closePropertiesWindow: (props: PropertiesProps) => void;
-}>({
-  properties: [],
-  openPropertiesWindow: () => {},
-  closePropertiesWindow: () => {},
-});
-
-export function itemSort(a: Item<ContractType>, b: Item<ContractType>): number {
-  return (
-    (+verifiedContracts[b.chainID].has(b.contractAddress) -
-      +verifiedContracts[a.chainID].has(a.contractAddress)) *
-      2 +
-    (+Boolean(b.iconUrl) - +Boolean(a.iconUrl))
-  );
-}
+export const nativeTokenAddress: Address =
+  "0x0000000000000000000000000000000000000000";

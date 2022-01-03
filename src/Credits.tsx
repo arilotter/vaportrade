@@ -1,5 +1,6 @@
 import { Window } from "packard-belle";
 import creditsIcon from "./icons/credits.png";
+import { SafeLink } from "./utils/SafeLink";
 import { useOnKeyDown } from "./utils/utils";
 
 interface CreditsProps {
@@ -24,17 +25,18 @@ export function Credits({ onClose, onMinimize }: CreditsProps) {
         >
           <ul>
             <li>
-              Concept: <a href="https://ari.computer/">Ari Lotter</a> &amp;{" "}
-              <a href="https://www.instagram.com/matthewshera/">
+              Concept:{" "}
+              <SafeLink href="https://ari.computer/">Ari Lotter</SafeLink> &amp;{" "}
+              <SafeLink href="https://www.instagram.com/matthewshera/">
                 Matthew Shera
-              </a>
+              </SafeLink>
             </li>
             <li>Design &amp; Layout: Matthew Shera &amp; Ari Lotter</li>
             <li>
               Vaportrade Logo:{" "}
-              <a href="https://www.instagram.com/soapy_scribbles/">
+              <SafeLink href="https://www.instagram.com/soapy_scribbles/">
                 @soapy_scribbles
-              </a>
+              </SafeLink>
             </li>
             <li>
               Development: Ari Lotter with heaps of nft-swap-sdk help from
@@ -44,33 +46,42 @@ export function Credits({ onClose, onMinimize }: CreditsProps) {
               Philippe Castonguay, &amp; Agustin Aguilar
             </li>
             <li>
-              Dependencies: <a href="https://trader.xyz">trader.xyz</a>,{" "}
-              <a href="https://0x.org/">0x v3</a>,{" "}
-              <a href="https://github.com/subins2000/p2pt">p2pt</a>,{" "}
-              <a href="https://sequence.build/">sequence.js</a>,{" "}
-              <a href="https://packard-belle.netlify.app/">packard-belle</a>,
+              Dependencies:{" "}
+              <SafeLink href="https://trader.xyz">trader.xyz</SafeLink>,{" "}
+              <SafeLink href="https://0x.org/">0x v3</SafeLink>,{" "}
+              <SafeLink href="https://github.com/subins2000/p2pt">
+                p2pt
+              </SafeLink>
+              , <SafeLink href="https://sequence.build/">sequence.js</SafeLink>,{" "}
+              <SafeLink href="https://packard-belle.netlify.app/">
+                packard-belle
+              </SafeLink>
+              ,
               <br />
-              <a href="https://github.com/NoahZinsmeister/web3-react">
+              <SafeLink href="https://github.com/NoahZinsmeister/web3-react">
                 web3-react
-              </a>
-              , <a href="https://ethers.org/">ethers</a>,{" "}
-              <a href="https://github.com/stephensprinkle-zz/react-blockies">
+              </SafeLink>
+              , <SafeLink href="https://ethers.org/">ethers</SafeLink>,{" "}
+              <SafeLink href="https://github.com/stephensprinkle-zz/react-blockies">
                 react blockies
-              </a>
+              </SafeLink>
               ,{" "}
-              <a href="https://github.com/pedrouid/blockies-ts">blockies-ts</a>,{" "}
-              <a href="https://immerjs.github.io/immer/">immer</a>, &{" "}
-              <a href="https://reactjs.org/">react</a>
+              <SafeLink href="https://github.com/pedrouid/blockies-ts">
+                blockies-ts
+              </SafeLink>
+              ,{" "}
+              <SafeLink href="https://immerjs.github.io/immer/">immer</SafeLink>
+              , & <SafeLink href="https://reactjs.org/">react</SafeLink>
             </li>
             <li>
               Special thanks: Daniel Rea and everyone on the Sequence team :)
             </li>
             <li>
               Follow
-              <a href="https://twitter.com/usevaportrade">
+              <SafeLink href="https://twitter.com/usevaportrade">
                 {" "}
                 @usevaportrade{" "}
-              </a>{" "}
+              </SafeLink>{" "}
               on that bird app or shoot me an email at{" "}
               <a href="mailto:vaportrade.net@gmail.com">
                 vaportrade.net@gmail.com
@@ -78,9 +89,9 @@ export function Credits({ onClose, onMinimize }: CreditsProps) {
             </li>
             <li>
               vaportrade.net is open source!{" "}
-              <a href="https://github.com/arilotter/vaportrade/">
+              <SafeLink href="https://github.com/arilotter/vaportrade/">
                 https://github.com/arilotter/vaportrade/
-              </a>
+              </SafeLink>
             </li>
           </ul>
         </div>

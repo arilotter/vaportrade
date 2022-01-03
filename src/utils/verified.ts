@@ -1,17 +1,22 @@
 import { SupportedChain } from "./multichain";
+import { Address, nativeTokenAddress, normalizeAddress } from "./utils";
 
 export const verifiedContracts: {
-  [K in SupportedChain]: Map<string, string>;
+  [K in SupportedChain]: Map<Address, string>;
 } = {
   "1": new Map(
     [
+      //native
+      [nativeTokenAddress, "https://ethereum.org/"],
       //erc20s
       ["0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0", "https://matic.network"],
       ["0x6b175474e89094c44da98b954eedeac495271d0f", "https://makerdao.com"],
-    ].map(([k, v]) => [k.toLowerCase(), v])
+    ].map(([k, v]) => [normalizeAddress(k), v])
   ),
   "137": new Map(
     [
+      //native
+      [nativeTokenAddress, "https://matic.network"],
       //erc1155s
       [
         "0x631998e91476DA5B870D741192fc5Cbc55F5a52E",
@@ -31,7 +36,6 @@ export const verifiedContracts: {
         "https://polygon.technology",
       ],
       ["0x84000b263080bc37d1dd73a29d92794a6cf1564e", "https://makerdao.com"],
-      ["0x0000000000000000000000000000000000000000", "https://matic.network"],
       ["0x0000000000000000000000000000000000001010", "https://matic.network"],
       ["0x7240feeb4d8862a25f3d22c063528557aa42da85", "https://unilend.finance"],
       ["0xda537104d6a5edd53c6fbba9a898708e465260b6", "https://yearn.finance"],
@@ -91,8 +95,14 @@ export const verifiedContracts: {
         "0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d",
         "https://boredapeyachtclub.com",
       ],
-    ].map(([k, v]) => [k.toLowerCase(), v])
+    ].map(([k, v]) => [normalizeAddress(k), v])
   ),
-  "4": new Map(),
-  "80001": new Map(),
+  "4": new Map([
+    //native
+    [nativeTokenAddress, "https://ethereum.org/"],
+  ]),
+  "80001": new Map([
+    //native
+    [nativeTokenAddress, "https://matic.network"],
+  ]),
 };

@@ -1,5 +1,8 @@
 import { sequence } from "0xsequence";
-import { TokenBalance } from "@0xsequence/indexer";
+import {
+  ContractType as SequenceContractType,
+  TokenBalance,
+} from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
 import { BigNumber } from "ethers";
@@ -102,6 +105,20 @@ export async function fetchBalances(
   const { balances } = await indexer.getTokenBalances({
     accountAddress,
   });
+  const etherBalance = await indexer.getEtherBalance({ accountAddress });
+
+  balances.push({
+    accountAddress,
+    balance: etherBalance.balance.balanceWei,
+    blockHash: "",
+    blockNumber: 0,
+    chainId: (await indexer.getChainID()).chainID,
+    contractAddress: "0x0000000000000000000000000000000000000000", // native token
+    contractType: SequenceContractType.UNKNOWN,
+    id: 0,
+    tokenID: "0",
+    updateId: 0,
+  });
   const extraBalances = await Promise.all(
     balances
       .filter(
@@ -171,9 +188,10 @@ export function getItems({
         const item: Item<ContractType> = {
           type,
           chainID,
-          contractAddress: collectible.contractAddress,
+          contractAddress: normalizeAddress(collectible.contractAddress),
           iconUrl: collectible.image,
           name: collectible.name,
+          symbol: contract.symbol,
           balance: BigNumber.from(balance.balance),
           tokenID: collectible.tokenID,
           originalBalance: BigNumber.from(balance.balance),
@@ -185,10 +203,11 @@ export function getItems({
         const item: Item<ContractType> = {
           type,
           chainID,
-          contractAddress: balance.contractAddress,
+          contractAddress: normalizeAddress(balance.contractAddress),
           balance: BigNumber.from(balance.balance),
           iconUrl: contract.logoURI,
           name: contract.name,
+          symbol: contract.symbol,
           tokenID: balance.tokenID,
           originalBalance: BigNumber.from(balance.balance),
           decimals: contract.decimals || 1,

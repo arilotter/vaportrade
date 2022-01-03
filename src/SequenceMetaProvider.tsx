@@ -10,11 +10,12 @@ import {
   fetchContractsForBalances,
   fetchCollectibles,
 } from "./components/tradeui/contracts";
-import { Indexers } from "./utils/multichain";
+import { chainConfigs, Indexers, supportedChains } from "./utils/multichain";
 import {
   getContractKey,
   getTokenKey,
   getTokenKeyFromToken,
+  nativeTokenAddress,
 } from "./utils/utils";
 
 interface SequenceMetaProviderProps {
@@ -41,7 +42,33 @@ export function SequenceMetaProvider({
   const [collectibles, updateCollectibles] = useImmer<CollectiblesDB>(
     new Map()
   );
-  const [contracts, updateContracts] = useImmer<ContractsDB>(new Map());
+  const [contracts, updateContracts] = useImmer<ContractsDB>(
+    new Map(
+      supportedChains.map((chainId) => {
+        const chainConfig = chainConfigs[chainId];
+        return [
+          getContractKey(chainId, nativeTokenAddress),
+          {
+            chainId,
+            address: nativeTokenAddress,
+            type: "native",
+            name: chainConfig.title,
+            symbol: chainConfig.nativeTokenSymbol,
+            logoURI: chainConfigs[chainId].iconUrl,
+            extensions: {
+              link: "",
+              description: `The native token for ${chainConfigs[chainId].title}.`,
+              ogImage: "",
+              originChainId: 0,
+              originAddress: "",
+              blacklist: false,
+            },
+            decimals: 18, // all EVM native tokens have 18 decimals
+          },
+        ];
+      })
+    )
+  );
 
   const requestTokensFetch = useCallback(
     (tokens: FetchableToken[]) => {

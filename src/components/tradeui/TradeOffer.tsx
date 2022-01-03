@@ -1,9 +1,9 @@
 import { useDrop } from "react-dnd";
+import { itemSort } from "../../utils/tokensort";
 import {
   DragItemType,
   getTokenKey,
   Item,
-  itemSort,
   KnownContractType,
 } from "../../utils/utils";
 import { DraggableIcon } from "./DraggableIcon";

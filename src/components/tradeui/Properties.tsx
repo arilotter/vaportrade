@@ -1,12 +1,18 @@
 import { Window } from "packard-belle";
 import missingIcon from "./missing.png";
 import warningIcon from "../../icons/warning.png";
-import { ContractType, useOnKeyDown } from "../../utils/utils";
+import {
+  ContractType,
+  normalizeAddress,
+  useOnKeyDown,
+} from "../../utils/utils";
 import { verifiedContracts } from "../../utils/verified";
 import "./Properties.css";
 import { chainConfigs, SupportedChain } from "../../utils/multichain";
+import { SafeLink } from "../../utils/SafeLink";
 export interface PropertiesProps {
   name: string;
+  symbol?: string;
   contractAddress: string;
   iconUrl: string;
   type: ContractType;
@@ -20,6 +26,7 @@ interface PropertiesWindowProps extends PropertiesProps {
 }
 export function Properties({
   name,
+  symbol,
   contractAddress,
   iconUrl,
   type,
@@ -29,6 +36,7 @@ export function Properties({
   onMinimize,
 }: PropertiesWindowProps) {
   useOnKeyDown("Escape", onClose);
+  const address = normalizeAddress(contractAddress);
   return (
     <div className="modal">
       <Window
@@ -44,6 +52,12 @@ export function Properties({
           <span>Name:</span>
           {name}
         </div>
+        {symbol ? (
+          <div className="propsProp">
+            <span>Symbol:</span>
+            {symbol}
+          </div>
+        ) : null}
         <div className="propsProp">
           <span>Type:</span>
           {type === undefined || typeof type === "string"
@@ -52,11 +66,11 @@ export function Properties({
         </div>
         <div className="propsProp">
           <span>Contract Address:</span>
-          <a
-            href={`${chainConfigs[chainID].explorerUrl}/token/${contractAddress}`}
+          <SafeLink
+            href={`${chainConfigs[chainID].explorerUrl}/token/${address}`}
           >
-            {contractAddress}
-          </a>
+            {address}
+          </SafeLink>
         </div>
         {tokenID && type !== "ERC20" ? (
           <div className="propsProp">
@@ -64,7 +78,7 @@ export function Properties({
             {tokenID}
           </div>
         ) : null}
-        {verifiedContracts[chainID].has(contractAddress) ? (
+        {verifiedContracts[chainID].has(address) ? (
           <div className="propsProp">
             <p style={{ maxWidth: "315px" }}>
               This token's Contract Address has been verified by vaportrade.net.
@@ -76,9 +90,9 @@ export function Properties({
             </p>
             <p>
               For more info about this verified token, go to{" "}
-              <a href={verifiedContracts[chainID].get(contractAddress)}>
-                {verifiedContracts[chainID].get(contractAddress)}
-              </a>
+              <SafeLink href={verifiedContracts[chainID].get(address)!}>
+                {verifiedContracts[chainID].get(address)}
+              </SafeLink>
             </p>
           </div>
         ) : (

@@ -1,7 +1,7 @@
 import { ExplorerIcon } from "packard-belle";
 import { useCallback, MouseEvent, useContext } from "react";
+import { PropertiesContext, RightClickMenuContext } from "../../utils/context";
 import { SupportedChain } from "../../utils/multichain";
-import { PropertiesContext, RightClickMenuContext } from "../../utils/utils";
 import folderBg from "./folder_bg.png";
 import folderFg from "./folder_fg.png";
 

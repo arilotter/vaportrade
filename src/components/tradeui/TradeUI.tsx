@@ -50,7 +50,11 @@ import {
 } from "./contracts";
 import { Web3Provider } from "@ethersproject/providers";
 import { useWeb3React } from "@web3-react/core";
-import { formatBytes32String, randomBytes } from "ethers/lib/utils";
+import {
+  formatBytes32String,
+  formatEther,
+  randomBytes,
+} from "ethers/lib/utils";
 import { BigNumber } from "@ethersproject/bignumber";
 import { config, LS_SIGNED_ORDER_CACHE_KEY } from "../../settings";
 import { TypedListener } from "@traderxyz/nft-swap-sdk/dist/contracts/common";
@@ -59,6 +63,7 @@ import { chainConfigs, Indexers, SupportedChain } from "../../utils/multichain";
 import { ChainPicker } from "../../utils/ChainPicker";
 import { isConnectorMultichain } from "../../web3/connectors";
 import { SequenceConnector } from "../../web3/Web3ReactSequenceConnector";
+import { SafeLink } from "../../utils/SafeLink";
 
 interface TradeUIProps {
   indexers: Indexers;
@@ -75,7 +80,7 @@ interface TradeUIProps {
   updateGoesFirst: (goesFirstAddress: string) => void;
   updateChain: (chainID: SupportedChain) => void;
   setWalletOpen: (open: boolean) => void;
-  onOpenWalletInfo: () => void;
+  onOpenWalletInfo: (chainID: SupportedChain) => void;
   showTipUI: () => void;
 }
 
@@ -90,7 +95,7 @@ type TradeButtonStatus =
   | "waiting_for_partner"
   | "waiting_for_order_completion";
 
-const DEFAULT_TIME = "...";
+const DEFAULT_TIME = 5 * 60 * 1000;
 
 interface CachedSignedOrder {
   signedOrder: SignedOrder;
@@ -114,7 +119,7 @@ export function TradeUI({
 }: TradeUIProps) {
   const {
     account: address,
-    chainId,
+    chainId: walletChainID,
     connector,
     library,
   } = useWeb3React<Web3Provider>();
@@ -176,7 +181,10 @@ export function TradeUI({
     setPickBalanceItem,
   ] = useState<Item<KnownContractType> | null>(null);
 
-  const [hardError, setHardError] = useState<string | null>(null);
+  const [hardError, setHardError] = useState<{
+    error: string;
+    txHash?: string;
+  } | null>(null);
   const [softWarning, setSoftWarning] = useState<string | null>(null);
 
   const [requiredApprovals, updateRequiredApprovals] = useImmer<
@@ -348,7 +356,7 @@ export function TradeUI({
     return () => clearTimeout(timer);
   }, []);
 
-  const timeLeftUntilTradeExpires = useMemo(() => {
+  const msLeftUntilTradeExpires = useMemo(() => {
     const expiryTimeString =
       tradingPartner.tradeStatus.type === "signedOrder"
         ? tradingPartner.tradeStatus.signedOrder.expirationTimeSeconds
@@ -363,10 +371,7 @@ export function TradeUI({
       return DEFAULT_TIME;
     }
 
-    // 30s buffer for network & desync.
-    const timeLeft = expiryTime * 1000 - time;
-
-    return formatTimeLeft(timeLeft);
+    return expiryTime * 1000 - time;
   }, [myOrderSent, tradingPartner.tradeStatus, time]);
 
   let tradeButtonStatus: TradeButtonStatus;
@@ -403,7 +408,7 @@ export function TradeUI({
         tradeButtonStatus = "waiting_for_order_completion";
       } else if (
         tradingPartner.tradeStatus.type === "signedOrder" &&
-        timeLeftUntilTradeExpires !== "0:00"
+        msLeftUntilTradeExpires > 30 * 1000
       ) {
         // 2nd player needs to accept order
         tradeButtonStatus = "ready_to_sign";
@@ -430,9 +435,9 @@ export function TradeUI({
           10
         );
         if (Number.isNaN(expiryTime)) {
-          const err = `Trading partner's signed order expires at NaN.`;
-          console.error(err);
-          setHardError(err);
+          const error = `Trading partner's signed order expiry time is not a number: ${tradingPartner.tradeStatus.signedOrder.expirationTimeSeconds}`;
+          console.error(error);
+          setHardError({ error });
         }
 
         const partnerHash = nftSwap.getOrderHash({
@@ -442,9 +447,9 @@ export function TradeUI({
         });
         const hash = nftSwap.getOrderHash(order);
         if (partnerHash !== hash) {
-          const err = `Got invalid hash from partner submitting signed order\n: Expected ${hash}, got ${partnerHash}`;
-          console.error(err);
-          setHardError(err);
+          const error = `Got invalid hash from partner submitting signed order\n: Expected ${hash}, got ${partnerHash}`;
+          console.error(error);
+          setHardError({ error });
         }
       }
     }
@@ -485,7 +490,7 @@ export function TradeUI({
   }, [nftSwap, order, p2p, tradingPartner.peer, lockedIn]);
 
   useEffect(() => {
-    if (myOrderSent && timeLeftUntilTradeExpires === "0:00") {
+    if (myOrderSent && msLeftUntilTradeExpires < -30 * 1000) {
       setMyOrderSent(false);
       setLockedIn({ lockedIn: false, sent: false });
       p2p.send(tradingPartner.peer, {
@@ -493,7 +498,7 @@ export function TradeUI({
         offer: [],
       });
     }
-  }, [myOrderSent, timeLeftUntilTradeExpires, p2p, tradingPartner.peer]);
+  }, [myOrderSent, msLeftUntilTradeExpires, p2p, tradingPartner.peer]);
 
   useEffect(() => {
     if (!nftSwap) {
@@ -514,7 +519,7 @@ export function TradeUI({
             const timeLeft =
               Number.parseInt(signedOrder.expirationTimeSeconds, 10) * 1000 -
               Date.now();
-            return timeLeft <= 0
+            return timeLeft <= -30 * 1000
               ? Promise.resolve({ signedOrder, orderInfo: false })
               : nftSwap
                   .getOrderInfo(signedOrder)
@@ -668,6 +673,8 @@ export function TradeUI({
     [nftSwap, signedOrderCache, address, fakeOrderHash, order]
   );
 
+  const chain = chainConfigs[tradingPartner.chainID];
+
   if (orderSuccess) {
     return (
       <div className="successfulTradeBox">
@@ -676,18 +683,17 @@ export function TradeUI({
           <div className="successLabel">You sent</div>
         </div>
         <div className="successfulTrade">
-          <div className="successfulTitle">Trade successful!</div>
-          <a
+          <div className="successfulTitle">Trade completed</div>
+          <p>Swap completed on {chainConfigs[orderSuccess.chainID].title}.</p>
+          <SafeLink
             href={`${chainConfigs[orderSuccess.chainID].explorerUrl}/tx/${
               orderSuccess.txHash
             }`}
-            target="_blank"
-            rel="noreferrer"
           >
             View on-chain transaction
-          </a>
+          </SafeLink>
           <ButtonForm
-            onClick={() => onOpenWalletInfo()}
+            onClick={() => onOpenWalletInfo(orderSuccess.chainID)}
             className="successWalletButton"
           >
             Open your wallet
@@ -730,30 +736,37 @@ export function TradeUI({
             Clear Error
           </ButtonForm>
         </h1>
-        <div className="error">{hardError}</div>
+        <div className="error">{hardError.error}</div>
+        {hardError.txHash ? (
+          <div className="error">
+            <SafeLink href={`${chain.explorerUrl}/tx/${hardError.txHash}`}>
+              View on block explorer
+            </SafeLink>
+          </div>
+        ) : null}
       </div>
     );
   }
 
-  if (!isConnectorMultichain(connector) && chainId !== tradingPartner.chainID) {
+  if (
+    !isConnectorMultichain(connector) &&
+    walletChainID !== tradingPartner.chainID
+  ) {
     return (
       <div style={{ textAlign: "center" }}>
         <h1>Chain ID mismatch</h1>
         <div className="error">
           Your wallet's chain ID is set to{" "}
-          {chainConfigs[(chainId || 0) as SupportedChain]?.title ??
+          {chainConfigs[(walletChainID || 0) as SupportedChain]?.title ??
             "an unknown chain"}{" "}
-          ( Chain ID {chainId}),
+          ( Chain ID {walletChainID}),
           <br />
-          but this trade is set to {
-            chainConfigs[tradingPartner.chainID].title
-          }{" "}
-          (Chain ID {tradingPartner.chainID}).
+          but this trade is set to {chain.title} (Chain ID{" "}
+          {tradingPartner.chainID}).
         </div>
         <p>
-          Please change the active network in your wallet to{" "}
-          {chainConfigs[tradingPartner.chainID].title} (Chain ID{" "}
-          {tradingPartner.chainID}).{" "}
+          Please change the active network in your wallet to {chain.title}{" "}
+          (Chain ID {tradingPartner.chainID}).{" "}
           <ButtonForm
             onClick={() => {
               Promise.race([
@@ -762,30 +775,28 @@ export function TradeUI({
                 ]),
                 new Promise((res) => setTimeout(res, 10_000)),
               ]).catch((err) => {
-                console.log(err);
+                console.error(err);
                 if (typeof err === "object" && (err as any).code === 4902) {
                   library
                     .send("wallet_addEthereumChain", [
                       {
                         chainId: `0x${tradingPartner.chainID.toString(16)}`,
-                        chainName: chainConfigs[tradingPartner.chainID].title,
-                        blockExplorerUrls: [
-                          chainConfigs[tradingPartner.chainID].explorerUrl,
-                        ],
-                        rpcUrls: [chainConfigs[tradingPartner.chainID].rpcUrl],
+                        chainName: chain.title,
+                        blockExplorerUrls: [chain.explorerUrl],
+                        rpcUrls: [chain.rpcUrl],
                       },
                     ])
                     .catch(() => {
-                      setHardError(`Failed to automatically add ${
-                        chainConfigs[tradingPartner.chainID].title
-                      } (Chain ID 
-                        ${tradingPartner.chainID}) to your wallet.`);
+                      setHardError({
+                        error: `Failed to automatically add ${chain.title} (Chain ID 
+                        ${tradingPartner.chainID}) to your wallet.`,
+                      });
                     });
                 } else {
-                  setHardError(`Failed to automatically switch your wallet's chain to ${
-                    chainConfigs[tradingPartner.chainID].title
-                  } (Chain ID 
-                  ${tradingPartner.chainID}).`);
+                  setHardError({
+                    error: `Failed to automatically switch your wallet's chain to ${chain.title} (Chain ID 
+                  ${tradingPartner.chainID}).`,
+                  });
                 }
               });
             }}
@@ -811,6 +822,7 @@ export function TradeUI({
       </div>
     );
   }
+
   const indexer = indexers[tradingPartner.chainID];
   return (
     <>
@@ -953,10 +965,14 @@ export function TradeUI({
                 <span className="acceptOfferText">
                   {tradeButtonStatus === "ready_to_sign" &&
                   tradingPartner.tradeStatus.type === "signedOrder"
-                    ? `Submit trade (${timeLeftUntilTradeExpires})`
+                    ? `Submit trade (${formatTimeLeft(
+                        msLeftUntilTradeExpires
+                      )})`
                     : tradeButtonStatus === "waiting_for_partner" &&
                       typeof myOrderSent === "object"
-                    ? `Waiting for order on-chain (${timeLeftUntilTradeExpires})`
+                    ? `Waiting for order on-chain (${formatTimeLeft(
+                        msLeftUntilTradeExpires
+                      )})`
                     : tradeButtonStates[tradeButtonStatus].altText}
                 </span>
               </div>
@@ -1034,13 +1050,26 @@ export function TradeUI({
                       if (iGoFirst) {
                         // sign and submit order to other player
 
+                        // TODO remove this when Sequence adds Tolga's deploy warning UI
+                        if (connector instanceof SequenceConnector) {
+                          const isDeployed = await connector.configIsUpToDate(
+                            tradingPartner.chainID,
+                            address
+                          );
+                          if (!isDeployed) {
+                            alert(
+                              "Woah! You're using Sequence, but your wallet config hasn't been deployed on this chain yet. Make a transaction on this chain using Sequence or pay fees in this trade to make this work."
+                            );
+                            return;
+                          }
+                        }
+
                         console.log(
                           "[trade] waiting for user to sign order..."
                         );
                         const expiryTime =
                           Math.floor(new Date().getTime() / 1000) +
-                          chainConfigs[tradingPartner.chainID]
-                            .tradingWindowSeconds;
+                          chain.tradingWindowSeconds;
                         try {
                           setWalletOpen(true);
                           const signedOrder = await nftSwap.signOrder(
@@ -1095,13 +1124,14 @@ export function TradeUI({
                               "You rejected the order signature.\nTry again and accept the signature request to continue."
                             );
                           } else {
-                            setHardError(
-                              typeof err === "string"
-                                ? err
-                                : err instanceof Error
-                                ? `${err.name}\n${err.message}\n${err.stack}`
-                                : JSON.stringify(err)
-                            );
+                            setHardError({
+                              error:
+                                typeof err === "string"
+                                  ? err
+                                  : err instanceof Error
+                                  ? `${err.name}\n${err.message}\n${err.stack}`
+                                  : JSON.stringify(err),
+                            });
                           }
                         } finally {
                           setWalletOpen(false);
@@ -1117,10 +1147,37 @@ export function TradeUI({
                           "[trade] got signed order from peer, button clicked. submitting order on-chain"
                         );
                         try {
+                          if (
+                            chain.protocolFee &&
+                            !chain.protocolFee.isZero()
+                          ) {
+                            const nativeTokenBalance = BigNumber.from(
+                              (
+                                await indexer.getEtherBalance({
+                                  accountAddress: address,
+                                })
+                              ).balance.balanceWei
+                            );
+                            if (nativeTokenBalance.lt(chain.protocolFee)) {
+                              throw new Error(
+                                `You can't afford the protocol fee on this chain! You need at least ${formatEther(
+                                  chain.protocolFee
+                                )}${
+                                  chain.nativeTokenSymbol
+                                } in your wallet, but you only have ${formatEther(
+                                  nativeTokenBalance
+                                )}${chain.nativeTokenSymbol}`
+                              );
+                            }
+                          }
                           setWalletOpen(true);
 
                           const fillTx = await nftSwap.fillSignedOrder(
-                            tradingPartner.tradeStatus.signedOrder
+                            tradingPartner.tradeStatus.signedOrder,
+                            undefined,
+                            {
+                              value: chain.protocolFee,
+                            }
                           );
                           setMyOrderSent(
                             tradingPartner.tradeStatus.signedOrder
@@ -1140,9 +1197,10 @@ export function TradeUI({
                               chainID: tradingPartner.chainID,
                             });
                           } else {
-                            setHardError(
-                              `Error making trade: Transaction ${fillTxReceipt.transactionHash} failed.`
-                            );
+                            setHardError({
+                              error: `Trade failed with error: Transaction ${fillTxReceipt.transactionHash} failed.`,
+                              txHash: fillTxReceipt.transactionHash,
+                            });
                           }
                         } catch (err) {
                           if (
@@ -1154,13 +1212,14 @@ export function TradeUI({
                               "You rejected submitting the trade on-chain.\nTry again and submit the order to complete the trade."
                             );
                           } else {
-                            setHardError(
-                              typeof err === "string"
-                                ? err
-                                : err instanceof Error
-                                ? `${err.name}\n${err.message}\n${err.stack}`
-                                : JSON.stringify(err)
-                            );
+                            setHardError({
+                              error:
+                                typeof err === "string"
+                                  ? err
+                                  : err instanceof Error
+                                  ? `${err.name}\n${err.message}\n${err.stack}`
+                                  : JSON.stringify(err),
+                            });
                           }
                         } finally {
                           setWalletOpen(false);

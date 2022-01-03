@@ -16,9 +16,9 @@ import {
   SupportedChain,
   supportedChains,
 } from "./utils/multichain";
-import { PropertiesContext } from "./utils/utils";
 import { ChainPicker } from "./utils/ChainPicker";
 import reloadIcon from "./icons/reload.png";
+import { PropertiesContext } from "./utils/context";
 
 interface WalletInfoProps {
   connector: AbstractConnector;
@@ -26,6 +26,7 @@ interface WalletInfoProps {
 
   onMinimize: () => void;
   onClose: () => void;
+  defaultChain?: SupportedChain;
 
   indexers: Indexers;
   collectibles: CollectiblesDB;
@@ -41,13 +42,14 @@ export function WalletInfo({
   onClose,
   disconnect,
   requestTokensFetch,
+  defaultChain,
 }: WalletInfoProps) {
   const { openPropertiesWindow } = useContext(PropertiesContext);
 
   const [address, setAddress] = useState<string | null>(null);
-  // use auth chain by default
   const [chainID, setChainID] = useState<SupportedChain>(
-    supportedChains.find((chain) => chainConfigs[chain].isAuthChain)!
+    defaultChain ||
+      supportedChains.find((chain) => chainConfigs[chain].isAuthChain)!
   );
   const [reloadNonce, setReloadNonce] = useState(0);
 
