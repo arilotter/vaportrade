@@ -1,3 +1,7 @@
+# Jan. 3rd, 2022 mini-update
+ - Improved approval wording.
+ - Added reload button to hard errors
+ - Fixed some ??? tokens
 # Jan. 3rd, 2022
  - Added native token balance display in wallets.
  - Added error message when trying to sign a message using Sequence if the config hasn't been deployed.

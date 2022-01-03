@@ -120,7 +120,8 @@ export function SequenceMetaProvider({
           updateContracts((contracts) => {
             for (const contractAddress of addrs) {
               const key = getContractKey(chainID, contractAddress);
-              if (contracts.has(key) && contracts.get(key) !== "fetching") {
+              const item = contracts.get(key);
+              if (item && item !== "fetching" && item.type !== "???") {
                 continue;
               }
               if (

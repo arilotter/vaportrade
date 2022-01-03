@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useImmer } from "use-immer";
 import { enableMapSet } from "immer";
-import { Window, Theme, WindowAlert, StandardMenu } from "packard-belle";
+import {
+  Window,
+  Theme,
+  WindowAlert,
+  StandardMenu,
+  ButtonForm,
+} from "packard-belle";
 import P2PT, { Peer, Tracker } from "p2pt";
 
 import { TrackersList } from "./components/TrackersList";
@@ -536,7 +542,11 @@ function Vaportrade() {
               hardError ? (
                 <div className="modal">
                   <Window title="Error">
-                    <p>Woah, vaportrade hit an error.</p>
+                    <p>Woah, vaportrade hit an unexpected error.</p>
+                    <p>Reload the page to continue.</p>
+                    <ButtonForm onClick={() => window.location.reload()}>
+                      Reload
+                    </ButtonForm>
                     <pre>{hardError}</pre>
                   </Window>
                 </div>

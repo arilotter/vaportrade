@@ -1275,7 +1275,8 @@ export function TradeUI({
               {tokensThatNeedApproval && tokensThatNeedApproval.length ? (
                 <>
                   <div className="softWarning">
-                    You'll need to approve transferring:
+                    After you lock in, vaportrade will ask you to approve
+                    transferring:
                     <ul>
                       {tokensThatNeedApproval.map(({ item, key }) => (
                         <li key={key}>{item.name}</li>
