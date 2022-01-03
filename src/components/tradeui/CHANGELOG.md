@@ -1,3 +1,6 @@
+# Jan. 3rd, 2022 mini-update #3
+- Add settings version keys
+- Remove CORS backend service from prod :)
 # Jan. 3rd, 2022 mini-update #2
 - Allow refreshing approval status by clicking the button
 - Allow copy-pasting chat text
