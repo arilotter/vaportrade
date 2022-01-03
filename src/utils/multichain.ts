@@ -7,6 +7,8 @@ import rinkebyIcon from "../icons/rinkeby.png";
 import polygonIcon from "../icons/polygon.webp";
 import mumbaiIcon from "../icons/mumbai.png";
 import { RpcRelayerOptions } from "@0xsequence/relayer";
+import { BigNumber } from "@ethersproject/bignumber";
+import { parseEther } from "@ethersproject/units";
 
 const _supportedChains = [
   ChainId.MAINNET,
@@ -37,12 +39,15 @@ export const chainConfigs: {
       relayer: RpcRelayerOptions;
       indexerUrl: string;
       tradingWindowSeconds: number;
+      protocolFee?: BigNumber;
+      nativeTokenSymbol: string;
     }
   >;
 } = {
   "1": {
     name: "mainnet",
     title: "Ethereum",
+    nativeTokenSymbol: "ETH",
     rpcUrl: `https://nodes.sequence.app/mainnet`,
     relayer: { url: `${corsProxy}https://mainnet-relayer.sequence.app` },
     indexerUrl: `${corsProxy}https://mainnet-indexer.sequence.app`,
@@ -54,6 +59,7 @@ export const chainConfigs: {
   "137": {
     name: "polygon",
     title: "Polygon",
+    nativeTokenSymbol: "MATIC",
     rpcUrl: `https://nodes.sequence.app/polygon`,
     relayer: { url: `${corsProxy}https://polygon-relayer.sequence.app` },
     indexerUrl: `${corsProxy}https://polygon-indexer.sequence.app`,
@@ -67,6 +73,7 @@ export const chainConfigs: {
   4: {
     name: "rinkeby",
     title: "Rinkeby Testnet",
+    nativeTokenSymbol: "tETH",
     rpcUrl: `https://nodes.sequence.app/rinkeby`,
     relayer: { url: `${corsProxy}https://rinkeby-relayer.sequence.app` },
     indexerUrl: `${corsProxy}https://rinkeby-indexer.sequence.app`,
@@ -74,10 +81,13 @@ export const chainConfigs: {
     iconUrl: rinkebyIcon,
     testnet: true,
     tradingWindowSeconds: 15 * 60,
+    // Rinkeby's 0x v3 has protocol fees, so give it a little eth to make it happy
+    protocolFee: parseEther("0.01"),
   },
   80001: {
     name: "mumbai",
     title: "Mumbai Polygon Testnet",
+    nativeTokenSymbol: "tMATIC",
     rpcUrl: `https://nodes.sequence.app/mumbai`,
     relayer: { url: `${corsProxy}https://mumbai-relayer.sequence.app` },
     indexerUrl: `${corsProxy}https://mumbai-indexer.sequence.app`,

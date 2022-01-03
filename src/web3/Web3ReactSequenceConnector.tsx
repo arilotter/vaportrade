@@ -7,6 +7,7 @@ import type {
   Web3Provider,
 } from "@0xsequence/provider";
 import { ChainId } from "@0xsequence/network";
+import { isConfigEqual } from "@0xsequence/config";
 
 interface SequenceConnectorArguments {
   supportedChainIds: number[];
@@ -80,5 +81,35 @@ export class SequenceConnector extends AbstractConnector {
     await this.wallet?.disconnect();
     this.wallet = undefined;
     this.emitDeactivate();
+  }
+
+  public async configIsUpToDate(
+    chainID: ChainId,
+    address: string
+  ): Promise<boolean> {
+    if (!this.wallet) {
+      return false;
+    }
+
+    const authChainID = await this.wallet.getAuthChainId();
+    const walletStates = await this.wallet.getWalletState();
+
+    const authChainState = walletStates.find(
+      (item) => item.chainId === authChainID
+    );
+    if (!authChainState || !authChainState.deployed || !authChainState.config) {
+      return false;
+    }
+
+    const thisChainState = walletStates.find(
+      (ws) =>
+        ws.chainId === chainID &&
+        ws.address.toLowerCase() === address.toLowerCase()
+    );
+    if (!thisChainState || !thisChainState.deployed || !thisChainState.config) {
+      return false;
+    }
+
+    return isConfigEqual(authChainState.config, thisChainState.config);
   }
 }

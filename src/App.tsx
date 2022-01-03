@@ -10,9 +10,6 @@ import {
   FailableTracker,
   isTradingPeer,
   isVaportradeMessage,
-  Menu,
-  PropertiesContext,
-  RightClickMenuContext,
   TradingPeer,
   VaportradeMessage,
 } from "./utils/utils";
@@ -51,6 +48,12 @@ import { TipUI } from "./TipUI";
 import { Properties, PropertiesProps } from "./components/tradeui/Properties";
 import { config } from "./settings";
 import { ChainId } from "@0xsequence/network";
+import { SupportedChain } from "./utils/multichain";
+import {
+  Menu,
+  PropertiesContext,
+  RightClickMenuContext,
+} from "./utils/context";
 
 enableMapSet();
 function App() {
@@ -173,9 +176,9 @@ function Vaportrade() {
   const [tradingPartnerAddress, setTradingPartnerAddress] = useState<
     string | null
   >(null);
-  const [showWalletInfo, setShowWalletInfo] = useState<boolean | "minimized">(
-    false
-  );
+  const [showWalletInfo, setShowWalletInfo] = useState<
+    false | { chainID?: SupportedChain; minimized: boolean }
+  >(false);
   const [showTipUI, setShowTipUI] = useState<boolean | "minimized">(false);
   const walletName = (Object.keys(connectorsByName) as Array<
     keyof typeof connectorsByName
@@ -250,12 +253,13 @@ function Vaportrade() {
     }
     if (showWalletInfo) {
       windows.push({
-        isActive: showWalletInfo === true,
+        isActive: !showWalletInfo.minimized,
         icon: walletIcon,
         title: "My Wallet",
         id: 1004,
-        minimize: () => setShowWalletInfo("minimized"),
-        open: () => setShowWalletInfo(true),
+        minimize: () =>
+          setShowWalletInfo({ ...showWalletInfo, minimized: true }),
+        open: () => setShowWalletInfo({ ...showWalletInfo, minimized: false }),
       });
     }
     if (showTipUI) {
@@ -625,7 +629,9 @@ function Vaportrade() {
                                   }
                                 });
                               }}
-                              onOpenWalletInfo={() => setShowWalletInfo(true)}
+                              onOpenWalletInfo={(chainID) =>
+                                setShowWalletInfo({ chainID, minimized: false })
+                              }
                               showTipUI={() => setShowTipUI(true)}
                             />
                             <Chat
@@ -664,12 +670,18 @@ function Vaportrade() {
                     )}
                   </div>
 
-                  {connector && showWalletInfo === true ? (
+                  {connector && showWalletInfo && !showWalletInfo.minimized ? (
                     <WalletInfo
+                      defaultChain={showWalletInfo.chainID}
                       connector={connector}
                       disconnect={deactivate}
                       onClose={() => setShowWalletInfo(false)}
-                      onMinimize={() => setShowWalletInfo("minimized")}
+                      onMinimize={() =>
+                        setShowWalletInfo({
+                          ...showWalletInfo,
+                          minimized: true,
+                        })
+                      }
                       collectibles={collectibles}
                       contracts={contracts}
                       indexers={indexers}
@@ -893,7 +905,7 @@ function Vaportrade() {
                   title: `My Wallet`,
                   onClick: () => {
                     minimizeWindows();
-                    setShowWalletInfo(true);
+                    setShowWalletInfo({ minimized: false });
                   },
                 },
               ],
@@ -923,7 +935,7 @@ function Vaportrade() {
                 alt: `Connected to wallet ${address}`,
                 onClick: () => {
                   minimizeWindows();
-                  setShowWalletInfo(true);
+                  setShowWalletInfo({ minimized: false });
                 },
                 icon: makeBlockyIcon(address),
               },
@@ -931,7 +943,7 @@ function Vaportrade() {
                 alt: `Wallet type: ${walletName}`,
                 onClick: () => {
                   minimizeWindows();
-                  setShowWalletInfo(true);
+                  setShowWalletInfo({ minimized: false });
                 },
                 icon: walletIcon,
               },

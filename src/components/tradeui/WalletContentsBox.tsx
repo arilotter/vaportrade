@@ -12,7 +12,6 @@ import {
   KnownContractType,
   isKnownContractType,
   DragItemType,
-  itemSort,
 } from "../../utils/utils";
 import { sequence } from "0xsequence";
 import { Folder } from "./Folder";
@@ -26,6 +25,7 @@ import {
 } from "./contracts";
 import { useDrop } from "react-dnd";
 import { SupportedChain } from "../../utils/multichain";
+import { itemSort } from "../../utils/tokensort";
 interface WalletContentsBoxProps {
   accountAddress: string;
   chainID: SupportedChain;

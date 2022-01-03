@@ -45,6 +45,7 @@ export function Tabs({ tabs, style, className }: TabsProps) {
         <div
           className="tabContents"
           style={i !== realSelectedTab ? { display: "none" } : {}}
+          key={i}
         >
           {tab.contents}
         </div>

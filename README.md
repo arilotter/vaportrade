@@ -23,9 +23,9 @@ Make sure you're running a cors-anywhere proxy at localhost:8080.
 Builds the app for production to the `build` folder.
 
 # NICE TO HAVE TODO:
+- [ ] support tokens without contract metadata in sequence via direct on-chain calls..?
 - [ ] fix partially reverted TXs showing "trade successful"
 - [ ] get Sequence indexer without hack, so we don't have to use a random wallet using a hardcoded key
-- [ ] other chains support
 - [ ] monitor for order success on taker side as well, in case wallet UX is weird and buggy.
 - [ ] ENS, unstoppable domains?
 - [ ] why does Sequence logout feel so buggy, how do I deauth?
@@ -33,6 +33,7 @@ Builds the app for production to the `build` folder.
 - [ ] make trade button flash when new things happen
 - [ ] buggy buggy css, please flexbox wizards, save me
 - [ ] correctly close trade req when we lose the peer. eek. sometimes doesn't work
+- [x] other chains support
 - [x] sexy rightclick menu
 - [x] add drag & drop (partially implemented, but doesn't work hehe)
 - [x] verified contracts :)

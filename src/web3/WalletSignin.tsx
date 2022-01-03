@@ -17,6 +17,7 @@ import controlPanelIcon from "../icons/controlPanel.png";
 import warningIcon from "../icons/warning.png";
 import vaportradeLogo from "../icons/vticon.png";
 import { ControlPanel } from "../ControlPanel";
+import { SafeLink } from "../utils/SafeLink";
 interface WalletSigninProps {
   children: JSX.Element;
 }
@@ -177,9 +178,9 @@ export function WalletSignin({ children }: WalletSigninProps) {
               textAlign: "center",
             }}
           >
-            <a href="https://github.com/arilotter/vaportrade/">
+            <SafeLink href="https://github.com/arilotter/vaportrade/">
               click here for the source code!
-            </a>
+            </SafeLink>
           </div>
         </Window>
       )}

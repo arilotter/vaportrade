@@ -5,8 +5,6 @@ import {
   ContractType,
   DragItemType,
   Item,
-  PropertiesContext,
-  RightClickMenuContext,
 } from "../../utils/utils";
 import missingIcon from "./missing.png";
 import warningIcon from "../../icons/warning.png";
@@ -14,6 +12,7 @@ import "./DraggableIcon.css";
 import { BigNumber } from "ethers";
 import { useCallback, useContext, MouseEvent } from "react";
 import { verifiedContracts } from "../../utils/verified";
+import { PropertiesContext, RightClickMenuContext } from "../../utils/context";
 
 interface DraggableIconProps {
   item: Item<ContractType>;
@@ -70,7 +69,9 @@ export function DraggableIcon({
       : BigNumber.from(decimalBalance.split(".")[0]).gt(1_000_000_000)
       ? "a lot of"
       : addNumberCommas(decimalBalance)
-  }\n${item.name}`;
+  }\n${
+    item.type === "ERC721" || item.type === "ERC1155" ? item.name : item.symbol
+  }`;
 
   return (
     <div
