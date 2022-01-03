@@ -23,6 +23,7 @@ Make sure you're running a cors-anywhere proxy at localhost:8080.
 Builds the app for production to the `build` folder.
 
 # TODO:
+- [ ] buggy UI in other trades after one trade completes
 - [ ] use tokenlists from coingecko, or uniswap, or something for ERC20s
 - [ ] add STUN/TURN servers
 - [ ] add Diablo, Runescape, Maplestory, Habbo themes
