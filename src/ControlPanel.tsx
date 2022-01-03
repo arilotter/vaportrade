@@ -55,7 +55,6 @@ export function ControlPanel({ onClose, onMinimize }: ControlPanelProps) {
               type="text"
               className="InputText text"
               value={modifiedConfig[configKey]}
-              placeholder="chungus"
               onChange={(ev) => {
                 updateModifiedConfig((cfg) => {
                   cfg[configKey] = ev.target.value;
