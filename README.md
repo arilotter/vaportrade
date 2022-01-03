@@ -23,6 +23,8 @@ Make sure you're running a cors-anywhere proxy at localhost:8080.
 Builds the app for production to the `build` folder.
 
 # NICE TO HAVE TODO:
+- [ ] when you lose peer, just mark them as "offline?
+- [ ] maybe allow reconnecting? store orders in localstorage?
 - [ ] support tokens without contract metadata in sequence via direct on-chain calls..?
 - [ ] fix partially reverted TXs showing "trade successful"
 - [ ] get Sequence indexer without hack, so we don't have to use a random wallet using a hardcoded key

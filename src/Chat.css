@@ -1,6 +1,7 @@
 .chat {
   padding: 8px;
   background: white;
+  pointer-events: all;
 }
 .chatMessages {
   max-height: 10vh;

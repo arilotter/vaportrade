@@ -301,7 +301,13 @@ export function TradeUI({
         });
       }
     });
-  });
+  }, [
+    address,
+    nftSwap,
+    requiredApprovals,
+    tradingPartner.myTradeOffer,
+    updateRequiredApprovals,
+  ]);
 
   const bothPlayersAccepted =
     lockedIn.lockedIn && tradingPartner.tradeStatus.type !== "negotiating";
@@ -1005,6 +1011,13 @@ export function TradeUI({
                   onClick={async () => {
                     // disable this button ? TODO
                     setSoftWarning(null);
+
+                    if (tradeButtonStatus === "waiting_for_approvals") {
+                      updateRequiredApprovals((approvals) => {
+                        approvals.clear();
+                      });
+                      return;
+                    }
                     // Do approvals on-click!
                     if (
                       tradeButtonStatus === "ready_for_approvals" &&
@@ -1041,9 +1054,7 @@ export function TradeUI({
                       setWalletOpen(false);
                       // after we go thru all approval TXs, re-check approval status of each.
                       updateRequiredApprovals((approvals) => {
-                        for (const { key } of tokensThatNeedApproval) {
-                          approvals.delete(key);
-                        }
+                        approvals.clear();
                       });
                     } else if (tradeButtonStatus === "ready_to_sign") {
                       // TODO status for signing in progress
@@ -1453,7 +1464,7 @@ export const tradeButtonStates: {
   waiting_for_approvals: {
     icon: loadingIcon,
     altText: "Waiting for token approvals...",
-    enabled: false,
+    enabled: true,
   },
   ready_to_sign: {
     icon: tradeIcon,
