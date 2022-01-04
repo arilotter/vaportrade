@@ -11,6 +11,9 @@ export const verifiedContracts: {
       //erc20s
       ["0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0", "https://matic.network"],
       ["0x6b175474e89094c44da98b954eedeac495271d0f", "https://makerdao.com"],
+
+      // erc721s
+      ["0xf3e778f839934fc819cfa1040aabacecba01e049", "https://avastars.io/"],
     ].map(([k, v]) => [normalizeAddress(k), v])
   ),
   "137": new Map(
