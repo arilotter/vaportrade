@@ -81,7 +81,6 @@ export function WalletContentsBox({
 
   // Get all balances for user's address
   useEffect(() => {
-    console.log("fetching bALANCE");
     setBalances([]);
     fetchBalances(chainID, accountAddress)
       .then(setBalances)
