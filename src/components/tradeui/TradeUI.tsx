@@ -19,6 +19,7 @@ import {
   Item,
   itemToSwapItem,
   KnownContractType,
+  normalizeAddress,
   OrderStatus,
   TokenKey,
   TradingPeer,
@@ -1157,7 +1158,7 @@ export function TradeUI({
                             const nativeTokenBalance = BigNumber.from(
                               await getEtherBalance(
                                 tradingPartner.chainID,
-                                address
+                                normalizeAddress(address)
                               )
                             );
                             if (nativeTokenBalance.lt(chain.protocolFee)) {

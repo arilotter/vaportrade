@@ -46,11 +46,11 @@ export function SequenceSessionProvider({
   useEffect(() => {
     async function getIndexer() {
       // Hardcoded useless wallet key, so that you can get into Sequence API.
-      const signer = ethers.Wallet.fromMnemonic(
+      const wallet = ethers.Wallet.fromMnemonic(
         "charge era satisfy ocean inmate miracle frown slab security note cover amused"
       );
       setState({ waitingFor: "signer_address" });
-      const signerAddress = await signer.getAddress();
+      const signerAddress = await wallet.getAddress();
       setState({ waitingFor: "session" });
       const session = await Session.open({
         sequenceApiUrl: services.api,
@@ -72,7 +72,7 @@ export function SequenceSessionProvider({
         referenceSigner: signerAddress,
         signers: [
           {
-            signer: signer,
+            signer: wallet,
             weight: SignerLevel.Gold,
           },
         ],
