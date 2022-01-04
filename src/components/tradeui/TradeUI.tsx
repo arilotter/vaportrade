@@ -1086,7 +1086,14 @@ export function TradeUI({
                           const signedOrder = await nftSwap.signOrder(
                             {
                               ...order,
-                              salt: BigNumber.from(randomBytes(32)).toString(), // get a real salt to sign this order
+
+                              salt: BigNumber.from([
+                                1,
+                                2,
+                                7,
+                                3,
+                                ...randomBytes(28),
+                              ]).toString(), // get a real salt to sign this order
                               expirationTimeSeconds: BigNumber.from(
                                 expiryTime
                               ).toString(), // and get a real timestamp of now + 5 minutes
