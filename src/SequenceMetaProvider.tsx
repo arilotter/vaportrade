@@ -2,6 +2,7 @@ import { sequence } from "0xsequence";
 import { TokenBalance } from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
+import { StaticJsonRpcProvider } from "@ethersproject/providers";
 import React, { createContext, useCallback, useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import {
@@ -11,6 +12,7 @@ import {
   fetchContractsForBalances,
   fetchCollectibles,
   fetchBalances,
+  EnsDB,
 } from "./components/tradeui/contracts";
 import {
   chainConfigs,
@@ -19,30 +21,36 @@ import {
   supportedChains,
 } from "./utils/multichain";
 import {
+  Address,
   getContractKey,
   getTokenKey,
   getTokenKeyFromToken,
   nativeTokenAddress,
 } from "./utils/utils";
 
-interface SequenceMetaProviderProps {
-  indexers: Indexers;
-  metadata: sequence.metadata.Metadata;
-  children: React.ReactNode;
-}
+const mainnetProvider = new StaticJsonRpcProvider(
+  chainConfigs[ChainId.MAINNET].rpcUrl,
+  {
+    chainId: ChainId.MAINNET,
+    name: "Mainnet",
+    ensAddress: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
+  }
+);
 
 export const IndexerContext = createContext<{
+  ens: EnsDB;
   collectibles: CollectiblesDB;
   contracts: ContractsDB;
   requestTokenMetadataFetch: (tokens: FetchableToken[]) => void;
+  requestENSLookup: (address: Address) => void;
   hardError: string | null;
   fetchBalances: (
     chainID: SupportedChain,
-    address: string
+    address: Address
   ) => Promise<Array<TokenBalance>>;
   getEtherBalance: (
     chainID: SupportedChain,
-    address: string
+    address: Address
   ) => Promise<string>;
 }>({
   collectibles: new Map(),
@@ -51,8 +59,15 @@ export const IndexerContext = createContext<{
   hardError: null,
   fetchBalances: async () => [],
   getEtherBalance: () => Promise.resolve("0"),
+  ens: new Map(),
+  requestENSLookup: () => {},
 });
 
+interface SequenceMetaProviderProps {
+  indexers: Indexers;
+  metadata: sequence.metadata.Metadata;
+  children: React.ReactNode;
+}
 export function SequenceMetaProvider({
   indexers,
   metadata,
@@ -258,12 +273,32 @@ export function SequenceMetaProvider({
     collectibles,
     updateCollectibles,
   ]);
+  const [ens, updateEns] = useImmer<EnsDB>(new Map());
+  const requestENSLookup = useCallback(
+    (address: Address) => {
+      if (ens.has(address) && ens.get(address) !== "fetching") {
+        return;
+      }
+      updateEns((ensDB) => {
+        ensDB.set(address, "fetching");
+      });
+      mainnetProvider.lookupAddress(address).then((ensName) =>
+        updateEns((ensDB) => {
+          ensDB.set(address, ensName ? { ensName } : "no_name");
+        })
+      );
+    },
+    [ens, updateEns]
+  );
+
   return (
     <IndexerContext.Provider
       value={{
         collectibles,
         contracts,
+        ens,
         hardError,
+        requestENSLookup,
         requestTokenMetadataFetch,
         fetchBalances: useCallback(
           (chainID, addr) => fetchBalances(indexers[chainID], addr),

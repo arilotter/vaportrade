@@ -13,8 +13,10 @@ import { ChainPicker } from "./utils/ChainPicker";
 import reloadIcon from "./icons/reload.png";
 import { PropertiesContext } from "./utils/context";
 import { useWeb3React } from "@web3-react/core";
-import { Web3Provider } from "@0xsequence/provider";
+import { Web3Provider } from "@ethersproject/providers";
 import { SafeLink } from "./utils/SafeLink";
+import { IndexerContext } from "./SequenceMetaProvider";
+import { Address, normalizeAddress } from "./utils/utils";
 
 interface WalletInfoProps {
   onMinimize: () => void;
@@ -28,8 +30,9 @@ export function WalletInfo({
 }: WalletInfoProps) {
   const { connector, deactivate } = useWeb3React<Web3Provider>();
   const { openPropertiesWindow } = useContext(PropertiesContext);
+  const { ens, requestENSLookup } = useContext(IndexerContext);
 
-  const [address, setAddress] = useState<string | null>(null);
+  const [address, setAddress] = useState<Address | null>(null);
   const [chainID, setChainID] = useState<SupportedChain>(
     defaultChain ||
       supportedChains.find((chain) => chainConfigs[chain].isAuthChain)!
@@ -37,13 +40,20 @@ export function WalletInfo({
   const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
-    connector?.getAccount().then(setAddress);
-  }, [connector, setAddress]);
+    connector?.getAccount().then((addr) => {
+      if (addr) {
+        const normalized = normalizeAddress(addr);
+        requestENSLookup(normalized);
+        setAddress(normalized);
+      }
+    });
+  }, [connector, setAddress, requestENSLookup]);
   const name = (Object.keys(connectorsByName) as Array<
     keyof typeof connectorsByName
   >).find((c) => connectorsByName[c] === connector)!;
   const icon = connectorsIconsByName[name];
 
+  const ensLookup = address ? ens.get(address) : "no_name";
   return (
     <div className="modal">
       <Window
@@ -72,7 +82,12 @@ export function WalletInfo({
               </ButtonForm>
             </h3>
             <div className="walletInfoContents">
-              <p>Your wallet address is {address}</p>
+              <p>
+                Your wallet address is{" "}
+                {typeof ensLookup === "object"
+                  ? `${ensLookup.ensName} (${address})`
+                  : address}
+              </p>
               <ButtonForm
                 className="walletInfoButton"
                 onClick={() => navigator.clipboard.writeText(address)}

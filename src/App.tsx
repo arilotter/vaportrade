@@ -16,6 +16,7 @@ import {
   FailableTracker,
   isTradingPeer,
   isVaportradeMessage,
+  normalizeAddress,
   TradingPeer,
   VaportradeMessage,
 } from "./utils/utils";
@@ -93,7 +94,16 @@ function App() {
           <DndProvider backend={HTML5Backend}>
             <Web3ReactProvider getLibrary={getLibrary}>
               <WalletSignin>
-                <Vaportrade />
+                <SequenceSessionProvider>
+                  {({ indexers, metadata }) => (
+                    <SequenceMetaProvider
+                      indexers={indexers}
+                      metadata={metadata}
+                    >
+                      <Vaportrade />
+                    </SequenceMetaProvider>
+                  )}
+                </SequenceSessionProvider>
               </WalletSignin>
             </Web3ReactProvider>
           </DndProvider>
@@ -142,6 +152,9 @@ function Vaportrade() {
   if (!address || !library) {
     throw new Error("Vaportrade created with no account!");
   }
+
+  const { ens, requestENSLookup } = useContext(IndexerContext);
+
   const [walletOpen, setWalletOpen] = useState(false);
 
   const [trackers, updateTrackers] = useImmer<Set<FailableTracker>>(new Set());
@@ -398,7 +411,7 @@ function Vaportrade() {
             }
             peers.add({
               peer: correctPeer,
-              address: msg.address,
+              address: normalizeAddress(msg.address),
               hasNewInfo: false,
               tradeRequest: false,
               tradeOffer: [],
@@ -507,6 +520,12 @@ function Vaportrade() {
     setTradingPartnerAddress,
   ]);
 
+  useEffect(() => {
+    for (const peer of [...peers].filter(isTradingPeer)) {
+      requestENSLookup(peer.address);
+    }
+  });
+
   const tradeRequests = [...peers]
     .filter(isTradingPeer)
     .filter((p) => p.tradeRequest);
@@ -529,328 +548,332 @@ function Vaportrade() {
   }, [windows]);
 
   return (
-    <SequenceSessionProvider>
-      {({ indexers, metadata }) => (
-        <SequenceMetaProvider indexers={indexers} metadata={metadata}>
-          <PropertiesContext.Provider
-            value={{
-              properties,
-              closePropertiesWindow,
-              openPropertiesWindow,
-            }}
+    <PropertiesContext.Provider
+      value={{
+        properties,
+        closePropertiesWindow,
+        openPropertiesWindow,
+      }}
+    >
+      {!p2pClient || !trackers.size || !connector ? (
+        <div className="modal">
+          <Window title="Connecting to trackers">
+            <div style={{ padding: "8px" }}>
+              Connecting to trackers
+              <EllipseAnimation />
+            </div>
+          </Window>
+        </div>
+      ) : (
+        <>
+          {tradingPartner ? (
+            <TradeContents
+              p2pClient={p2pClient}
+              tradingPartner={tradingPartner}
+              updatePeers={updatePeers}
+              onMinimize={() => setTradingPartnerAddress(null)}
+              openTipUI={() => setShowTipUI(true)}
+              openWalletInfo={(chainID) =>
+                setShowWalletInfo({ chainID, minimized: false })
+              }
+              setWalletIsOpen={setWalletOpen}
+            />
+          ) : null}
+          {connector && showWalletInfo && !showWalletInfo.minimized ? (
+            <WalletInfo
+              defaultChain={showWalletInfo.chainID}
+              onClose={() => setShowWalletInfo(false)}
+              onMinimize={() =>
+                setShowWalletInfo({
+                  ...showWalletInfo,
+                  minimized: true,
+                })
+              }
+            />
+          ) : null}
+        </>
+      )}
+
+      {walletOpen ? (
+        <div className="modal darkenbg walletOpenDialog">
+          <WindowAlert
+            title="Waiting..."
+            icon={walletIcon}
+            onClose={() => setWalletOpen(false)}
           >
-            {!p2pClient || !trackers.size || !connector ? (
-              <Window title="Connecting to trackers">
-                <div style={{ padding: "8px" }}>
-                  Connecting to trackers
-                  <EllipseAnimation />
-                </div>
-              </Window>
-            ) : (
-              <>
-                {tradingPartner ? (
-                  <TradeContents
-                    p2pClient={p2pClient}
-                    tradingPartner={tradingPartner}
-                    updatePeers={updatePeers}
-                    onMinimize={() => setTradingPartnerAddress(null)}
-                    openTipUI={() => setShowTipUI(true)}
-                    openWalletInfo={(chainID) =>
-                      setShowWalletInfo({ chainID, minimized: false })
-                    }
-                    setWalletIsOpen={setWalletOpen}
-                  />
-                ) : null}
-                {connector && showWalletInfo && !showWalletInfo.minimized ? (
-                  <WalletInfo
-                    defaultChain={showWalletInfo.chainID}
-                    onClose={() => setShowWalletInfo(false)}
-                    onMinimize={() =>
-                      setShowWalletInfo({
-                        ...showWalletInfo,
-                        minimized: true,
-                      })
-                    }
-                  />
-                ) : null}
-              </>
-            )}
+            Confirm in your {walletName} wallet
+          </WindowAlert>
+        </div>
+      ) : null}
 
-            {walletOpen ? (
-              <div className="modal darkenbg walletOpenDialog">
-                <WindowAlert
-                  title="Waiting..."
-                  icon={walletIcon}
-                  onClose={() => setWalletOpen(false)}
-                >
-                  Confirm in your {walletName} wallet
-                </WindowAlert>
-              </div>
-            ) : null}
+      {showTrackers === true ? (
+        <TrackersList
+          sources={sources}
+          trackers={trackers}
+          onClose={() => setShowTrackers(false)}
+          onMinimize={() => setShowTrackers("minimized")}
+        />
+      ) : null}
 
-            {showTrackers === true ? (
-              <TrackersList
-                sources={sources}
-                trackers={trackers}
-                onClose={() => setShowTrackers(false)}
-                onMinimize={() => setShowTrackers("minimized")}
-              />
-            ) : null}
+      {showControlPanel === true ? (
+        <ControlPanel
+          onClose={() => setShowControlPanel(false)}
+          onMinimize={() => setShowControlPanel("minimized")}
+        />
+      ) : null}
 
-            {showControlPanel === true ? (
-              <ControlPanel
-                onClose={() => setShowControlPanel(false)}
-                onMinimize={() => setShowControlPanel("minimized")}
-              />
-            ) : null}
+      {showCredits === true ? (
+        <Credits
+          onClose={() => setShowCredits(false)}
+          onMinimize={() => setShowCredits("minimized")}
+        />
+      ) : null}
 
-            {showCredits === true ? (
-              <Credits
-                onClose={() => setShowCredits(false)}
-                onMinimize={() => setShowCredits("minimized")}
-              />
-            ) : null}
+      {showTipUI === true ? (
+        <TipUI
+          onClose={() => setShowTipUI(false)}
+          onMinimize={() => setShowTipUI("minimized")}
+        />
+      ) : null}
 
-            {showTipUI === true ? (
-              <TipUI
-                onClose={() => setShowTipUI(false)}
-                onMinimize={() => setShowTipUI("minimized")}
-              />
-            ) : null}
-
-            {showContacts ? (
-              <Contacts
-                requestMorePeers={() => p2pClient?.requestMorePeers()}
-                onClose={() => setShowContacts(false)}
-                options={[...peers]
+      {showContacts ? (
+        <Contacts
+          requestMorePeers={() => p2pClient?.requestMorePeers()}
+          onClose={() => setShowContacts(false)}
+          options={[...peers]
+            .filter(isTradingPeer)
+            .map((peer) => [ens.get(peer.address), peer.address] as const)
+            .filter(([_, peerAddr]) => address !== peerAddr)
+            .map(([ens, peerAddr]) => ({
+              title:
+                typeof ens === "object"
+                  ? (`${ens.ensName} (${peerAddr})` as const)
+                  : (`${peerAddr}` as const),
+              value: peerAddr,
+              alt: `Wallet Address ${peerAddr}`,
+              icon: makeBlockyIcon(peerAddr),
+            }))}
+          onSubmit={(peerAddr) => {
+            const correctPeer = [...peers]
+              .filter(isTradingPeer)
+              .find((p) => p.address === peerAddr);
+            if (correctPeer) {
+              p2pClient?.send(correctPeer.peer, {
+                type: "trade_request",
+              });
+              updatePeers((peers) => {
+                const correctPeer = [...peers]
                   .filter(isTradingPeer)
-                  .map((peer) => peer.address)
-                  .filter(([peerAddr]) => address !== peerAddr)
-                  .map((peerAddr) => ({
-                    title: peerAddr,
-                    value: peerAddr,
-                    alt: `Wallet Address ${peerAddr}`,
-                    icon: makeBlockyIcon(peerAddr),
-                  }))}
-                onSubmit={(peerAddr) => {
-                  const correctPeer = [...peers]
-                    .filter(isTradingPeer)
-                    .find((p) => p.address === peerAddr);
-                  if (correctPeer) {
-                    p2pClient?.send(correctPeer.peer, {
-                      type: "trade_request",
-                    });
-                    updatePeers((peers) => {
-                      const correctPeer = [...peers]
-                        .filter(isTradingPeer)
-                        .find((p) => p.address === peerAddr);
-                      if (correctPeer) {
-                        correctPeer.tradeRequest = true;
-                      }
-                    });
+                  .find((p) => p.address === peerAddr);
+                if (correctPeer) {
+                  correctPeer.tradeRequest = true;
+                }
+              });
 
-                    for (const w of windows) {
-                      w.minimize();
+              for (const w of windows) {
+                w.minimize();
+              }
+              setTradingPartnerAddress(correctPeer.address);
+            }
+            setShowContacts(false);
+          }}
+        />
+      ) : null}
+
+      {showClippy && (
+        <Clippy
+          message={
+            tradeRequests.length
+              ? "Double-click items to add them to your trade offer!"
+              : !showContacts
+              ? "Click Start → Find People to Trade With to get started!"
+              : "Pick someone online to trade with!"
+          }
+          onOutOfMessages={() => setShowClippy(false)}
+        />
+      )}
+      {activePropertiesWindowIndex !== -1 ? (
+        <Properties
+          {...properties[activePropertiesWindowIndex]}
+          onClose={() =>
+            closePropertiesWindow(properties[activePropertiesWindowIndex])
+          }
+          onMinimize={() => setActivePropertiesWindowIndex(-1)}
+        ></Properties>
+      ) : null}
+
+      <TaskBar
+        openWindows={[
+          ...tradeRequests.map((trader, id) => {
+            const ensName = ens.get(trader.address);
+            return {
+              isAlerting:
+                trader.hasNewInfo && trader.address !== tradingPartnerAddress,
+              title:
+                ensName && typeof ensName === "object"
+                  ? ensName.ensName
+                  : trader.address,
+              icon: makeBlockyIcon(trader.address),
+              isActive: trader.address === tradingPartnerAddress,
+              onClick: () => {
+                updatePeers((peers) => {
+                  for (const peer of peers) {
+                    if (
+                      isTradingPeer(peer) &&
+                      peer.address === trader.address
+                    ) {
+                      peer.hasNewInfo = false;
                     }
-                    setTradingPartnerAddress(correctPeer.address);
                   }
-                  setShowContacts(false);
-                }}
-              />
-            ) : null}
-
-            {showClippy && (
-              <Clippy
-                message={
-                  tradeRequests.length
-                    ? "Double-click items to add them to your trade offer!"
-                    : !showContacts
-                    ? "Click Start → Find People to Trade With to get started!"
-                    : "Pick someone online to trade with!"
+                });
+                setTradingPartnerAddress(
+                  trader.address === tradingPartnerAddress
+                    ? null
+                    : trader.address
+                );
+                for (const w of windows) {
+                  w.minimize();
                 }
-                onOutOfMessages={() => setShowClippy(false)}
-              />
-            )}
-            {activePropertiesWindowIndex !== -1 ? (
-              <Properties
-                {...properties[activePropertiesWindowIndex]}
-                onClose={() =>
-                  closePropertiesWindow(properties[activePropertiesWindowIndex])
+              },
+              id,
+            };
+          }),
+          ...windows.map((win) => ({
+            ...win,
+            isAlerting: false,
+            onClick: () => {
+              if (win.isActive) {
+                win.minimize();
+              } else {
+                win.open();
+                setTradingPartnerAddress(null);
+                for (const w of windows) {
+                  if (w.id !== win.id) {
+                    w.minimize();
+                  }
                 }
-                onMinimize={() => setActivePropertiesWindowIndex(-1)}
-              ></Properties>
-            ) : null}
-
-            <TaskBar
-              openWindows={[
-                ...tradeRequests.map((trader, id) => ({
-                  isAlerting:
-                    trader.hasNewInfo &&
-                    trader.address !== tradingPartnerAddress,
-                  title: trader.address,
-                  icon: makeBlockyIcon(trader.address),
-                  isActive: trader.address === tradingPartnerAddress,
-                  onClick: () => {
-                    updatePeers((peers) => {
-                      for (const peer of peers) {
-                        if (
-                          isTradingPeer(peer) &&
-                          peer.address === trader.address
-                        ) {
-                          peer.hasNewInfo = false;
-                        }
-                      }
-                    });
-                    setTradingPartnerAddress(
-                      trader.address === tradingPartnerAddress
-                        ? null
-                        : trader.address
-                    );
-                    for (const w of windows) {
-                      w.minimize();
-                    }
-                  },
-                  id,
-                })),
-                ...windows.map((win) => ({
-                  ...win,
-                  isAlerting: false,
-                  onClick: () => {
-                    if (win.isActive) {
-                      win.minimize();
-                    } else {
-                      win.open();
-                      setTradingPartnerAddress(null);
-                      for (const w of windows) {
-                        if (w.id !== win.id) {
-                          w.minimize();
-                        }
-                      }
-                    }
-                  },
-                })),
-                ...properties.map((props, index) => ({
-                  isActive: activePropertiesWindowIndex === index,
-                  icon: props.iconUrl || missingIcon,
-                  title: `${props.name} Properties`,
-                  id: 5000 + index,
-                  isAlerting: false,
-                  onClick: () => {
-                    if (activePropertiesWindowIndex === index) {
-                      setActivePropertiesWindowIndex(-1);
-                    } else {
-                      setActivePropertiesWindowIndex(index);
-                    }
-                  },
-                })),
-              ]}
-              options={[
-                [
-                  {
-                    title: "Find People to Trade With",
-                    icon: findPeersIcon,
-                    onClick: () => setShowContacts(true),
-                  },
-                ],
-                [
-                  {
-                    title: "Credits",
-                    icon: creditsIcon,
-                    onClick: () => {
-                      minimizeWindows();
-                      setShowCredits(true);
-                    },
-                  },
-                  {
-                    title: "Help",
-                    icon: helpIcon,
-                    onClick: () => {
-                      setShowClippy(true);
-                    },
-                  },
-                  {
-                    title: "Donate",
-                    icon: tipIcon,
-                    onClick: () => {
-                      setShowTipUI(true);
-                    },
-                  },
-                  {
-                    onClick: () => {},
-                    title: "Settings",
-                    icon: controlPanelIcon,
-                    options: [
-                      {
-                        onClick: () => {
-                          minimizeWindows();
-                          setShowControlPanel(true);
-                        },
-                        title: "Control Panel",
-                        icon: controlPanelIcon,
-                      },
-                      {
-                        icon: yesIcon,
-                        title: "Peer Discovery",
-                        onClick: () => {
-                          minimizeWindows();
-                          setShowTrackers(true);
-                        },
-                      },
-                    ],
-                  },
-                  {
-                    icon: walletIcon,
-                    title: `My Wallet`,
-                    onClick: () => {
-                      minimizeWindows();
-                      setShowWalletInfo({ minimized: false });
-                    },
-                  },
-                ],
+              }
+            },
+          })),
+          ...properties.map((props, index) => ({
+            isActive: activePropertiesWindowIndex === index,
+            icon: props.iconUrl || missingIcon,
+            title: `${props.name} Properties`,
+            id: 5000 + index,
+            isAlerting: false,
+            onClick: () => {
+              if (activePropertiesWindowIndex === index) {
+                setActivePropertiesWindowIndex(-1);
+              } else {
+                setActivePropertiesWindowIndex(index);
+              }
+            },
+          })),
+        ]}
+        options={[
+          [
+            {
+              title: "Find People to Trade With",
+              icon: findPeersIcon,
+              onClick: () => setShowContacts(true),
+            },
+          ],
+          [
+            {
+              title: "Credits",
+              icon: creditsIcon,
+              onClick: () => {
+                minimizeWindows();
+                setShowCredits(true);
+              },
+            },
+            {
+              title: "Help",
+              icon: helpIcon,
+              onClick: () => {
+                setShowClippy(true);
+              },
+            },
+            {
+              title: "Donate",
+              icon: tipIcon,
+              onClick: () => {
+                setShowTipUI(true);
+              },
+            },
+            {
+              onClick: () => {},
+              title: "Settings",
+              icon: controlPanelIcon,
+              options: [
                 {
-                  onClick: () => window.location.reload(),
-                  title: "Reboot",
-                  icon: rebootIcon,
+                  onClick: () => {
+                    minimizeWindows();
+                    setShowControlPanel(true);
+                  },
+                  title: "Control Panel",
+                  icon: controlPanelIcon,
                 },
                 {
-                  onClick: deactivate,
-                  title: "Disconnect Wallet",
-                  icon: logOutIcon,
-                },
-              ]}
-              notifiers={[
-                {
-                  alt: sources.length
-                    ? `Connected to ${trackers.size}/${sources.length} trackers`
-                    : "Loading Trackers...",
+                  icon: yesIcon,
+                  title: "Peer Discovery",
                   onClick: () => {
                     minimizeWindows();
                     setShowTrackers(true);
                   },
-                  icon: sources.length && trackers.size ? yesIcon : noIcon,
                 },
-                {
-                  alt: `Connected to wallet ${address}`,
-                  onClick: () => {
-                    minimizeWindows();
-                    setShowWalletInfo({ minimized: false });
-                  },
-                  icon: makeBlockyIcon(address),
-                },
-                {
-                  alt: `Wallet type: ${walletName}`,
-                  onClick: () => {
-                    minimizeWindows();
-                    setShowWalletInfo({ minimized: false });
-                  },
-                  icon: walletIcon,
-                },
-              ]}
-            />
-          </PropertiesContext.Provider>
-        </SequenceMetaProvider>
-      )}
-    </SequenceSessionProvider>
+              ],
+            },
+            {
+              icon: walletIcon,
+              title: `My Wallet`,
+              onClick: () => {
+                minimizeWindows();
+                setShowWalletInfo({ minimized: false });
+              },
+            },
+          ],
+          {
+            onClick: () => window.location.reload(),
+            title: "Reboot",
+            icon: rebootIcon,
+          },
+          {
+            onClick: deactivate,
+            title: "Disconnect Wallet",
+            icon: logOutIcon,
+          },
+        ]}
+        notifiers={[
+          {
+            alt: sources.length
+              ? `Connected to ${trackers.size}/${sources.length} trackers`
+              : "Loading Trackers...",
+            onClick: () => {
+              minimizeWindows();
+              setShowTrackers(true);
+            },
+            icon: sources.length && trackers.size ? yesIcon : noIcon,
+          },
+          {
+            alt: `Connected to wallet ${address}`,
+            onClick: () => {
+              minimizeWindows();
+              setShowWalletInfo({ minimized: false });
+            },
+            icon: makeBlockyIcon(address),
+          },
+          {
+            alt: `Wallet type: ${walletName}`,
+            onClick: () => {
+              minimizeWindows();
+              setShowWalletInfo({ minimized: false });
+            },
+            icon: walletIcon,
+          },
+        ]}
+      />
+    </PropertiesContext.Provider>
   );
 }
 
@@ -874,7 +897,7 @@ function TradeContents({
   openTipUI,
   setWalletIsOpen,
 }: TradeContentsProps) {
-  const { hardError } = useContext(IndexerContext);
+  const { hardError, ens } = useContext(IndexerContext);
   if (hardError) {
     return (
       <div className="modal">
@@ -892,11 +915,16 @@ function TradeContents({
       </div>
     );
   }
+  const ensName = ens.get(tradingPartner.address);
   return (
     <>
       <div className="modal">
         <Window
-          title={`Trading with ${tradingPartner.address}`}
+          title={`Trading with ${
+            ensName && typeof ensName === "object"
+              ? `${ensName.ensName} (${tradingPartner.address})`
+              : tradingPartner.address
+          }`}
           icon={makeBlockyIcon(tradingPartner.address)}
           className="tradeWindow"
           onMinimize={onMinimize}

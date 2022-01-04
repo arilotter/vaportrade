@@ -82,7 +82,7 @@ export function WalletContentsBox({
   // Get all balances for user's address
   useEffect(() => {
     setBalances([]);
-    fetchBalances(chainID, accountAddress)
+    fetchBalances(chainID, normalizeAddress(accountAddress))
       .then(setBalances)
       .catch((err) => setError(`${err}`));
   }, [fetchBalances, chainID, accountAddress, reloadNonce]);

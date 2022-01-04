@@ -20,6 +20,7 @@ import {
   NetworkItem,
   getTokenKey,
   KnownContractType,
+  Address,
 } from "../../utils/utils";
 import { blacklistedContracts } from "../../utils/verified";
 
@@ -250,6 +251,7 @@ export function getItems({
 }
 
 export type CollectiblesDB = Map<TokenKey, Collectible | "fetching">;
+export type EnsDB = Map<Address, { ensName: string } | "no_name" | "fetching">;
 export type ContractsDB = Map<ContractKey, ContractInfo | "fetching">;
 export interface FetchableToken {
   chainID: ChainId;

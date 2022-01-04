@@ -132,7 +132,7 @@ function isNetworkItem(item: any): item is NetworkItem {
 
 export interface TradingPeer {
   peer: Peer;
-  address: string;
+  address: Address;
   tradeRequest: boolean;
   hasNewInfo: boolean;
   tradeOffer: NetworkItem[];
