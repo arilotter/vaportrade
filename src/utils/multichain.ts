@@ -22,6 +22,10 @@ export type SupportedChain = typeof _supportedChains[number];
 const _checkChains: ReadonlyArray<ChainId> = _supportedChains;
 void _checkChains;
 
+export function isSupportedChain(id: number): id is SupportedChain {
+  return _supportedChains.some((chainID) => id === chainID);
+}
+
 export type Indexers = { [K in SupportedChain]: Indexer };
 
 const corsProxy = config.corsAnywhereUrl;

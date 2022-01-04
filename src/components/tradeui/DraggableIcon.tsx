@@ -70,7 +70,11 @@ export function DraggableIcon({
       ? "a lot of"
       : addNumberCommas(decimalBalance)
   }\n${
-    item.type === "ERC721" || item.type === "ERC1155" ? item.name : item.symbol
+    item.type === "ERC721" ||
+    item.type === "ERC1155" ||
+    item.symbol.length === 0
+      ? item.name
+      : item.symbol
   }`;
 
   return (

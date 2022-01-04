@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { sequence } from "0xsequence";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import "./TradeUI.css";
 import P2PT from "p2pt";
 import {
@@ -42,12 +41,7 @@ import {
   OrderInfoStruct,
   SignedOrder,
 } from "@traderxyz/nft-swap-sdk";
-import {
-  CollectiblesDB,
-  ContractsDB,
-  FetchableToken,
-  getItems,
-} from "./contracts";
+import { getItems } from "./contracts";
 import { Web3Provider } from "@ethersproject/providers";
 import { useWeb3React } from "@web3-react/core";
 import {
@@ -59,19 +53,14 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { config, LS_SIGNED_ORDER_CACHE_KEY } from "../../settings";
 import { TypedListener } from "@traderxyz/nft-swap-sdk/dist/contracts/common";
 import { verifiedContracts } from "../../utils/verified";
-import { chainConfigs, Indexers, SupportedChain } from "../../utils/multichain";
+import { chainConfigs, SupportedChain } from "../../utils/multichain";
 import { ChainPicker } from "../../utils/ChainPicker";
 import { isConnectorMultichain } from "../../web3/connectors";
 import { SequenceConnector } from "../../web3/Web3ReactSequenceConnector";
 import { SafeLink } from "../../utils/SafeLink";
+import { IndexerContext } from "../../SequenceMetaProvider";
 
 interface TradeUIProps {
-  indexers: Indexers;
-  metadata: sequence.metadata.Metadata;
-  collectibles: CollectiblesDB;
-  contracts: ContractsDB;
-  requestTokensFetch: (tokens: FetchableToken[]) => void;
-
   p2p: P2PT<VaportradeMessage>;
   tradingPartner: TradingPeer;
   updateMyTradeOffer: (
@@ -79,8 +68,8 @@ interface TradeUIProps {
   ) => void;
   updateGoesFirst: (goesFirstAddress: string) => void;
   updateChain: (chainID: SupportedChain) => void;
-  setWalletOpen: (open: boolean) => void;
-  onOpenWalletInfo: (chainID: SupportedChain) => void;
+  openWalletInfo: (chainID: SupportedChain) => void;
+  setWalletIsOpen: (isOpen: boolean) => void;
   showTipUI: () => void;
 }
 
@@ -104,17 +93,13 @@ interface CachedSignedOrder {
   theirItems: Array<Item<"ERC20" | "ERC721" | "ERC1155">>;
 }
 export function TradeUI({
-  indexers,
   tradingPartner,
   p2p,
   updateMyTradeOffer: externalUpdateMyTradeOffer,
   updateGoesFirst,
   updateChain,
-  collectibles,
-  contracts,
-  requestTokensFetch,
-  setWalletOpen,
-  onOpenWalletInfo,
+  openWalletInfo,
+  setWalletIsOpen,
   showTipUI,
 }: TradeUIProps) {
   const {
@@ -126,6 +111,12 @@ export function TradeUI({
   if (!address || !connector || !library) {
     throw new Error("No address when TradeUI open!");
   }
+  const {
+    getEtherBalance,
+    requestTokenMetadataFetch,
+    contracts,
+    collectibles,
+  } = useContext(IndexerContext);
   const [nftSwap, setNftSwap] = useState<NftSwap | null>(null);
   useEffect(() => {
     setNftSwap(null);
@@ -238,8 +229,8 @@ export function TradeUI({
   }, [lockedIn, myOrderSent, tradingPartner]);
 
   useEffect(() => {
-    requestTokensFetch(tradingPartner.tradeOffer);
-  }, [requestTokensFetch, tradingPartner.tradeOffer]);
+    requestTokenMetadataFetch(tradingPartner.tradeOffer);
+  }, [requestTokenMetadataFetch, tradingPartner.tradeOffer]);
 
   useEffect(() => {
     p2p.send(tradingPartner.peer, {
@@ -699,7 +690,7 @@ export function TradeUI({
             View on-chain transaction
           </SafeLink>
           <ButtonForm
-            onClick={() => onOpenWalletInfo(orderSuccess.chainID)}
+            onClick={() => openWalletInfo(orderSuccess.chainID)}
             className="successWalletButton"
           >
             Open your wallet
@@ -829,7 +820,6 @@ export function TradeUI({
     );
   }
 
-  const indexer = indexers[tradingPartner.chainID];
   return (
     <>
       <div
@@ -874,10 +864,6 @@ export function TradeUI({
                 <WalletContentsBox
                   chainID={tradingPartner.chainID}
                   accountAddress={address}
-                  indexer={indexer}
-                  collectibles={collectibles}
-                  contracts={contracts}
-                  requestTokensFetch={requestTokensFetch}
                   onItemSelected={addItemToTrade}
                   subtractItems={tradingPartner.myTradeOffer}
                   onItemDropped={(item) => {
@@ -905,10 +891,6 @@ export function TradeUI({
                 <WalletContentsBox
                   chainID={tradingPartner.chainID}
                   accountAddress={tradingPartner.address}
-                  indexer={indexer}
-                  collectibles={collectibles}
-                  contracts={contracts}
-                  requestTokensFetch={requestTokensFetch}
                   subtractItems={tradingPartner.tradeOffer}
                   mine={false}
                   isInTrade
@@ -1028,7 +1010,7 @@ export function TradeUI({
                           approvals.set(key, "approving");
                         }
                       });
-                      setWalletOpen(true);
+                      setWalletIsOpen(true);
                       const approvalTxs = tokensThatNeedApproval
                         // 721s and 1155s only need one approval per contract
                         .filter(
@@ -1051,7 +1033,7 @@ export function TradeUI({
                             .then((tx) => nftSwap.awaitTransactionHash(tx.hash))
                         );
                       await Promise.allSettled(approvalTxs);
-                      setWalletOpen(false);
+                      setWalletIsOpen(false);
                       // after we go thru all approval TXs, re-check approval status of each.
                       updateRequiredApprovals((approvals) => {
                         approvals.clear();
@@ -1082,7 +1064,7 @@ export function TradeUI({
                           Math.floor(new Date().getTime() / 1000) +
                           chain.tradingWindowSeconds;
                         try {
-                          setWalletOpen(true);
+                          setWalletIsOpen(true);
                           const signedOrder = await nftSwap.signOrder(
                             {
                               ...order,
@@ -1100,7 +1082,7 @@ export function TradeUI({
                             },
                             address
                           );
-                          setWalletOpen(false);
+                          setWalletIsOpen(false);
                           console.log(
                             "[trade] got signed order, sending to peer"
                           );
@@ -1152,7 +1134,7 @@ export function TradeUI({
                             });
                           }
                         } finally {
-                          setWalletOpen(false);
+                          setWalletIsOpen(false);
                         }
                       } else {
                         if (tradingPartner.tradeStatus.type !== "signedOrder") {
@@ -1170,11 +1152,10 @@ export function TradeUI({
                             !chain.protocolFee.isZero()
                           ) {
                             const nativeTokenBalance = BigNumber.from(
-                              (
-                                await indexer.getEtherBalance({
-                                  accountAddress: address,
-                                })
-                              ).balance.balanceWei
+                              await getEtherBalance(
+                                tradingPartner.chainID,
+                                address
+                              )
                             );
                             if (nativeTokenBalance.lt(chain.protocolFee)) {
                               throw new Error(
@@ -1188,7 +1169,7 @@ export function TradeUI({
                               );
                             }
                           }
-                          setWalletOpen(true);
+                          setWalletIsOpen(true);
 
                           const fillTx = await nftSwap.fillSignedOrder(
                             tradingPartner.tradeStatus.signedOrder,
@@ -1240,7 +1221,7 @@ export function TradeUI({
                             });
                           }
                         } finally {
-                          setWalletOpen(false);
+                          setWalletIsOpen(false);
                         }
                       }
                     }
@@ -1354,11 +1335,11 @@ export function TradeUI({
                             <ButtonIconSmall
                               icon={cancelIcon}
                               onClick={async () => {
-                                setWalletOpen(true);
+                                setWalletIsOpen(true);
                                 try {
                                   await nftSwap.cancelOrder(order.signedOrder);
                                 } finally {
-                                  setWalletOpen(false);
+                                  setWalletIsOpen(false);
                                 }
                               }}
                             />

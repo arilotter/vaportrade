@@ -1,5 +1,6 @@
 # Jan. 3rd, 2022 mini-update #4
 - Add reset / default buttons to Control Panel
+- Hide broken 0x1010 token on Polygon & Polygon Testnet
 # Jan. 3rd, 2022 mini-update #3
 - Add settings version keys
 - Remove CORS backend service from prod :)

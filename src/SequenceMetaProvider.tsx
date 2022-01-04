@@ -1,7 +1,8 @@
 import { sequence } from "0xsequence";
+import { TokenBalance } from "@0xsequence/indexer";
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
-import { useCallback, useEffect, useState } from "react";
+import React, { createContext, useCallback, useEffect, useState } from "react";
 import { useImmer } from "use-immer";
 import {
   FetchableToken,
@@ -9,8 +10,14 @@ import {
   ContractsDB,
   fetchContractsForBalances,
   fetchCollectibles,
+  fetchBalances,
 } from "./components/tradeui/contracts";
-import { chainConfigs, Indexers, supportedChains } from "./utils/multichain";
+import {
+  chainConfigs,
+  Indexers,
+  SupportedChain,
+  supportedChains,
+} from "./utils/multichain";
 import {
   getContractKey,
   getTokenKey,
@@ -21,15 +28,30 @@ import {
 interface SequenceMetaProviderProps {
   indexers: Indexers;
   metadata: sequence.metadata.Metadata;
-  children: (props: SequenceMetaProps) => JSX.Element;
+  children: React.ReactNode;
 }
 
-interface SequenceMetaProps {
+export const IndexerContext = createContext<{
   collectibles: CollectiblesDB;
   contracts: ContractsDB;
-  requestTokensFetch: (tokens: FetchableToken[]) => void;
+  requestTokenMetadataFetch: (tokens: FetchableToken[]) => void;
   hardError: string | null;
-}
+  fetchBalances: (
+    chainID: SupportedChain,
+    address: string
+  ) => Promise<Array<TokenBalance>>;
+  getEtherBalance: (
+    chainID: SupportedChain,
+    address: string
+  ) => Promise<string>;
+}>({
+  collectibles: new Map(),
+  contracts: new Map(),
+  requestTokenMetadataFetch: () => {},
+  hardError: null,
+  fetchBalances: async () => [],
+  getEtherBalance: () => Promise.resolve("0"),
+});
 
 export function SequenceMetaProvider({
   indexers,
@@ -70,7 +92,7 @@ export function SequenceMetaProvider({
     )
   );
 
-  const requestTokensFetch = useCallback(
+  const requestTokenMetadataFetch = useCallback(
     (tokens: FetchableToken[]) => {
       updateTokensToFetch((balances) => {
         const newTokens = tokens.filter(
@@ -236,10 +258,27 @@ export function SequenceMetaProvider({
     collectibles,
     updateCollectibles,
   ]);
-  return children({
-    collectibles,
-    contracts,
-    requestTokensFetch,
-    hardError,
-  });
+  return (
+    <IndexerContext.Provider
+      value={{
+        collectibles,
+        contracts,
+        hardError,
+        requestTokenMetadataFetch,
+        fetchBalances: useCallback(
+          (chainID, addr) => fetchBalances(indexers[chainID], addr),
+          [indexers]
+        ),
+        getEtherBalance: useCallback(
+          (chainID, accountAddress) =>
+            indexers[chainID]
+              .getEtherBalance({ accountAddress })
+              .then((t) => t.balance.balanceWei),
+          [indexers]
+        ),
+      }}
+    >
+      {children}
+    </IndexerContext.Provider>
+  );
 }

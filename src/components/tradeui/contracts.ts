@@ -6,6 +6,7 @@ import {
 import { ContractInfo } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
 import { BigNumber } from "ethers";
+import { isSupportedChain } from "../../utils/multichain";
 import {
   ContractKey,
   unique,
@@ -20,6 +21,7 @@ import {
   getTokenKey,
   KnownContractType,
 } from "../../utils/utils";
+import { blacklistedContracts } from "../../utils/verified";
 
 export function fetchContractsForBalances(
   chainId: ChainId,
@@ -102,9 +104,15 @@ export async function fetchBalances(
   indexer: sequence.indexer.Indexer,
   accountAddress: string
 ): Promise<Array<TokenBalance>> {
-  const { balances } = await indexer.getTokenBalances({
-    accountAddress,
-  });
+  const balances = (
+    await indexer.getTokenBalances({
+      accountAddress,
+    })
+  ).balances.filter(
+    (b) =>
+      !isSupportedChain(b.chainId) ||
+      !blacklistedContracts[b.chainId].has(normalizeAddress(b.contractAddress))
+  );
   const etherBalance = await indexer.getEtherBalance({ accountAddress });
 
   balances.push({

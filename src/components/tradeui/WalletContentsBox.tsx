@@ -2,7 +2,7 @@ import "./WalletContentsBox.css";
 import { Window } from "packard-belle";
 import missingIcon from "./missing.png";
 import { TokenBalance } from "@0xsequence/indexer";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import {
   getContractKey,
   getTokenKey,
@@ -14,26 +14,16 @@ import {
   DragItemType,
   normalizeAddress,
 } from "../../utils/utils";
-import { sequence } from "0xsequence";
 import { Folder } from "./Folder";
 import { DraggableIcon } from "./DraggableIcon";
-import {
-  CollectiblesDB,
-  ContractsDB,
-  FetchableToken,
-  fetchBalances,
-  getItems,
-} from "./contracts";
+import { getItems } from "./contracts";
 import { useDrop } from "react-dnd";
 import { SupportedChain } from "../../utils/multichain";
 import { itemSort } from "../../utils/tokensort";
+import { IndexerContext } from "../../SequenceMetaProvider";
 interface WalletContentsBoxProps {
   accountAddress: string;
   chainID: SupportedChain;
-  indexer: sequence.indexer.Indexer;
-  collectibles: CollectiblesDB;
-  contracts: ContractsDB;
-  requestTokensFetch: (tokens: FetchableToken[]) => void;
   onItemSelected?: (item: Item<KnownContractType>) => void;
   onItemDropped?: (item: Item<KnownContractType>) => void;
   subtractItems?:
@@ -48,10 +38,6 @@ interface WalletContentsBoxProps {
 export function WalletContentsBox({
   accountAddress,
   chainID,
-  indexer,
-  collectibles,
-  contracts,
-  requestTokensFetch,
   onItemSelected,
   subtractItems,
   className,
@@ -74,6 +60,13 @@ export function WalletContentsBox({
     [mine, onItemDropped]
   );
 
+  const {
+    fetchBalances,
+    requestTokenMetadataFetch,
+    contracts,
+    collectibles,
+  } = useContext(IndexerContext);
+
   const [error, setError] = useState<string | null>(null);
   const [balances, setBalances] = useState<TokenBalance[]>([]);
 
@@ -88,15 +81,16 @@ export function WalletContentsBox({
 
   // Get all balances for user's address
   useEffect(() => {
+    console.log("fetching bALANCE");
     setBalances([]);
-    fetchBalances(indexer, accountAddress)
+    fetchBalances(chainID, accountAddress)
       .then(setBalances)
       .catch((err) => setError(`${err}`));
-  }, [indexer, accountAddress, reloadNonce]);
+  }, [fetchBalances, chainID, accountAddress, reloadNonce]);
 
   // Request contract metadata fetch for all balances
   useEffect(() => {
-    requestTokensFetch(
+    requestTokenMetadataFetch(
       balances
         .filter((bal) => isKnownContractType(bal.contractType))
         .map((bal) => ({
@@ -107,7 +101,7 @@ export function WalletContentsBox({
           tokenID: bal.tokenID,
         }))
     );
-  }, [balances, requestTokensFetch, chainID]);
+  }, [balances, requestTokenMetadataFetch, chainID]);
 
   const erc20 = [
     ...getItems({

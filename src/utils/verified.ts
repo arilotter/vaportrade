@@ -39,7 +39,6 @@ export const verifiedContracts: {
         "https://polygon.technology",
       ],
       ["0x84000b263080bc37d1dd73a29d92794a6cf1564e", "https://makerdao.com"],
-      ["0x0000000000000000000000000000000000001010", "https://matic.network"],
       ["0x7240feeb4d8862a25f3d22c063528557aa42da85", "https://unilend.finance"],
       ["0xda537104d6a5edd53c6fbba9a898708e465260b6", "https://yearn.finance"],
       [
@@ -108,4 +107,19 @@ export const verifiedContracts: {
     //native
     [nativeTokenAddress, "https://matic.network"],
   ]),
+};
+
+export const blacklistedContracts: {
+  [K in SupportedChain]: Set<Address>;
+} = {
+  "1": new Set(),
+  "4": new Set(),
+  // Polygon & its testnets should have the 1010 address blacklisted,
+  // since the Sequence Indexer has the wrong balance for it.
+  "137": new Set(
+    ["0x0000000000000000000000000000000000001010"].map(normalizeAddress)
+  ),
+  "80001": new Set(
+    ["0x0000000000000000000000000000000000001010"].map(normalizeAddress)
+  ),
 };

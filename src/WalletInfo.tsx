@@ -1,49 +1,31 @@
-import { AbstractConnector } from "@web3-react/abstract-connector";
 import { connectorsByName, connectorsIconsByName } from "./web3/connectors";
 import { ButtonForm, Window } from "packard-belle";
 import { useContext, useEffect, useState } from "react";
 import { ProfileIcon } from "./components/ProfileIcon";
 import { WalletContentsBox } from "./components/tradeui/WalletContentsBox";
-import {
-  CollectiblesDB,
-  ContractsDB,
-  FetchableToken,
-} from "./components/tradeui/contracts";
 import "./WalletInfo.css";
 import {
   chainConfigs,
-  Indexers,
   SupportedChain,
   supportedChains,
 } from "./utils/multichain";
 import { ChainPicker } from "./utils/ChainPicker";
 import reloadIcon from "./icons/reload.png";
 import { PropertiesContext } from "./utils/context";
+import { useWeb3React } from "@web3-react/core";
+import { Web3Provider } from "@0xsequence/provider";
 
 interface WalletInfoProps {
-  connector: AbstractConnector;
-  disconnect: () => void;
-
   onMinimize: () => void;
   onClose: () => void;
   defaultChain?: SupportedChain;
-
-  indexers: Indexers;
-  collectibles: CollectiblesDB;
-  contracts: ContractsDB;
-  requestTokensFetch: (tokens: FetchableToken[]) => void;
 }
 export function WalletInfo({
-  connector,
-  collectibles,
-  contracts,
-  indexers,
   onMinimize,
   onClose,
-  disconnect,
-  requestTokensFetch,
   defaultChain,
 }: WalletInfoProps) {
+  const { connector, deactivate } = useWeb3React<Web3Provider>();
   const { openPropertiesWindow } = useContext(PropertiesContext);
 
   const [address, setAddress] = useState<string | null>(null);
@@ -54,7 +36,7 @@ export function WalletInfo({
   const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
-    connector.getAccount().then(setAddress);
+    connector?.getAccount().then(setAddress);
   }, [connector, setAddress]);
   const name = (Object.keys(connectorsByName) as Array<
     keyof typeof connectorsByName
@@ -84,7 +66,7 @@ export function WalletInfo({
                 alt={`${name} logo`}
               />
               Connected to {name}
-              <ButtonForm onClick={disconnect} className="walletInfoButton">
+              <ButtonForm onClick={deactivate} className="walletInfoButton">
                 Disconnect
               </ButtonForm>
             </h3>
@@ -134,10 +116,6 @@ export function WalletInfo({
                 chainID={chainID}
                 className="walletInfoWalletContents"
                 accountAddress={address}
-                indexer={indexers[chainID]}
-                collectibles={collectibles}
-                contracts={contracts}
-                requestTokensFetch={requestTokensFetch}
                 mine
                 onItemSelected={openPropertiesWindow}
                 isInTrade={false}
