@@ -1,6 +1,6 @@
 import { ButtonForm, Window } from "packard-belle";
 import { useImmer } from "use-immer";
-import { config, setSetting } from "./settings";
+import { config, defaultSettings, setSetting } from "./settings";
 import { useOnKeyDown, Writeable } from "./utils/utils";
 import GitInfo from "react-git-info/macro";
 
@@ -28,7 +28,7 @@ export function ControlPanel({ onClose, onMinimize }: ControlPanelProps) {
   const tryClose = useCallback(() => {
     if (
       hasChanges &&
-      !window.confirm("You have unsaved changes. Reset them?")
+      !window.confirm("You have unsaved changes. Close without saving them?")
     ) {
       return;
     }
@@ -51,6 +51,12 @@ export function ControlPanel({ onClose, onMinimize }: ControlPanelProps) {
             <input
               style={{
                 minWidth: "256px",
+                background:
+                  modifiedConfig[configKey] !== config[configKey]
+                    ? "goldenrod"
+                    : modifiedConfig[configKey] !== defaultSettings[configKey]
+                    ? "lightgreen"
+                    : "white",
               }}
               type="text"
               className="InputText text"
@@ -61,6 +67,28 @@ export function ControlPanel({ onClose, onMinimize }: ControlPanelProps) {
                 });
               }}
             />
+            {modifiedConfig[configKey] !== config[configKey] ? (
+              <ButtonForm
+                onClick={() => {
+                  updateModifiedConfig((cfg) => {
+                    cfg[configKey] = config[configKey];
+                  });
+                }}
+              >
+                Undo Changes
+              </ButtonForm>
+            ) : null}
+            {modifiedConfig[configKey] !== defaultSettings[configKey] ? (
+              <ButtonForm
+                onClick={() => {
+                  updateModifiedConfig((cfg) => {
+                    cfg[configKey] = defaultSettings[configKey];
+                  });
+                }}
+              >
+                Reset to Default
+              </ButtonForm>
+            ) : null}
           </div>
         ))}
 

@@ -1,5 +1,5 @@
 // Default settings!
-const settings = {
+const _defaultSettings = {
   background: "#008080",
   corsAnywhereUrl:
     process.env.NODE_ENV === "production" ? "" : "http://localhost:8080/",
@@ -8,6 +8,14 @@ const settings = {
     process.env.NODE_ENV === "development" ? "true" : "false",
   testnetModeSetMeToTheStringTrue:
     process.env.NODE_ENV === "development" ? "true" : "false",
+};
+
+export const defaultSettings: {
+  readonly [K in keyof typeof _defaultSettings]: string;
+} = _defaultSettings;
+
+const settings = {
+  ...defaultSettings,
 };
 
 const settingsVersions: { [K in keyof typeof settings]: number } = {
