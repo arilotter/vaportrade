@@ -60,6 +60,7 @@ import {
   PropertiesContext,
   RightClickMenuContext,
 } from "./utils/context";
+import { SafeLink } from "./utils/SafeLink";
 
 enableMapSet();
 function App() {
@@ -883,6 +884,9 @@ function TradeContents({
           <ButtonForm onClick={() => window.location.reload()}>
             Reload
           </ButtonForm>
+          <SafeLink href="https://github.com/arilotter/vaportrade/discussions">
+            Ask a question on the vaportrade support forums
+          </SafeLink>
           <pre>{hardError}</pre>
         </Window>
       </div>

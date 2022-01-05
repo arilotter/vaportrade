@@ -14,6 +14,7 @@ import reloadIcon from "./icons/reload.png";
 import { PropertiesContext } from "./utils/context";
 import { useWeb3React } from "@web3-react/core";
 import { Web3Provider } from "@0xsequence/provider";
+import { SafeLink } from "./utils/SafeLink";
 
 interface WalletInfoProps {
   onMinimize: () => void;
@@ -124,7 +125,12 @@ export function WalletInfo({
             </div>
           </>
         ) : (
-          <div className="walletInfoContents error">Failed to load address</div>
+          <div className="walletInfoContents error">
+            <div>Failed to load address</div>
+            <SafeLink href="https://github.com/arilotter/vaportrade/discussions">
+              Ask a question on the vaportrade support forums
+            </SafeLink>
+          </div>
         )}
       </Window>
     </div>

@@ -733,6 +733,9 @@ export function TradeUI({
             Clear Error
           </ButtonForm>
         </h1>
+        <SafeLink href="https://github.com/arilotter/vaportrade/discussions">
+          Ask a question on the vaportrade support forums
+        </SafeLink>
         <div className="error">{hardError.error}</div>
         {hardError.txHash ? (
           <div className="error">

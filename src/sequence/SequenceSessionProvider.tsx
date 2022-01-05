@@ -2,11 +2,12 @@ import { sequence } from "0xsequence";
 import { Session } from "@0xsequence/auth";
 import { sequenceContext, NetworkConfig } from "@0xsequence/network";
 import * as ethers from "ethers";
-import { Window } from "packard-belle";
+import { ButtonForm, Window } from "packard-belle";
 import { useState, useEffect } from "react";
-import { config } from "../settings";
+import { config, prodOptionalCorsService, setSetting } from "../settings";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
 import { chainConfigs, Indexers, supportedChains } from "../utils/multichain";
+import { SafeLink } from "../utils/SafeLink";
 import sequenceLogo from "./sequence.png";
 
 interface SequenceSessionProviderProps {
@@ -122,19 +123,33 @@ export function SequenceSessionProvider({
   if ("error" in state) {
     return (
       <div className="modal">
-        <Window title="Error connecting to Sequence Indexer">
+        <Window title="Error connecting to the Indexer Service">
           {state.error.map((e, i) => (
             <p key={i} style={{ padding: "8px" }}>
               {e}
             </p>
           ))}
+          {config.corsAnywhereUrl !== prodOptionalCorsService ? (
+            <ButtonForm
+              onClick={() => {
+                setSetting("corsAnywhereUrl", prodOptionalCorsService);
+                window.location.reload();
+              }}
+            >
+              Try Indexer Service Proxy
+            </ButtonForm>
+          ) : (
+            <SafeLink href="https://github.com/arilotter/vaportrade/discussions">
+              Ask a question on the vaportrade support forums
+            </SafeLink>
+          )}
         </Window>
       </div>
     );
   } else if ("waitingFor" in state) {
     return (
       <div className="modal">
-        <Window title="Loading Sequence Indexer" icon={sequenceLogo}>
+        <Window title="Loading Indexer Service" icon={sequenceLogo}>
           <p style={{ padding: "8px" }}>
             Waiting for {state.waitingFor}
             <EllipseAnimation />

@@ -47,3 +47,5 @@ function storageKey(key: keyof typeof settings) {
 
 export const config: Readonly<typeof settings> = settings;
 export const LS_SIGNED_ORDER_CACHE_KEY = "signedOrderCache";
+
+export const prodOptionalCorsService = "https://cors.vaportrade.net/";
