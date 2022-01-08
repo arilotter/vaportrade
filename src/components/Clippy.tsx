@@ -30,7 +30,23 @@ export function Clippy({ message, onOutOfMessages }: ClippyProps) {
   return (
     <div className="clippyContainer">
       <div className="speechBubble">
-        {isHovering ? angryDialog[clickCount] : <p>{message}</p>}
+        {isHovering ? (
+          angryDialog[clickCount]
+        ) : (
+          <>
+            <p>{message}</p>
+            <p>
+              <a
+                href="https://github.com/arilotter/vaportrade/discussions"
+                style={{
+                  pointerEvents: "auto",
+                }}
+              >
+                Click here for Vaportrade discussion & support
+              </a>
+            </p>
+          </>
+        )}
         <div className="speechBubbleArrow"></div>
       </div>
 
