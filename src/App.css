@@ -114,3 +114,11 @@ header {
 .StandardMenu.css div .active {
   display: block !important;
 }
+
+.unverifiedIcon {
+  filter: grayscale(60%);
+}
+
+.unverifiedIcon .icon__text {
+  color: gray;
+}

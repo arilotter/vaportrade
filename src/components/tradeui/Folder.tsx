@@ -2,12 +2,15 @@ import { ExplorerIcon } from "packard-belle";
 import { useCallback, MouseEvent, useContext } from "react";
 import { PropertiesContext, RightClickMenuContext } from "../../utils/context";
 import { SupportedChain } from "../../utils/multichain";
+import { Address } from "../../utils/utils";
+import { verifiedContracts } from "../../utils/verified";
 import folderBg from "./folder_bg.png";
 import folderFg from "./folder_fg.png";
+import warningIcon from "../../icons/warning.png";
 
 interface FolderProps {
   name: string;
-  contractAddress: string;
+  contractAddress: Address;
   iconUrl: string;
   type: "ERC721" | "ERC1155";
   chainID: SupportedChain;
@@ -61,6 +64,7 @@ export function Folder({
       chainID,
     ]
   );
+  const isVerified = verifiedContracts[chainID].has(contractAddress);
   return (
     <div
       style={{
@@ -69,6 +73,7 @@ export function Folder({
       onContextMenu={onContext}
     >
       <img
+        className={!isVerified ? "unverifiedIcon" : ""}
         src={folderBg}
         alt=""
         width="32"
@@ -95,6 +100,7 @@ export function Folder({
         }}
       />
       <ExplorerIcon
+        className={!isVerified ? "unverifiedIcon" : ""}
         onDoubleClick={onFolderOpen}
         alt={`${name} (${contractAddress})`}
         icon={folderFg}
@@ -113,6 +119,25 @@ export function Folder({
         }}
       >
         {type}
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          top: "21px",
+          left: "8px",
+          padding: "1px",
+          pointerEvents: "none",
+        }}
+      >
+        {!isVerified ? (
+          <img
+            src={warningIcon}
+            alt="Unverified Token!"
+            style={{
+              width: "16px",
+            }}
+          />
+        ) : null}
       </div>
     </div>
   );

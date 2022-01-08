@@ -55,6 +55,7 @@ export function DraggableIcon({
         isDragging: !!monitor.isDragging(),
       }),
       item,
+      canDrag: typeof item.type === "string",
     }),
     [dragItemType]
   );
@@ -77,6 +78,8 @@ export function DraggableIcon({
       : item.symbol
   }`;
 
+  const isVerified = !verifiedContracts[item.chainID].has(item.contractAddress);
+
   return (
     <div
       className={isDisabled ? "disabledIcon" : ""}
@@ -89,6 +92,7 @@ export function DraggableIcon({
       onContextMenu={onContext}
     >
       <ExplorerIcon
+        className={isVerified ? "unverifiedIcon" : ""}
         onDoubleClick={isDisabled ? () => {} : onDoubleClick}
         alt={`${decimalBalance} ${item.name} (${item.contractAddress})`}
         icon={item.iconUrl || missingIcon}
@@ -103,7 +107,7 @@ export function DraggableIcon({
           pointerEvents: "none",
         }}
       >
-        {!verifiedContracts[item.chainID].has(item.contractAddress) ? (
+        {isVerified ? (
           <img
             src={warningIcon}
             alt="Unverified Token!"
