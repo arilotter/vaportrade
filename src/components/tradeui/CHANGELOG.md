@@ -1,3 +1,10 @@
+# Jan. 7th, 2022
+- Added a support link to clippy
+- Fixed a bug where you could drag unaccepted token types
+- Added an unverified icon on unverified folders
+- Added ENS support :)
+- Grayed out unverified tokens a little
+
 # Jan. 3rd, 2022 mini-update #4
 - Add reset / default buttons to Control Panel
 - Hide broken 0x1010 token on Polygon & Polygon Testnet
