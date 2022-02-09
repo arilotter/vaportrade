@@ -14,7 +14,7 @@ export interface PropertiesProps {
   name: string;
   symbol?: string;
   contractAddress: string;
-  iconUrl: string;
+  iconUrl?: string;
   type: ContractType;
   chainID: SupportedChain;
   tokenID?: string;

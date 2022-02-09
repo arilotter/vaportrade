@@ -87,7 +87,7 @@ export interface Item<CT extends ContractType> {
   name: string;
   symbol: string;
   tokenID: string;
-  iconUrl: string;
+  iconUrl?: string;
   balance: BigNumber;
   originalBalance: BigNumber;
   decimals: number;

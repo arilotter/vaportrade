@@ -173,7 +173,7 @@ export function WalletContentsBox({
                 name={name}
                 chainID={chainID}
                 contractAddress={contractAddress}
-                iconUrl={iconUrl.length ? iconUrl : missingIcon}
+                iconUrl={iconUrl?.length ? iconUrl : missingIcon}
                 onFolderOpen={() => setTokenFolderAddress(contractAddress)}
                 type={type as "ERC721" | "ERC1155"}
               />
