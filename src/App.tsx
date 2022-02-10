@@ -168,6 +168,21 @@ function Vaportrade() {
 
   useEffect(() => {
     updateSources(defaultSources);
+    fetch(
+      "https://raw.githubusercontent.com/ngosang/trackerslist/master/trackers_all_ws.txt"
+    )
+      .then((r) => r.text())
+      .then((newSources) =>
+        updateSources([
+          ...new Set([
+            ...defaultSources,
+            ...newSources
+              .split("\n")
+              .map((s) => s.trim())
+              .filter((s) => s && s.includes("wss")),
+          ]),
+        ])
+      );
   }, [updateSources]);
 
   const [p2pClient, setP2pClient] = useState<P2PT<VaportradeMessage> | null>(
