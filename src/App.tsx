@@ -137,6 +137,7 @@ function getLibrary(provider: ExternalProvider) {
 }
 
 const defaultSources = [
+  "wss://tracker.vaportrade.net",
   "wss://tracker.openwebtorrent.com",
   "wss://tracker.files.fm:7073/announce",
   "wss://tracker.btorrent.xyz",
