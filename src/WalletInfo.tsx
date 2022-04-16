@@ -1,22 +1,21 @@
-import { connectorsByName, connectorsIconsByName } from "./web3/connectors";
 import { ButtonForm, Window } from "packard-belle";
 import { useContext, useEffect, useState } from "react";
+import { useAccount } from "wagmi";
 import { ProfileIcon } from "./components/ProfileIcon";
 import { WalletContentsBox } from "./components/tradeui/WalletContentsBox";
-import "./WalletInfo.css";
+import reloadIcon from "./icons/reload.png";
+import { IndexerContext } from "./SequenceMetaProvider";
+import { ChainPicker } from "./utils/ChainPicker";
+import { PropertiesContext } from "./utils/context";
+import { wallets } from "./web3/wallets";
 import {
   chainConfigs,
   SupportedChain,
   supportedChains,
 } from "./utils/multichain";
-import { ChainPicker } from "./utils/ChainPicker";
-import reloadIcon from "./icons/reload.png";
-import { PropertiesContext } from "./utils/context";
-import { useWeb3React } from "@web3-react/core";
-import { Web3Provider } from "@ethersproject/providers";
 import { SafeLink } from "./utils/SafeLink";
-import { IndexerContext } from "./SequenceMetaProvider";
 import { Address, normalizeAddress } from "./utils/utils";
+import "./WalletInfo.css";
 
 interface WalletInfoProps {
   onMinimize: () => void;
@@ -28,32 +27,29 @@ export function WalletInfo({
   onClose,
   defaultChain,
 }: WalletInfoProps) {
-  const { connector, deactivate } = useWeb3React<Web3Provider>();
+  const [{ data }, deactivate] = useAccount();
+  if (!data || !data.connector) {
+    throw new Error("No wagmi account !!!");
+  }
+  const { address, connector } = data;
+
   const { openPropertiesWindow } = useContext(PropertiesContext);
   const { ens, requestENSLookup } = useContext(IndexerContext);
 
-  const [address, setAddress] = useState<Address | null>(null);
   const [chainID, setChainID] = useState<SupportedChain>(
     defaultChain ||
       supportedChains.find((chain) => chainConfigs[chain].isAuthChain)!
   );
   const [reloadNonce, setReloadNonce] = useState(0);
-
   useEffect(() => {
-    connector?.getAccount().then((addr) => {
-      if (addr) {
-        const normalized = normalizeAddress(addr);
-        requestENSLookup(normalized);
-        setAddress(normalized);
-      }
-    });
-  }, [connector, setAddress, requestENSLookup]);
-  const name = (Object.keys(connectorsByName) as Array<
-    keyof typeof connectorsByName
-  >).find((c) => connectorsByName[c] === connector)!;
-  const icon = connectorsIconsByName[name];
+    const normalized = normalizeAddress(address);
+    requestENSLookup(normalized);
+  }, [address, requestENSLookup]);
 
-  const ensLookup = address ? ens.get(address) : "no_name";
+  const name = connector.name;
+  const icon = wallets.find((w) => w.id === connector.id)?.iconUrl;
+
+  const ensLookup = ens.get(address as Address);
   return (
     <div className="modal">
       <Window

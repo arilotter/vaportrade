@@ -1,63 +1,25 @@
-import { useWeb3React } from "@web3-react/core";
-import { useEffect, useState } from "react";
-import {
-  connectorsByName,
-  connectorsIconsByName,
-  getConnectorErrorMessage,
-  resetWalletConnector,
-} from "./connectors";
-import { useInactiveListener } from "./hooks";
-import loadingIcon from "../icons/loadingIcon.gif";
-import { Web3Provider } from "@ethersproject/providers";
-import { AbstractConnector } from "@web3-react/abstract-connector";
-import { ButtonForm, DetailsSection, Window } from "packard-belle";
-import "./WalletSignin.css";
-import rebootIcon from "../icons/reboot.png";
-import controlPanelIcon from "../icons/controlPanel.png";
-import warningIcon from "../icons/warning.png";
-import vaportradeLogo from "../icons/vticon.png";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ButtonForm, Window } from "packard-belle";
+import { useState } from "react";
+import { useAccount } from "wagmi";
 import { ControlPanel } from "../ControlPanel";
+import controlPanelIcon from "../icons/controlPanel.png";
+import rebootIcon from "../icons/reboot.png";
+import vaportradeLogo from "../icons/vticon.png";
+import warningIcon from "../icons/warning.png";
 import { SafeLink } from "../utils/SafeLink";
+import "./WalletSignin.css";
+import "../../node_modules/@rainbow-me/rainbowkit/dist/index.css";
 interface WalletSigninProps {
   children: JSX.Element;
 }
 
 export function WalletSignin({ children }: WalletSigninProps) {
-  const {
-    connector,
-    activate,
-    active,
-    deactivate,
-    error,
-  } = useWeb3React<Web3Provider>();
-
   const [controlPanelOpen, setControlPanelOpen] = useState(false);
-  const [cachedError, setCachedError] = useState<Error | null>(null);
 
-  // handle logic to recognize the connector currently being activated
-  const [
-    activatingConnector,
-    setActivatingConnector,
-  ] = useState<AbstractConnector>();
-  useEffect(() => {
-    if (activatingConnector && activatingConnector === connector) {
-      setActivatingConnector(undefined);
-    }
-  }, [activatingConnector, connector]);
+  const [{ data }] = useAccount();
 
-  // if we hit an error, disconnect.
-  useEffect(() => {
-    if (activatingConnector && error) {
-      setCachedError(error);
-      resetWalletConnector(activatingConnector);
-      deactivate();
-    }
-  }, [error, active, deactivate, activatingConnector]);
-
-  // handle logic to connect in reaction to certain events on the injected ethereum provider, if it exists
-  useInactiveListener(!!activatingConnector);
-
-  if (active) {
+  if (data) {
     return children;
   }
   return (
@@ -79,71 +41,29 @@ export function WalletSignin({ children }: WalletSigninProps) {
               alt={"Warning!"}
             />
             <p>
-              <strong>VAPORTRADE.NET IS IN BETA.</strong>
-            </p>
-            <p>
-              While it doesn't do anything new on-chain & it uses battle-tested
-              0x v3 contracts, it could still be buggy.
-              <br />
-              Until it's gotten some more use and eyeballs on it, you shouldn't
-              trade with people you don't know.
+              <strong>PRIVACY WARNING</strong>
             </p>
             <p>
               vaportrade.net uses peer-to-peer (p2p) communication via WebRTC.
             </p>
             <p>
-              Your IP address and wallet address will be published to other
-              vaportrade.net users so you can trade.
-            </p>
-            <p>
-              If you aren't okay with this,
-              <br />
-              <strong>DO NOT CONNECT YOUR WALLET.</strong>
-            </p>
-            <p>
-              Otherwise, continue by picking a wallet connection method below.
+              After connecting your wallet, your IP address and wallet address
+              will be published to other vaportrade.net users so you can trade.
             </p>
           </div>
-          {(Object.keys(connectorsByName) as Array<
-            keyof typeof connectorsByName
-          >).map((name) => {
-            const currentConnector = connectorsByName[name];
-            const activating = currentConnector === activatingConnector;
-            const connected = currentConnector === connector;
-            const disabled = !!activatingConnector || connected || !!error;
-
-            return (
-              <div key={name}>
+          <ConnectButton.Custom>
+            {({ openConnectModal }) => (
+              <div className="walletConnectButton">
                 <ButtonForm
-                  isDisabled={disabled}
                   className="walletConnectButton"
-                  onClick={() => {
-                    setCachedError(null);
-                    setActivatingConnector(currentConnector);
-                    activate(connectorsByName[name]);
-                  }}
+                  onClick={openConnectModal}
                 >
-                  {activating && <img src={loadingIcon} alt="Loading..." />}
-                  <img
-                    className="walletConnectButtonLogo"
-                    width={16}
-                    height={16}
-                    src={connectorsIconsByName[name]}
-                    alt={`${name} logo`}
-                  />
-
-                  {name}
+                  Connect Wallet
                 </ButtonForm>
               </div>
-            );
-          })}
-          {cachedError ? (
-            <div className="walletConnectError">
-              <DetailsSection title="Error">
-                {getConnectorErrorMessage(cachedError)}
-              </DetailsSection>
-            </div>
-          ) : null}
+            )}
+          </ConnectButton.Custom>
+
           <hr />
           <div className="walletConnectButton">
             <ButtonForm

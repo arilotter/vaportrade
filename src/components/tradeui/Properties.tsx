@@ -67,7 +67,7 @@ export function Properties({
         <div className="propsProp">
           <span>Contract Address:</span>
           <SafeLink
-            href={`${chainConfigs[chainID].explorerUrl}/token/${address}`}
+            href={`${chainConfigs[chainID].blockExplorers[0].url}/token/${address}`}
           >
             {address}
           </SafeLink>

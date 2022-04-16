@@ -3,7 +3,7 @@ import {
   ContractType as SequenceContractType,
   TokenBalance,
 } from "@0xsequence/indexer";
-import { ContractInfo } from "@0xsequence/metadata";
+import { ContractInfo, GetContractInfoBatchReturn } from "@0xsequence/metadata";
 import { ChainId } from "@0xsequence/network";
 import { BigNumber } from "ethers";
 import { isSupportedChain } from "../../utils/multichain";
@@ -47,10 +47,24 @@ export function fetchContractsForBalances(
   }
 
   if (batchContractAddresses.length) {
-    const batchPromise = metadata.getContractInfoBatch({
-      contractAddresses: batchContractAddresses,
-      chainID: String(chainId),
-    });
+    const maxBatchSize = 50;
+    const chunks = [];
+    for (let i = 0; i < batchContractAddresses.length; i += maxBatchSize) {
+      const chunk = batchContractAddresses.slice(i, i + maxBatchSize);
+      const batchPromise = metadata.getContractInfoBatch({
+        contractAddresses: chunk,
+        chainID: String(chainId),
+      });
+      chunks.push(batchPromise);
+    }
+    const batchPromise: Promise<GetContractInfoBatchReturn> = Promise.all(
+      chunks
+    ).then((allBatches) => ({
+      contractInfoMap: allBatches.reduce(
+        (map, { contractInfoMap }) => Object.assign(map, contractInfoMap),
+        {}
+      ),
+    }));
     return { batchPromise, batchContractAddresses };
   }
   return null;

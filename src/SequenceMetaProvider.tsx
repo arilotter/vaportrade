@@ -90,7 +90,7 @@ export function SequenceMetaProvider({
             address: nativeTokenAddress,
             type: "native",
             name: chainConfig.title,
-            symbol: chainConfig.nativeTokenSymbol,
+            symbol: chainConfig.nativeCurrency.symbol,
             logoURI: chainConfigs[chainId].iconUrl,
             extensions: {
               link: "",

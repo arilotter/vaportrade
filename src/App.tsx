@@ -1,17 +1,59 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { useImmer } from "use-immer";
-import { enableMapSet } from "immer";
+import { ChainId } from "@0xsequence/network";
+import { JsonRpcProvider } from "@ethersproject/providers";
 import {
-  Window,
-  Theme,
-  WindowAlert,
-  StandardMenu,
-  ButtonForm,
-} from "packard-belle";
+  connectorsForWallets,
+  RainbowKitProvider,
+} from "@rainbow-me/rainbowkit";
+import { enableMapSet } from "immer";
 import P2PT, { Peer, Tracker } from "p2pt";
-
+import {
+  ButtonForm,
+  StandardMenu,
+  Theme,
+  Window,
+  WindowAlert,
+} from "packard-belle";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { useImmer } from "use-immer";
+import { useAccount, WagmiProvider } from "wagmi";
+import "./App.css";
+import backgroundImg from "./background.png";
+import { Chat } from "./Chat";
+import { Clippy } from "./components/Clippy";
+import { Contacts } from "./components/Contacts";
 import { TrackersList } from "./components/TrackersList";
+import missingIcon from "./components/tradeui/missing.png";
+import { Properties, PropertiesProps } from "./components/tradeui/Properties";
 import { TradeUI } from "./components/tradeui/TradeUI";
+import { ControlPanel } from "./ControlPanel";
+import { Credits } from "./Credits";
+import controlPanelIcon from "./icons/controlPanel.png";
+import creditsIcon from "./icons/credits.png";
+import findPeersIcon from "./icons/findPeers.png";
+import helpIcon from "./icons/help.png";
+import logOutIcon from "./icons/logOut.png";
+import noIcon from "./icons/no.png";
+import rebootIcon from "./icons/reboot.png";
+import tipIcon from "./icons/tip.png";
+import yesIcon from "./icons/yes.png";
+
+import { makeBlockyIcon } from "./makeBlockyIcon";
+import { SequenceSessionProvider } from "./sequence/SequenceSessionProvider";
+import { IndexerContext, SequenceMetaProvider } from "./SequenceMetaProvider";
+import { config } from "./settings";
+import { TaskBar } from "./TaskBar";
+import testnetBackgroundImg from "./testnetBackground.png";
+import { TipUI } from "./TipUI";
+import {
+  Menu,
+  PropertiesContext,
+  RightClickMenuContext,
+} from "./utils/context";
+import { EllipseAnimation } from "./utils/EllipseAnimation";
+import { chainConfigs, SupportedChain } from "./utils/multichain";
+import { SafeLink } from "./utils/SafeLink";
 import {
   FailableTracker,
   isTradingPeer,
@@ -20,50 +62,22 @@ import {
   TradingPeer,
   VaportradeMessage,
 } from "./utils/utils";
-
-import logOutIcon from "./icons/logOut.png";
-import helpIcon from "./icons/help.png";
-import findPeersIcon from "./icons/findPeers.png";
-import controlPanelIcon from "./icons/controlPanel.png";
-import noIcon from "./icons/no.png";
-import yesIcon from "./icons/yes.png";
-import rebootIcon from "./icons/reboot.png";
-import creditsIcon from "./icons/credits.png";
-import tipIcon from "./icons/tip.png";
-import missingIcon from "./components/tradeui/missing.png";
-import backgroundImg from "./background.png";
-import testnetBackgroundImg from "./testnetBackground.png";
-import "./App.css";
-import { EllipseAnimation } from "./utils/EllipseAnimation";
-import { SequenceSessionProvider } from "./sequence/SequenceSessionProvider";
-import { Clippy } from "./components/Clippy";
-import { Contacts } from "./components/Contacts";
-import { makeBlockyIcon } from "./makeBlockyIcon";
-import { Chat } from "./Chat";
-import { ControlPanel } from "./ControlPanel";
-import { Credits } from "./Credits";
-import { useWeb3React, Web3ReactProvider } from "@web3-react/core";
-import { Web3Provider, ExternalProvider } from "@ethersproject/providers";
-import { WalletSignin } from "./web3/WalletSignin";
-import { connectorsByName, connectorsIconsByName } from "./web3/connectors";
-import { TaskBar } from "./TaskBar";
 import { WalletInfo } from "./WalletInfo";
-import { IndexerContext, SequenceMetaProvider } from "./SequenceMetaProvider";
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
-import { TipUI } from "./TipUI";
-import { Properties, PropertiesProps } from "./components/tradeui/Properties";
-import { config } from "./settings";
-import { ChainId } from "@0xsequence/network";
-import { SupportedChain } from "./utils/multichain";
-import {
-  Menu,
-  PropertiesContext,
-  RightClickMenuContext,
-} from "./utils/context";
-import { SafeLink } from "./utils/SafeLink";
+import { walletGroups, wallets } from "./web3/wallets";
+import { WalletSignin } from "./web3/WalletSignin";
 
 enableMapSet();
+
+const connectors = connectorsForWallets(walletGroups);
+
+const provider = ({ chainId }: { chainId?: number }) =>
+  new JsonRpcProvider(
+    (
+      (chainId && chainConfigs[chainId as SupportedChain]) ||
+      chainConfigs[1]
+    ).rpcUrl
+  );
+
 function App() {
   const [contextMenu, setContextMenu] = useState<Menu | null>(null);
   useEffect(() => {
@@ -92,20 +106,26 @@ function App() {
           }}
         >
           <DndProvider backend={HTML5Backend}>
-            <Web3ReactProvider getLibrary={getLibrary}>
-              <WalletSignin>
-                <SequenceSessionProvider>
-                  {({ indexers, metadata }) => (
-                    <SequenceMetaProvider
-                      indexers={indexers}
-                      metadata={metadata}
-                    >
-                      <Vaportrade />
-                    </SequenceMetaProvider>
-                  )}
-                </SequenceSessionProvider>
-              </WalletSignin>
-            </Web3ReactProvider>
+            <RainbowKitProvider chains={Object.values(chainConfigs)}>
+              <WagmiProvider
+                autoConnect
+                connectors={connectors}
+                provider={provider}
+              >
+                <WalletSignin>
+                  <SequenceSessionProvider>
+                    {({ indexers, metadata }) => (
+                      <SequenceMetaProvider
+                        indexers={indexers}
+                        metadata={metadata}
+                      >
+                        <Vaportrade />
+                      </SequenceMetaProvider>
+                    )}
+                  </SequenceSessionProvider>
+                </WalletSignin>
+              </WagmiProvider>
+            </RainbowKitProvider>
           </DndProvider>
         </RightClickMenuContext.Provider>
         {contextMenu ? (
@@ -132,10 +152,6 @@ function App() {
   );
 }
 
-function getLibrary(provider: ExternalProvider) {
-  return new Web3Provider(provider, "any"); // this will vary according to whether you use e.g. ethers or web3.js}
-}
-
 const defaultSources = [
   "wss://tracker.vaportrade.net",
   "wss://tracker.openwebtorrent.com",
@@ -144,16 +160,14 @@ const defaultSources = [
 ];
 
 function Vaportrade() {
-  const {
-    account: address,
-    library,
-    deactivate,
-    connector,
-  } = useWeb3React<Web3Provider>();
-  if (!address || !library) {
-    throw new Error("Vaportrade created with no account!");
+  const [{ data }, disconnect] = useAccount();
+  if (!data || !data.connector) {
+    throw new Error("No wagmi account !!!");
   }
 
+  const { connector, address } = data;
+  const walletName = connector.name;
+  const walletIcon = wallets.find((w) => w.id === connector.id)?.iconUrl ?? "";
   const { ens, requestENSLookup } = useContext(IndexerContext);
 
   const [walletOpen, setWalletOpen] = useState(false);
@@ -216,15 +230,6 @@ function Vaportrade() {
     false | { chainID?: SupportedChain; minimized: boolean }
   >(false);
   const [showTipUI, setShowTipUI] = useState<boolean | "minimized">(false);
-  const walletName = (Object.keys(connectorsByName) as Array<
-    keyof typeof connectorsByName
-  >).find((c) => connectorsByName[c] === connector);
-  if (!walletName) {
-    deactivate();
-  }
-
-  const walletIcon = connectorsIconsByName[walletName!];
-
   const [
     activePropertiesWindowIndex,
     setActivePropertiesWindowIndex,
@@ -527,9 +532,9 @@ function Vaportrade() {
       p2p.off("msg", msg);
     };
   }, [
+    address,
     sources,
     updateTrackers,
-    address,
     updatePeers,
     tradingPartnerAddress,
     p2pClient,
@@ -571,7 +576,7 @@ function Vaportrade() {
         openPropertiesWindow,
       }}
     >
-      {!p2pClient || !trackers.size || !connector ? (
+      {!p2pClient || !trackers.size ? (
         <div className="modal">
           <Window title="Connecting to trackers">
             <div style={{ padding: "8px" }}>
@@ -595,7 +600,7 @@ function Vaportrade() {
               setWalletIsOpen={setWalletOpen}
             />
           ) : null}
-          {connector && showWalletInfo && !showWalletInfo.minimized ? (
+          {showWalletInfo && !showWalletInfo.minimized ? (
             <WalletInfo
               defaultChain={showWalletInfo.chainID}
               onClose={() => setShowWalletInfo(false)}
@@ -855,7 +860,7 @@ function Vaportrade() {
             icon: rebootIcon,
           },
           {
-            onClick: deactivate,
+            onClick: disconnect,
             title: "Disconnect Wallet",
             icon: logOutIcon,
           },

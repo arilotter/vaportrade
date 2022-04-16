@@ -58,10 +58,8 @@ export function Credits({ onClose, onMinimize }: CreditsProps) {
               </SafeLink>
               ,
               <br />
-              <SafeLink href="https://github.com/NoahZinsmeister/web3-react">
-                web3-react
-              </SafeLink>
-              , <SafeLink href="https://ethers.org/">ethers</SafeLink>,{" "}
+              <SafeLink href="#">RainbowKit</SafeLink>,{" "}
+              <SafeLink href="https://ethers.org/">ethers</SafeLink>,{" "}
               <SafeLink href="https://github.com/stephensprinkle-zz/react-blockies">
                 react blockies
               </SafeLink>

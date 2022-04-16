@@ -1,5 +1,16 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import "./TradeUI.css";
+import { BigNumber } from "@ethersproject/bignumber";
+import {
+  FillEvent,
+  NftSwap,
+  OrderInfoStruct,
+  SignedOrder,
+} from "@traderxyz/nft-swap-sdk";
+import { TypedListener } from "@traderxyz/nft-swap-sdk/dist/contracts/common";
+import {
+  formatBytes32String,
+  formatEther,
+  randomBytes,
+} from "ethers/lib/utils";
 import P2PT from "p2pt";
 import {
   ButtonForm,
@@ -8,8 +19,19 @@ import {
   DetailsSection,
   Radio,
 } from "packard-belle";
-import { WalletContentsBox } from "./WalletContentsBox";
-import { TradeOffer } from "./TradeOffer";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useImmer } from "use-immer";
+import { useAccount, useProvider, useSigner } from "wagmi";
+import approveIcon from "../../icons/approve.png";
+import cancelIcon from "../../icons/cancel.png";
+import loadingIcon from "../../icons/loadingIcon.gif";
+import reloadIcon from "../../icons/reload.png";
+import tipIcon from "../../icons/tip.png";
+import { IndexerContext } from "../../SequenceMetaProvider";
+import { config, LS_SIGNED_ORDER_CACHE_KEY } from "../../settings";
+import { ChainPicker } from "../../utils/ChainPicker";
+import { chainConfigs, SupportedChain } from "../../utils/multichain";
+import { SafeLink } from "../../utils/SafeLink";
 import {
   buildOrder,
   formatTimeLeft,
@@ -26,40 +48,15 @@ import {
   VaportradeMessage,
   zero,
 } from "../../utils/utils";
-import { PickAmountWindow } from "./PickAmountWindow";
+import { verifiedContracts } from "../../utils/verified";
 import { Tabs } from "../Tabs";
-import { useImmer } from "use-immer";
+import { getItems } from "./contracts";
+import { PickAmountWindow } from "./PickAmountWindow";
 import tradeIcon from "./send.png";
 import tradeIconDisabled from "./sendDisabled.png";
-import loadingIcon from "../../icons/loadingIcon.gif";
-import approveIcon from "../../icons/approve.png";
-import tipIcon from "../../icons/tip.png";
-import cancelIcon from "../../icons/cancel.png";
-import reloadIcon from "../../icons/reload.png";
-import {
-  FillEvent,
-  NftSwap,
-  OrderInfoStruct,
-  SignedOrder,
-} from "@traderxyz/nft-swap-sdk";
-import { getItems } from "./contracts";
-import { Web3Provider } from "@ethersproject/providers";
-import { useWeb3React } from "@web3-react/core";
-import {
-  formatBytes32String,
-  formatEther,
-  randomBytes,
-} from "ethers/lib/utils";
-import { BigNumber } from "@ethersproject/bignumber";
-import { config, LS_SIGNED_ORDER_CACHE_KEY } from "../../settings";
-import { TypedListener } from "@traderxyz/nft-swap-sdk/dist/contracts/common";
-import { verifiedContracts } from "../../utils/verified";
-import { chainConfigs, SupportedChain } from "../../utils/multichain";
-import { ChainPicker } from "../../utils/ChainPicker";
-import { isConnectorMultichain } from "../../web3/connectors";
-import { SequenceConnector } from "../../web3/Web3ReactSequenceConnector";
-import { SafeLink } from "../../utils/SafeLink";
-import { IndexerContext } from "../../SequenceMetaProvider";
+import { TradeOffer } from "./TradeOffer";
+import "./TradeUI.css";
+import { WalletContentsBox } from "./WalletContentsBox";
 
 interface TradeUIProps {
   p2p: P2PT<VaportradeMessage>;
@@ -103,15 +100,14 @@ export function TradeUI({
   setWalletIsOpen,
   showTipUI,
 }: TradeUIProps) {
-  const {
-    account: address,
-    chainId: walletChainID,
-    connector,
-    library,
-  } = useWeb3React<Web3Provider>();
-  if (!address || !connector || !library) {
-    throw new Error("No address when TradeUI open!");
+  const [{ data }] = useAccount();
+  if (!data) {
+    throw new Error("No wagmi account !!!");
   }
+  const { address } = data;
+
+  const provider = useProvider();
+  const [, getSigner] = useSigner();
   const {
     getEtherBalance,
     requestTokenMetadataFetch,
@@ -122,18 +118,13 @@ export function TradeUI({
   useEffect(() => {
     setNftSwap(null);
     (async () => {
-      const provider: Web3Provider | undefined = await (connector instanceof
-      SequenceConnector
-        ? connector.getProvider(tradingPartner.chainID)
-        : library);
-      if (!provider) {
-        return;
+      const signer = await getSigner();
+      if (!signer) {
+        throw new Error("Failed to get signer!");
       }
-      setNftSwap(
-        new NftSwap(provider, provider.getSigner(), tradingPartner.chainID)
-      );
+      setNftSwap(new NftSwap(provider, signer, tradingPartner.chainID));
     })();
-  }, [connector, tradingPartner.chainID, library]);
+  }, [tradingPartner.chainID, getSigner, provider]);
 
   const [lockedIn, setLockedIn] = useState<
     Readonly<{
@@ -684,9 +675,9 @@ export function TradeUI({
           <div className="successfulTitle">Trade completed</div>
           <p>Swap completed on {chainConfigs[orderSuccess.chainID].title}.</p>
           <SafeLink
-            href={`${chainConfigs[orderSuccess.chainID].explorerUrl}/tx/${
-              orderSuccess.txHash
-            }`}
+            href={`${
+              chainConfigs[orderSuccess.chainID].blockExplorers[0].url
+            }/tx/${orderSuccess.txHash}`}
           >
             View on-chain transaction
           </SafeLink>
@@ -740,7 +731,9 @@ export function TradeUI({
         <div className="error">{hardError.error}</div>
         {hardError.txHash ? (
           <div className="error">
-            <SafeLink href={`${chain.explorerUrl}/tx/${hardError.txHash}`}>
+            <SafeLink
+              href={`${chain.blockExplorers[0].url}/tx/${hardError.txHash}`}
+            >
               View on block explorer
             </SafeLink>
           </div>
@@ -749,80 +742,80 @@ export function TradeUI({
     );
   }
 
-  if (
-    !isConnectorMultichain(connector) &&
-    walletChainID !== tradingPartner.chainID
-  ) {
-    return (
-      <div style={{ textAlign: "center" }}>
-        <h1>Chain ID mismatch</h1>
-        <div className="error">
-          Your wallet's chain ID is set to{" "}
-          {chainConfigs[(walletChainID || 0) as SupportedChain]?.title ??
-            "an unknown chain"}{" "}
-          ( Chain ID {walletChainID}),
-          <br />
-          but this trade is set to {chain.title} (Chain ID{" "}
-          {tradingPartner.chainID}).
-        </div>
-        <p>
-          Please change the active network in your wallet to {chain.title}{" "}
-          (Chain ID {tradingPartner.chainID}).{" "}
-          <ButtonForm
-            onClick={() => {
-              Promise.race([
-                library.send("wallet_switchEthereumChain", [
-                  { chainId: `0x${tradingPartner.chainID.toString(16)}` },
-                ]),
-                new Promise((res) => setTimeout(res, 10_000)),
-              ]).catch((err) => {
-                console.error(err);
-                if (typeof err === "object" && (err as any).code === 4902) {
-                  library
-                    .send("wallet_addEthereumChain", [
-                      {
-                        chainId: `0x${tradingPartner.chainID.toString(16)}`,
-                        chainName: chain.title,
-                        blockExplorerUrls: [chain.explorerUrl],
-                        rpcUrls: [chain.rpcUrl],
-                      },
-                    ])
-                    .catch(() => {
-                      setHardError({
-                        error: `Failed to automatically add ${chain.title} (Chain ID 
-                        ${tradingPartner.chainID}) to your wallet.`,
-                      });
-                    });
-                } else {
-                  setHardError({
-                    error: `Failed to automatically switch your wallet's chain to ${chain.title} (Chain ID 
-                  ${tradingPartner.chainID}).`,
-                  });
-                }
-              });
-            }}
-          >
-            Try Auto-Switch
-          </ButtonForm>
-        </p>
-        <p>Or, change the chain this trade is set to occur on.</p>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          Trade Chain:{" "}
-          <ChainPicker
-            setChain={updateChain}
-            chain={tradingPartner.chainID}
-            isDisabled={Boolean(lockedIn.lockedIn)}
-          />
-        </div>
-      </div>
-    );
-  }
+  // if (
+  //   !isConnectorMultichain(connector) &&
+  //   walletChainID !== tradingPartner.chainID
+  // ) {
+  //   return (
+  //     <div style={{ textAlign: "center" }}>
+  //       <h1>Chain ID mismatch</h1>
+  //       <div className="error">
+  //         Your wallet's chain ID is set to{" "}
+  //         {chainConfigs[(walletChainID || 0) as SupportedChain]?.title ??
+  //           "an unknown chain"}{" "}
+  //         ( Chain ID {walletChainID}),
+  //         <br />
+  //         but this trade is set to {chain.title} (Chain ID{" "}
+  //         {tradingPartner.chainID}).
+  //       </div>
+  //       <p>
+  //         Please change the active network in your wallet to {chain.title}{" "}
+  //         (Chain ID {tradingPartner.chainID}).{" "}
+  //         <ButtonForm
+  //           onClick={() => {
+  //             Promise.race([
+  //               library.send("wallet_switchEthereumChain", [
+  //                 { chainId: `0x${tradingPartner.chainID.toString(16)}` },
+  //               ]),
+  //               new Promise((res) => setTimeout(res, 10_000)),
+  //             ]).catch((err) => {
+  //               console.error(err);
+  //               if (typeof err === "object" && (err as any).code === 4902) {
+  //                 library
+  //                   .send("wallet_addEthereumChain", [
+  //                     {
+  //                       chainId: `0x${tradingPartner.chainID.toString(16)}`,
+  //                       chainName: chain.title,
+  //                       blockExplorerUrls: [chain.explorerUrl],
+  //                       rpcUrls: [chain.rpcUrl],
+  //                     },
+  //                   ])
+  //                   .catch(() => {
+  //                     setHardError({
+  //                       error: `Failed to automatically add ${chain.title} (Chain ID
+  //                       ${tradingPartner.chainID}) to your wallet.`,
+  //                     });
+  //                   });
+  //               } else {
+  //                 setHardError({
+  //                   error: `Failed to automatically switch your wallet's chain to ${chain.title} (Chain ID
+  //                 ${tradingPartner.chainID}).`,
+  //                 });
+  //               }
+  //             });
+  //           }}
+  //         >
+  //           Try Auto-Switch
+  //         </ButtonForm>
+  //       </p>
+  //       <p>Or, change the chain this trade is set to occur on.</p>
+  //       <div
+  //         style={{
+  //           display: "flex",
+  //           alignItems: "center",
+  //           justifyContent: "center",
+  //         }}
+  //       >
+  //         Trade Chain:{" "}
+  //         <ChainPicker
+  //           setChain={updateChain}
+  //           chain={tradingPartner.chainID}
+  //           isDisabled={Boolean(lockedIn.lockedIn)}
+  //         />
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <>
@@ -1046,187 +1039,178 @@ export function TradeUI({
                       // TODO status for signing in progress
                       if (iGoFirst) {
                         // sign and submit order to other player
-
                         // TODO remove this when Sequence adds Tolga's deploy warning UI
-                        if (connector instanceof SequenceConnector) {
-                          const isDeployed = await connector.configIsUpToDate(
-                            tradingPartner.chainID,
-                            address
-                          );
-                          if (!isDeployed) {
-                            alert(
-                              "Woah! You're using Sequence, but your wallet config hasn't been deployed on this chain yet. Make a transaction on this chain using Sequence or pay fees in this trade to make this work."
-                            );
-                            return;
-                          }
-                        }
+                        // if (connector instanceof SequenceConnector) {
+                        //   const isDeployed = await connector.configIsUpToDate(
+                        //     tradingPartner.chainID,
+                        //     address
+                        //   );
+                        //   if (!isDeployed) {
+                        //     alert(
+                        //       "Woah! You're using Sequence, but your wallet config hasn't been deployed on this chain yet. Make a transaction on this chain using Sequence or pay fees in this trade to make this work."
+                        //     );
+                        //     return;
+                        //   }
+                      }
 
-                        console.log(
-                          "[trade] waiting for user to sign order..."
+                      console.log("[trade] waiting for user to sign order...");
+                      const expiryTime =
+                        Math.floor(new Date().getTime() / 1000) +
+                        chain.tradingWindowSeconds;
+                      try {
+                        setWalletIsOpen(true);
+                        const signedOrder = await nftSwap.signOrder(
+                          {
+                            ...order,
+
+                            salt: BigNumber.from([
+                              1,
+                              2,
+                              7,
+                              3,
+                              ...randomBytes(28),
+                            ]).toString(), // get a real salt to sign this order
+                            expirationTimeSeconds: BigNumber.from(
+                              expiryTime
+                            ).toString(), // and get a real timestamp of now + 5 minutes
+                          },
+                          address
                         );
-                        const expiryTime =
-                          Math.floor(new Date().getTime() / 1000) +
-                          chain.tradingWindowSeconds;
-                        try {
-                          setWalletIsOpen(true);
-                          const signedOrder = await nftSwap.signOrder(
-                            {
-                              ...order,
+                        setWalletIsOpen(false);
+                        console.log(
+                          "[trade] got signed order, sending to peer"
+                        );
+                        updateSignedOrderCache([
+                          ...signedOrderCache,
+                          {
+                            signedOrder,
+                            myItems: myHalfOfOrder.items,
+                            theirItems: theirHalfOfOrder.items,
+                            chainID: tradingPartner.chainID,
+                          },
+                        ]);
 
-                              salt: BigNumber.from([
-                                1,
-                                2,
-                                7,
-                                3,
-                                ...randomBytes(28),
-                              ]).toString(), // get a real salt to sign this order
-                              expirationTimeSeconds: BigNumber.from(
-                                expiryTime
-                              ).toString(), // and get a real timestamp of now + 5 minutes
-                            },
-                            address
-                          );
-                          setWalletIsOpen(false);
-                          console.log(
-                            "[trade] got signed order, sending to peer"
-                          );
-                          updateSignedOrderCache([
-                            ...signedOrderCache,
-                            {
-                              signedOrder,
-                              myItems: myHalfOfOrder.items,
-                              theirItems: theirHalfOfOrder.items,
-                              chainID: tradingPartner.chainID,
-                            },
-                          ]);
-
-                          p2p?.send(tradingPartner.peer, {
-                            type: "accept",
-                            order: signedOrder,
+                        p2p?.send(tradingPartner.peer, {
+                          type: "accept",
+                          order: signedOrder,
+                        });
+                        console.log("[trade] waiting for peer to accept");
+                        setMyOrderSent(signedOrder);
+                        const orderFilled = await waitUntilOrderFilled(
+                          nftSwap,
+                          signedOrder
+                        ).orderFilled;
+                        if (typeof orderFilled === "object") {
+                          setOrderSuccess({
+                            txHash: orderFilled.txHash,
+                            myItems: myHalfOfOrder.items,
+                            theirItems: theirHalfOfOrder.items,
+                            chainID: tradingPartner.chainID,
                           });
-                          console.log("[trade] waiting for peer to accept");
-                          setMyOrderSent(signedOrder);
-                          const orderFilled = await waitUntilOrderFilled(
-                            nftSwap,
-                            signedOrder
-                          ).orderFilled;
-                          if (typeof orderFilled === "object") {
-                            setOrderSuccess({
-                              txHash: orderFilled.txHash,
-                              myItems: myHalfOfOrder.items,
-                              theirItems: theirHalfOfOrder.items,
-                              chainID: tradingPartner.chainID,
-                            });
-                          }
-                        } catch (err) {
-                          if (
-                            err &&
-                            typeof err === "object" &&
-                            (err as any).code === 4001
-                          ) {
-                            setSoftWarning(
-                              "You rejected the order signature.\nTry again and accept the signature request to continue."
-                            );
-                          } else {
-                            setHardError({
-                              error:
-                                typeof err === "string"
-                                  ? err
-                                  : err instanceof Error
-                                  ? `${err.name}\n${err.message}\n${err.stack}`
-                                  : JSON.stringify(err),
-                            });
-                          }
-                        } finally {
-                          setWalletIsOpen(false);
                         }
-                      } else {
-                        if (tradingPartner.tradeStatus.type !== "signedOrder") {
-                          throw new Error(
-                            "expected signed order to exist for p2 when clicking button"
+                      } catch (err) {
+                        if (
+                          err &&
+                          typeof err === "object" &&
+                          (err as any).code === 4001
+                        ) {
+                          setSoftWarning(
+                            "You rejected the order signature.\nTry again and accept the signature request to continue."
                           );
+                        } else {
+                          setHardError({
+                            error:
+                              typeof err === "string"
+                                ? err
+                                : err instanceof Error
+                                ? `${err.name}\n${err.message}\n${err.stack}`
+                                : JSON.stringify(err),
+                          });
                         }
-                        // we're good. submit it on-chain.
-                        console.log(
-                          "[trade] got signed order from peer, button clicked. submitting order on-chain"
+                      } finally {
+                        setWalletIsOpen(false);
+                      }
+                    } else {
+                      if (tradingPartner.tradeStatus.type !== "signedOrder") {
+                        throw new Error(
+                          "expected signed order to exist for p2 when clicking button"
                         );
-                        try {
-                          if (
-                            chain.protocolFee &&
-                            !chain.protocolFee.isZero()
-                          ) {
-                            const nativeTokenBalance = BigNumber.from(
-                              await getEtherBalance(
-                                tradingPartner.chainID,
-                                normalizeAddress(address)
-                              )
+                      }
+                      // we're good. submit it on-chain.
+                      console.log(
+                        "[trade] got signed order from peer, button clicked. submitting order on-chain"
+                      );
+                      try {
+                        if (chain.protocolFee && !chain.protocolFee.isZero()) {
+                          const nativeTokenBalance = BigNumber.from(
+                            await getEtherBalance(
+                              tradingPartner.chainID,
+                              normalizeAddress(address)
+                            )
+                          );
+                          if (nativeTokenBalance.lt(chain.protocolFee)) {
+                            throw new Error(
+                              `You can't afford the protocol fee on this chain! You need at least ${formatEther(
+                                chain.protocolFee
+                              )}${
+                                chain.nativeCurrency.symbol
+                              } in your wallet, but you only have ${formatEther(
+                                nativeTokenBalance
+                              )}${chain.nativeCurrency.symbol}`
                             );
-                            if (nativeTokenBalance.lt(chain.protocolFee)) {
-                              throw new Error(
-                                `You can't afford the protocol fee on this chain! You need at least ${formatEther(
-                                  chain.protocolFee
-                                )}${
-                                  chain.nativeTokenSymbol
-                                } in your wallet, but you only have ${formatEther(
-                                  nativeTokenBalance
-                                )}${chain.nativeTokenSymbol}`
-                              );
-                            }
                           }
-                          setWalletIsOpen(true);
-
-                          const fillTx = await nftSwap.fillSignedOrder(
-                            tradingPartner.tradeStatus.signedOrder,
-                            undefined,
-                            {
-                              value: chain.protocolFee,
-                            }
-                          );
-                          setMyOrderSent(
-                            tradingPartner.tradeStatus.signedOrder
-                          );
-                          console.log("[trade] waiting for order completion.");
-                          const fillTxReceipt = await nftSwap.awaitTransactionHash(
-                            fillTx.hash
-                          );
-                          console.log(
-                            `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
-                          );
-                          if (fillTxReceipt.status === 1) {
-                            setOrderSuccess({
-                              txHash: fillTxReceipt.transactionHash,
-                              myItems: myHalfOfOrder.items,
-                              theirItems: theirHalfOfOrder.items,
-                              chainID: tradingPartner.chainID,
-                            });
-                          } else {
-                            setHardError({
-                              error: `Trade failed with error: Transaction ${fillTxReceipt.transactionHash} failed.`,
-                              txHash: fillTxReceipt.transactionHash,
-                            });
-                          }
-                        } catch (err) {
-                          if (
-                            err &&
-                            typeof err === "object" &&
-                            (err as any).code === 4001
-                          ) {
-                            setSoftWarning(
-                              "You rejected submitting the trade on-chain.\nTry again and submit the order to complete the trade."
-                            );
-                          } else {
-                            setHardError({
-                              error:
-                                typeof err === "string"
-                                  ? err
-                                  : err instanceof Error
-                                  ? `${err.name}\n${err.message}\n${err.stack}`
-                                  : JSON.stringify(err),
-                            });
-                          }
-                        } finally {
-                          setWalletIsOpen(false);
                         }
+                        setWalletIsOpen(true);
+
+                        const fillTx = await nftSwap.fillSignedOrder(
+                          tradingPartner.tradeStatus.signedOrder,
+                          undefined,
+                          {
+                            value: chain.protocolFee,
+                          }
+                        );
+                        setMyOrderSent(tradingPartner.tradeStatus.signedOrder);
+                        console.log("[trade] waiting for order completion.");
+                        const fillTxReceipt = await nftSwap.awaitTransactionHash(
+                          fillTx.hash
+                        );
+                        console.log(
+                          `[trade] 🎉 🥳 Order filled. TxHash: ${fillTxReceipt.transactionHash}`
+                        );
+                        if (fillTxReceipt.status === 1) {
+                          setOrderSuccess({
+                            txHash: fillTxReceipt.transactionHash,
+                            myItems: myHalfOfOrder.items,
+                            theirItems: theirHalfOfOrder.items,
+                            chainID: tradingPartner.chainID,
+                          });
+                        } else {
+                          setHardError({
+                            error: `Trade failed with error: Transaction ${fillTxReceipt.transactionHash} failed.`,
+                            txHash: fillTxReceipt.transactionHash,
+                          });
+                        }
+                      } catch (err) {
+                        if (
+                          err &&
+                          typeof err === "object" &&
+                          (err as any).code === 4001
+                        ) {
+                          setSoftWarning(
+                            "You rejected submitting the trade on-chain.\nTry again and submit the order to complete the trade."
+                          );
+                        } else {
+                          setHardError({
+                            error:
+                              typeof err === "string"
+                                ? err
+                                : err instanceof Error
+                                ? `${err.name}\n${err.message}\n${err.stack}`
+                                : JSON.stringify(err),
+                          });
+                        }
+                      } finally {
+                        setWalletIsOpen(false);
                       }
                     }
                   }}

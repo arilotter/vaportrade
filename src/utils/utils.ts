@@ -334,3 +334,7 @@ export function formatTimeLeft(timeLeft: number): string {
 
 export const nativeTokenAddress: Address =
   "0x0000000000000000000000000000000000000000";
+
+export type RequiredNonNull<T> = {
+  [P in keyof T]-?: NonNullable<T[P]>;
+};

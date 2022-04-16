@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@rainbow-me/rainbowkit": "^0.0.2",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -11,12 +12,6 @@
     "@types/node": "^12.0.0",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
-    "@web3-react/abstract-connector": "^6.0.7",
-    "@web3-react/core": "^6.1.9",
-    "@web3-react/injected-connector": "^6.0.7",
-    "@web3-react/network-connector": "^6.1.9",
-    "@web3-react/walletconnect-connector": "^6.2.8",
-    "@web3-react/walletlink-connector": "^6.2.8",
     "0xsequence": "^0.35.2",
     "blockies-ts": "^1.0.0",
     "ethers": "^5.5.1",
@@ -30,6 +25,7 @@
     "react-dom": "^17.0.2",
     "react-select": "^5.2.1",
     "use-immer": "^0.6.0",
+    "wagmi": "^0.2.26",
     "web-vitals": "^1.0.1"
   },
   "devDependencies": {

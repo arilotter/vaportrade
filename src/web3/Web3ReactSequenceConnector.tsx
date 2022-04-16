@@ -1,115 +1,110 @@
-import { ConnectorUpdate } from "@web3-react/types";
-import { AbstractConnector } from "@web3-react/abstract-connector";
+import { mainnetNetworks, testnetNetworks } from "@0xsequence/network";
 import type {
-  Wallet,
-  ProviderConfig,
   ConnectOptions,
+  ProviderConfig,
   Web3Provider,
 } from "@0xsequence/provider";
-import { ChainId } from "@0xsequence/network";
-import { isConfigEqual } from "@0xsequence/config";
-
-interface SequenceConnectorArguments {
-  supportedChainIds: number[];
-  constructorOptions?: ProviderConfig;
-  connectOptions?: ConnectOptions;
+import { Wallet } from "@0xsequence/provider";
+import { Chain } from "@rainbow-me/rainbowkit";
+import {
+  Connector,
+  ConnectorData,
+  ConnectorNotFoundError,
+  UserRejectedRequestError,
+} from "wagmi";
+import { chainConfigList } from "../utils/multichain";
+interface Options {
+  provider?: Partial<ProviderConfig>;
+  connect?: ConnectOptions;
 }
 
-export class SequenceConnector extends AbstractConnector {
-  private readonly constructorOptions?: ProviderConfig;
-  private readonly connectOptions?: ConnectOptions;
-
-  public wallet: Wallet | undefined;
-
-  constructor({
-    supportedChainIds,
-    constructorOptions,
-    connectOptions,
-  }: SequenceConnectorArguments) {
-    super({ supportedChainIds });
-
-    this.constructorOptions = constructorOptions;
-    this.connectOptions = connectOptions;
+export class SequenceConnector extends Connector<
+  Web3Provider,
+  Options | undefined
+> {
+  id = "sequence";
+  name = "Sequence";
+  chains = chainConfigList;
+  ready = true;
+  #provider: Web3Provider | null = null;
+  #wallet: Wallet;
+  #connected = false;
+  constructor({ chains, options }: { chains?: Chain[]; options?: Options }) {
+    super({ chains, options });
+    if ((window as any).__sequenceWallet) {
+      this.#wallet = (window as any).__sequenceWallet;
+    } else {
+      this.#wallet = new Wallet(
+        this.options?.provider?.defaultNetworkId,
+        this.options?.provider
+      );
+      (window as any).__sequenceWallet = this.#wallet;
+    }
   }
-
-  public async activate(): Promise<ConnectorUpdate> {
-    if (!this.wallet) {
-      const sequence = await import("@0xsequence/provider").then(
-        (m) => m?.default ?? m
-      );
-      this.wallet = new sequence.Wallet(
-        this.constructorOptions?.defaultNetworkId,
-        this.constructorOptions
-      );
-      const { error } = await this.wallet.connect(this.connectOptions);
-      if (error) {
-        throw new Error(error);
+  async connect(): Promise<ConnectorData<Web3Provider>> {
+    if (!this.#wallet.isConnected()) {
+      const e = await this.#wallet.connect(this.options?.connect);
+      if (e.error) {
+        throw new UserRejectedRequestError(e.error);
       }
     }
-    const account = await this.wallet.getAddress();
-    const provider = await this.wallet.getProvider();
-    if (!provider) {
-      throw new Error("Failed to get provider from Sequence");
+    const chainId = await this.getChainId();
+    const provider = this.getProvider();
+    const account = await this.getAccount();
+    // provider.on("accountsChanged", this.onAccountsChanged);
+    // provider.on("chainChanged", this.onChainChanged);
+    provider.on("disconnect", this.onDisconnect);
+    this.#connected = true;
+    return {
+      account,
+      chain: {
+        id: chainId,
+        unsupported: this.isChainUnsupported(chainId),
+      },
+      provider,
+    };
+  }
+  async disconnect() {
+    this.#wallet.disconnect();
+  }
+  getAccount() {
+    return this.#wallet.getAddress();
+  }
+  getChainId() {
+    return this.#wallet.getChainId();
+  }
+  getProvider() {
+    if (!this.#provider) {
+      const provider = this.#wallet.getProvider();
+      if (!provider) {
+        throw new ConnectorNotFoundError(
+          "Failed to get Sequence Wallet provider."
+        );
+      }
+      this.#provider = provider;
     }
-
-    return { provider, account };
+    return this.#provider;
   }
-
-  public async getProvider(
-    chainID?: ChainId
-  ): Promise<Web3Provider | undefined> {
-    return this.wallet?.getProvider(chainID);
+  async getSigner() {
+    return this.#wallet.getSigner();
   }
-
-  public async getChainId(): Promise<number | string> {
-    return this.wallet!.getChainId();
-  }
-
-  public async getAccount(): Promise<null | string> {
-    return this.wallet?.getAddress() ?? null;
-  }
-
-  public async deactivate() {
-    await this.wallet?.disconnect();
-    window.localStorage.removeItem("@sequence.connectedSites");
-    window.localStorage.removeItem("@sequence.session");
-    this.wallet = undefined;
-    this.emitDeactivate();
-  }
-
-  public async close() {
-    await this.wallet?.disconnect();
-    this.wallet = undefined;
-    this.emitDeactivate();
-  }
-
-  public async configIsUpToDate(
-    chainID: ChainId,
-    address: string
-  ): Promise<boolean> {
-    if (!this.wallet) {
+  async isAuthorized() {
+    try {
+      const account = await this.getAccount();
+      return !!account;
+    } catch {
       return false;
     }
-
-    const authChainID = await this.wallet.getAuthChainId();
-    const walletStates = await this.wallet.getWalletState();
-
-    const authChainState = walletStates.find(
-      (item) => item.chainId === authChainID
+  }
+  protected onAccountsChanged = (accounts: string[]) => {};
+  protected onChainChanged = (chain: number | string) => {};
+  protected onDisconnect = () => {
+    this.emit("disconnect");
+  };
+  isChainUnsupported(chainId: number): boolean {
+    return !(
+      mainnetNetworks.some((c) => c.chainId === chainId) ||
+      testnetNetworks.some((c) => c.chainId === chainId)
     );
-    if (!authChainState || !authChainState.deployed || !authChainState.config) {
-      return false;
-    }
-
-    const thisChainState = walletStates.find(
-      (ws) =>
-        ws.chainId === chainID &&
-        ws.address.toLowerCase() === address.toLowerCase()
-    );
-    if (!thisChainState || !thisChainState.deployed || !thisChainState.config) {
-      return false;
-    }
-
-    return isConfigEqual(authChainState.config, thisChainState.config);
   }
 }

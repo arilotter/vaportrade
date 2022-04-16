@@ -8,7 +8,7 @@ import { config, prodOptionalCorsService, setSetting } from "../settings";
 import { EllipseAnimation } from "../utils/EllipseAnimation";
 import { chainConfigs, Indexers, supportedChains } from "../utils/multichain";
 import { SafeLink } from "../utils/SafeLink";
-import sequenceLogo from "./sequence.png";
+import sequenceLogo from "../web3/sequence.svg";
 
 interface SequenceSessionProviderProps {
   children: (props: SequenceIndexerProps) => JSX.Element;
